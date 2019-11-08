@@ -1,6 +1,7 @@
 from numpy.random.mtrand import RandomState
 from scipy.stats import norm
 
+random_state = RandomState(0)
 
 def apply_norm_dist(net):
     import torch
@@ -22,7 +23,6 @@ def apply_jumbler(net):
     def init_weights(m):
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
-            random_state = RandomState()
             random_order = random_state.permutation(weights.shape[1])
             weights = weights[:, random_order]
             m.weight.data = torch.Tensor(weights)

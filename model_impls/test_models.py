@@ -83,15 +83,15 @@ def cornet_s_brainmodel(identifier='', init_weigths=True, function=None):
 
 
 def alexnet(identifier, init_weights=True, function=None):
-    pytorch_model('alexnet', '%s_%s' % ('alexnet', identifier), 224, init_weights, function)
+    return pytorch_model('alexnet', '%s_%s' % ('alexnet', identifier), 224, init_weights, function)
 
 
-def densenet(identifier, init_weights=True, function=None):
-    pytorch_model('densenet169', '%s_%s' % ('densenet', identifier), 224, init_weights, function)
+def densenet169(identifier, init_weights=True, function=None):
+    return pytorch_model('densenet169', '%s_%s' % ('densenet', identifier), 224, init_weights, function)
 
 
-def resnet(identifier, init_weights=True, function=None):
-    pytorch_model('resnet101', '%s_%s' % ('resnet', identifier), 224, init_weights, function)
+def resnet101(identifier, init_weights=True, function=None):
+    return pytorch_model('resnet101', '%s_%s' % ('resnet', identifier), 224, init_weights, function)
 
 
 def pytorch_model(function, identifier, image_size, init_weights=True, transformation=None):

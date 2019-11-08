@@ -4,8 +4,8 @@ from cornet import cornet_s
 from submission.ml_pool import MLBrainPool
 from submission.utils import UniqueKeyDict
 
-from models import models as model_file
-from models.models import cornet_s_brainmodel, model_layers
+from model_impls import test_models as model_file
+from model_impls.test_models import cornet_s_brainmodel, model_layers
 from perturbations.model_based import *
 
 
@@ -21,15 +21,15 @@ class BaseModelPool(UniqueKeyDict):
 
         _key_functions = {}
 
-        for model in ['alexnet', 'densenet', 'resnet']:
+        for model in ['alexnet', 'densenet169', 'resnet101']:
             model_func = getattr(model_file, model)
+            _key_functions[f'{model}'] = lambda bound_func=model_func: bound_func('', True)
+            _key_functions[f'{model}_random'] = lambda bound_func=model_func: bound_func('random', False)
+            _key_functions[f'{model}_norm_dist'] = lambda bound_func=model_func: bound_func('norm_dist', True, apply_norm_dist)
+            _key_functions[f'{model}_uniform_dist'] = lambda bound_func=model_func: bound_func('uniform_dist', True, apply_uniform_dist)
+            _key_functions[f'{model}_jumbler'] = lambda bound_func=model_func: bound_func('jumbler', True, apply_jumbler)
 
-            _key_functions[f'{model}_random'] = lambda: model_func('random', False)
-            _key_functions[f'{model}_norm_dist'] = lambda: model_func('norm_dist', True, apply_norm_dist)
-            _key_functions[f'{model}_uniform_dist'] = lambda: model_func('uniform_dist', True, apply_uniform_dist)
-            _key_functions[f'{model}_jumbler'] = lambda: model_func('jumbler', True, apply_jumbler)
-
-        for identifier,function in _key_functions.items():
+        for identifier, function in _key_functions.items():
             self[identifier] = LazyLoad(function)
 
 
