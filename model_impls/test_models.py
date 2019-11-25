@@ -11,10 +11,12 @@ from model_tools.activations import PytorchWrapper
 from submission.utils import UniqueKeyDict
 from torch.nn import Module
 
+from transformations.layer_based import apply_to_net
+
 _logger = logging.getLogger(__name__)
 
 
-def cornet(identifier, init_weights=True, function=None):
+def cornet(identifier, init_weights=True, type='layer', function=None, config=None):
     cornet_type = 'S'
     mod = importlib.import_module(f'cornet.cornet_{cornet_type.lower()}')
     model_ctr = getattr(mod, f'CORnet_{cornet_type.upper()}')
@@ -42,8 +44,11 @@ def cornet(identifier, init_weights=True, function=None):
         model.load_state_dict(checkpoint['state_dict'])
         model = model.module  # unwrap
     if function:
-        print('>>>run with function ', function)
-        model = function(model)
+        if type == 'layer':
+            print('>>>run with function ', function)
+            model = apply_to_net(model, function)
+        elif type == 'model':
+            model = function(model)
     from model_tools.activations.pytorch import load_preprocess_images
     preprocessing = functools.partial(load_preprocess_images, image_size=224)
     wrapper = TemporalPytorchWrapper(identifier='%s_%s' % ('CORnet-S', identifier), model=model,
@@ -61,7 +66,7 @@ def _build_time_mappings(time_mappings):
         for region, (time_start, time_step_size, timesteps) in time_mappings.items()}
 
 
-def cornet_s_brainmodel(identifier='', init_weigths=True, function=None):
+def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer'):
     identifier = '%s_%s' % ('CORnet-S', identifier)
     # map region -> (time_start, time_step_size, timesteps)
     time_mappings = {
@@ -73,7 +78,7 @@ def cornet_s_brainmodel(identifier='', init_weigths=True, function=None):
     }
     return CORnetCommitment(identifier=identifier,
                             activations_model=cornet(identifier=identifier, init_weights=init_weigths,
-                                                     function=function),
+                                                     function=function, config=config, type=type),
                             layers=['V1.output-t0'] +
                                    [f'{area}.output-t{timestep}'
                                     for area, timesteps in [('V2', range(2)), ('V4', range(4)), ('IT', range(2))]
@@ -97,11 +102,12 @@ def resnet101(identifier, init_weights=True, function=None):
 def pytorch_model(function, identifier, image_size, init_weights=True, transformation=None):
     module = importlib.import_module(f'torchvision.models')
     model_ctr = getattr(module, function)
+    model = model_ctr(pretrained=init_weights)
     if transformation:
-        model_ctr = transformation(model_ctr)
+        model = apply_to_net(model, transformation)
     from model_tools.activations.pytorch import load_preprocess_images
     preprocessing = functools.partial(load_preprocess_images, image_size=image_size)
-    wrapper = PytorchWrapper(identifier=identifier, model=model_ctr(pretrained=init_weights),
+    wrapper = PytorchWrapper(identifier=identifier, model=model,
                              preprocessing=preprocessing)
     wrapper.image_size = image_size
     return wrapper

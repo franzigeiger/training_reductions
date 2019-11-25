@@ -2,12 +2,11 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from brainscore.model_interface import BrainModel
 from model_tools.brain_transformation import ModelCommitment
 from scipy.stats import norm
 
 from model_impls.pool import brain_translated_pool
-from plot_data import plot_histogram, plot_data, plot_data_map
+from plot.plot_data import plot_data_map
 
 
 def load_model(model_name):
@@ -39,12 +38,11 @@ def weight_mean_std(model_name):
             norm_dists['std'].append(std)
             print(f'Norm dist mean: {mu} and std: {std}')
             # plot_histogram(flat, name, model_name)
-    plot_data_map(norm_dists, model_name)
+    plot_data_map(norm_dists, model_name,scale_fix=[-0.01, 0.15])
     # model.apply(plot_distribution)
 
 
 def weight_histogram(model_name):
-    import torch
     import torch.nn as nn
     model = load_model(model_name)
     # pytorch model
@@ -100,7 +98,7 @@ def kernel_weight_dist(model_name):
             all_kernels['name'].append(name)
             all_kernels['max'].append(np.mean(kernel_values['min']))
             all_kernels['min'].append(np.mean(kernel_values['max']))
-    plot_data_map(all_kernels, f'{model_name}.kernel.dist', 'name', 'Layer number', 'value')
+    plot_data_map(all_kernels, f'{model_name}.kernel.dist', 'name', 'Layer number', 'value', scale_fix=[-0.75, 1.0])
 
 def kernel_channel_weight_dist(model_name):
     import torch.nn as nn
@@ -124,13 +122,15 @@ def kernel_channel_weight_dist(model_name):
                 kernel_values['name'].append(f'{name}.kernel{kernel_no}')
                 kernel_values['mean'].append(np.mean(kernel_weights))
                 kernel_values['std'].append(np.std(kernel_weights))
-            plot_data_map(kernel_values, name, 'name')
+            plot_data_map(kernel_values, f'{name}_kernel_channel', 'name', scale_fix=[-0.75, 1.0])
 
 
 if __name__ == '__main__':
-    function_name = 'kernel_weight_dist'
+    # function_name = 'weight_mean_std'
+    # function_name = 'kernel_weight_dist'
+    function_name = 'kernel_channel_weight_dist'
     func = getattr(sys.modules[__name__], function_name)
-    func('CORnet-S')
+    # func('CORnet-S')
     func('alexnet')
-    func('densenet169')
-    func('resnet101')
+    # func('densenet169')
+    # func('resnet101')
