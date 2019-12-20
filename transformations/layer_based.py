@@ -10,10 +10,13 @@ random_state = RandomState(0)
 batchnorm_shuffle = False
 
 
-def apply_to_net(net, function):
+def apply_to_net(net, function, config=None):
     def init_weights(m):
         if type(m) == nn.Conv2d or ((type(m) == nn.Linear or type(m) == nn.BatchNorm2d) and batchnorm_shuffle):
-            function(m)
+            if config == None:
+                function(m)
+            else:
+                function(m, config)
 
     net.apply(init_weights)
     return net
@@ -32,7 +35,7 @@ def apply_norm_dist_kernel(m):
         for k in range(weights.shape[0]):
             kernel_weights = weights[k].flatten()
             mu, std = norm.fit(kernel_weights)
-            weights[k] = np.random.normal(mu, std,weights[k].shape)
+            weights[k] = np.random.normal(mu, std, weights[k].shape)
         m.weight.data = torch.Tensor(weights)
     else:
         apply_norm_dist(m)
@@ -45,17 +48,28 @@ def apply_all_jumbler(m):
         random_order_2 = random_state.permutation(weights.shape[1])
         random_order_3 = random_state.permutation(weights.shape[2])
         random_order_4 = random_state.permutation(weights.shape[3])
-        weights=weights[random_order_1]
-        weights=weights[: , random_order_2]
-        weights=weights[:,:,random_order_3]
-        weights=weights[:,:,:,random_order_4]
+        weights = weights[random_order_1]
+        weights = weights[:, random_order_2]
+        weights = weights[:, :, random_order_3]
+        weights = weights[:, :, :, random_order_4]
         m.weight.data = torch.Tensor(weights)
     else:
         random_order_1 = random_state.permutation(weights.shape[0])
         random_order_2 = random_state.permutation(weights.shape[1])
-        weights=weights[random_order_1][: , random_order_2]
+        weights = weights[random_order_1][:, random_order_2]
         m.weight.data = torch.Tensor(weights)
 
+
+def apply_fixed_value(m):
+    weights = m.weight.data.cpu().numpy()
+    new = np.full(weights.shape, 1.0)
+    m.weight.data = torch.Tensor(new)
+
+
+def apply_fixed_value_small(m):
+    weights = m.weight.data.cpu().numpy()
+    new = np.full(weights.shape, 0.1)
+    m.weight.data = torch.Tensor(new)
 
 def apply_channel_jumbler(m):
     weights = m.weight.data.cpu().numpy()
@@ -70,7 +84,6 @@ def apply_channel_jumbler(m):
                 m.weight.data = torch.Tensor(weights)
 
 
-
 def apply_in_kernel_jumbler(m):
     weights = m.weight.data.cpu().numpy()
     if len(weights.shape) > 2:
@@ -78,9 +91,9 @@ def apply_in_kernel_jumbler(m):
             random_order_1 = random_state.permutation(weights.shape[1])
             random_order_2 = random_state.permutation(weights.shape[2])
             random_order_3 = random_state.permutation(weights.shape[3])
-            weights[i] = weights[i][ random_order_1, :, :]
-            weights[i] = weights[i][: , random_order_2, :]
-            weights[i] = weights[i][ :, :, random_order_3]
+            weights[i] = weights[i][random_order_1, :, :]
+            weights[i] = weights[i][:, random_order_2, :]
+            weights[i] = weights[i][:, :, random_order_3]
         m.weight.data = torch.Tensor(weights)
 
 
@@ -88,4 +101,5 @@ def apply_uniform_dist(m):
     weights = m.weight.data.cpu().numpy()
     mu, std = norm.fit(weights)
     torch.nn.init.uniform(m.weight, a=-1 * std, b=std)
+
 

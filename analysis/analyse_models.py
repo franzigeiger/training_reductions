@@ -1,7 +1,9 @@
+import math
 import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot
 from model_tools.brain_transformation import ModelCommitment
 from scipy.stats import norm
 
@@ -38,7 +40,7 @@ def weight_mean_std(model_name):
             norm_dists['std'].append(std)
             print(f'Norm dist mean: {mu} and std: {std}')
             # plot_histogram(flat, name, model_name)
-    plot_data_map(norm_dists, model_name,scale_fix=[-0.01, 0.15])
+    plot_data_map(norm_dists, model_name, scale_fix=[-0.01, 0.15])
     # model.apply(plot_distribution)
 
 
@@ -72,7 +74,7 @@ def print_histogram(parent_name, m):
 def kernel_weight_dist(model_name):
     import torch.nn as nn
     model = load_model(model_name)
-    all_kernels =  {}
+    all_kernels = {}
     all_kernels['name'] = []
     all_kernels['min'] = []
     all_kernels['max'] = []
@@ -89,21 +91,21 @@ def kernel_weight_dist(model_name):
             for kernel_no in range(weights.shape[0]):
                 kernel = weights[kernel_no]
                 kernel_weights = kernel.flatten()
-                kernel_values['min'][kernel_no] =np.min(kernel_weights)
-                kernel_values['max'][kernel_no] =np.max(kernel_weights)
+                kernel_values['min'][kernel_no] = np.min(kernel_weights)
+                kernel_values['max'][kernel_no] = np.max(kernel_weights)
                 kernel_values['name'].append(f'{name}.kernel{kernel_no}')
                 kernel_values['mean'][kernel_no] = np.mean(kernel_weights)
-                kernel_values['std'][kernel_no]=np.std(kernel_weights)
+                kernel_values['std'][kernel_no] = np.std(kernel_weights)
             # plot_data_map(kernel_values, name, 'name')
             all_kernels['name'].append(name)
             all_kernels['max'].append(np.mean(kernel_values['min']))
             all_kernels['min'].append(np.mean(kernel_values['max']))
     plot_data_map(all_kernels, f'{model_name}.kernel.dist', 'name', 'Layer number', 'value', scale_fix=[-0.75, 1.0])
 
+
 def kernel_channel_weight_dist(model_name):
     import torch.nn as nn
-    model = load_model(model_name
-                       )
+    model = load_model(model_name)
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
@@ -122,15 +124,41 @@ def kernel_channel_weight_dist(model_name):
                 kernel_values['name'].append(f'{name}.kernel{kernel_no}')
                 kernel_values['mean'].append(np.mean(kernel_weights))
                 kernel_values['std'].append(np.std(kernel_weights))
-            plot_data_map(kernel_values, f'{name}_kernel_channel', 'name', scale_fix=[-0.75, 1.0])
+            plot_data_map(kernel_values, f'{name}_kernels', 'name', scale_fix=[-0.75, 1.0])
+
+
+def visualize_first_layer(model_name):
+    import torch.nn as nn
+    model = load_model(model_name)
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            weights = m.weight
+            f_min, f_max = weights.min(), weights.max()
+            weights = (weights - f_min) / (f_max - f_min)
+            number = math.ceil(math.sqrt(weights.shape[0]))
+            filter_weights = weights.data.squeeze()
+            img = np.transpose(np.abs(filter_weights), (0, 2, 3, 1))
+            idx = 0
+            # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
+            for j in range(number): # in zip(axes, range(weights.shape[0])):
+                for i in range(number):
+                    ax = pyplot.subplot(number, number, idx+1)
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+                    # imgs = img[range(j*8, (j*8)+number)]
+                    pyplot.imshow(img[idx])
+                    idx+=1
+            pyplot.show()
+            return
 
 
 if __name__ == '__main__':
     # function_name = 'weight_mean_std'
     # function_name = 'kernel_weight_dist'
-    function_name = 'kernel_channel_weight_dist'
+    # function_name = 'kernel_channel_weight_dist'
+    function_name = 'visualize_first_layer'
     func = getattr(sys.modules[__name__], function_name)
     # func('CORnet-S')
-    func('alexnet')
+    func('CORnet-S_random')
     # func('densenet169')
     # func('resnet101')

@@ -10,7 +10,7 @@ from submission import score_model
 
 # from submission import brain_translated_pool
 from benchmark.database import create_connection, store_score
-from model_impls.pool import brain_translated_pool, batchnorm_shuffle
+from model_impls.single_layer_pool import brain_translated_pool
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +44,14 @@ def score_models(model, benchmark, filename):
     score = 0
     raw_scores = []
     try:
-        repeat = models[model]
+        repeat = False
         iterations = 4 if repeat else 1
         for i in range(iterations):
                 d = datetime.datetime.now()
                 raw_score = run_benchmark(benchmark, model)
                 result = raw_score.sel(aggregation='center')
                 result = result.values
-                store_score(db, (base_model,benchmark,d, result.item(0), model, batchnorm_shuffle))
+                store_score(db, (base_model,benchmark,d, result.item(0), model, False))
                 raw_scores.append(result.item(0))
     except Exception as e:
         logging.error(f'Could not run model {model} because of following error')
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         # score_models('CORnet-S', benchmark, filename)
         # score_models('alexnet_jumbler', benchmark, filename)
         # score_models('alexnet_kernel_jumbler', benchmark, filename)
-        score_models('alexnet_channel_jumbler', benchmark, filename)
+        score_models('CORnet-S_norm_dist_L1', benchmark, filename)
         # score_models('alexnet_norm_dist_kernel', benchmark, filename)
         # score_models('CORnet-S_norm_dist', benchmark, filename)
         # score_models('resnet101', benchmark, filename)

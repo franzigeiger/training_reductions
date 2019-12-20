@@ -34,8 +34,17 @@ def store_score(conn, score):
     conn.commit()
     return cur.lastrowid
 
+def load_like(conn, model_name, benchmarks):
+    sql = "select model, benchmark, time, score, modification, batchnorm from raw_scores where modification like ?".format(
+        model_name)
+    # load_from_statement(conn, sql, models, benchmarks)
 
 def load_scores(conn, models, benchmarks):
+    sql = "select model, benchmark, time, score, modification, batchnorm from raw_scores where modification in ({seq}) and benchmark in ({seq2})".format(
+        seq=','.join(['?'] * len(models)), seq2=','.join(['?']* len(benchmarks)))
+    return load_from_statement(conn, sql, models, benchmarks)
+
+def load_from_statement(conn, sql, models, benchmarks):
     """
     Create a new project into the projects table
     :param conn:
@@ -43,10 +52,8 @@ def load_scores(conn, models, benchmarks):
     :return: project id
     """
     results = {}
-    sql = "select model, benchmark, time, score, modification, batchnorm from raw_scores where modification in ({seq})".format(
-        seq=','.join(['?'] * len(models)))
     cursor = conn.cursor()
-    cursor.execute(sql, models)
+    cursor.execute(sql, models+ benchmarks)
     records = cursor.fetchall()
     # Structure:
     # score = { 'Model_name': [[1.3,20.1],[13.3, 1.2]]}

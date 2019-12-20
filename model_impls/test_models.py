@@ -8,10 +8,13 @@ from candidate_models import s3
 from candidate_models.base_models.cornet import TemporalPytorchWrapper
 from candidate_models.model_commitments.cornets import CORnetCommitment
 from model_tools.activations import PytorchWrapper
+from result_caching import store
 from submission.utils import UniqueKeyDict
 from torch.nn import Module
 
+from model_impls.train_model import train
 from transformations.layer_based import apply_to_net
+from transformations.model_based import apply_to_one_layer
 
 _logger = logging.getLogger(__name__)
 
@@ -44,11 +47,11 @@ def cornet(identifier, init_weights=True, type='layer', function=None, config=No
         model.load_state_dict(checkpoint['state_dict'])
         model = model.module  # unwrap
     if function:
-        if type == 'layer':
+        if type is 'layer':
             print('>>>run with function ', function)
-            model = apply_to_net(model, function)
-        elif type == 'model':
-            model = function(model)
+            model = apply_to_net(model, function, config)
+        elif type is 'model':
+            model = apply_to_one_layer(model, function, config)
     from model_tools.activations.pytorch import load_preprocess_images
     preprocessing = functools.partial(load_preprocess_images, image_size=224)
     wrapper = TemporalPytorchWrapper(identifier='%s_%s' % ('CORnet-S', identifier), model=model,
@@ -56,6 +59,21 @@ def cornet(identifier, init_weights=True, type='layer', function=None, config=No
                                      separate_time=True)
     wrapper.image_size = 224
     return wrapper
+
+
+
+def cornets_decoder_train(identifier, init_weights=True, type='layer', function=None, config=None):
+    wrapper = cornet(identifier, init_weights, type, function, config)
+    wrapper._model = train_model(identifier, wrapper._model)
+    return wrapper
+
+@store(identifier_ignore=['model'])
+def train_model(identifier, model):
+    for name, m in model.named_modules():
+        m.requires_grad = False
+    model.decoder.requires_grad = True
+    train(model)
+    return model
 
 
 def _build_time_mappings(time_mappings):
@@ -66,7 +84,7 @@ def _build_time_mappings(time_mappings):
         for region, (time_start, time_step_size, timesteps) in time_mappings.items()}
 
 
-def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer'):
+def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer', train_decoder=False):
     identifier = '%s_%s' % ('CORnet-S', identifier)
     # map region -> (time_start, time_step_size, timesteps)
     time_mappings = {
@@ -76,9 +94,14 @@ def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=
         'V4': (90, 50, 4),
         'IT': (100, 100, 2),
     }
+    if train_decoder:
+        model = cornets_decoder_train(identifier=identifier, init_weights=init_weigths,
+                                      function=function, config=config, type=type)
+    else:
+        model = cornet(identifier=identifier, init_weights=init_weigths,
+                       function=function, config=config, type=type)
     return CORnetCommitment(identifier=identifier,
-                            activations_model=cornet(identifier=identifier, init_weights=init_weigths,
-                                                     function=function, config=config, type=type),
+                            activations_model=model,
                             layers=['V1.output-t0'] +
                                    [f'{area}.output-t{timestep}'
                                     for area, timesteps in [('V2', range(2)), ('V4', range(4)), ('IT', range(2))]
