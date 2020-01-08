@@ -17,11 +17,11 @@ def get_connection():
 
 
 def get_all_perturbations():
-    return ['_jumbler', '_random', '_norm_dist', '', '_kernel_jumbler', '_norm_dist_kernel', '_channel_jumbler']
+    return ['', '_random', '_jumbler', '_kernel_jumbler', '_channel_jumbler', '_norm_dist', '_norm_dist_kernel']
 
 
 def get_all_models():
-    return ['CORnet-S', 'alexnet']
+    return ['CORnet-S', 'alexnet', 'resnet101']
 
 
 def get_list_all_pert(models):
@@ -64,18 +64,20 @@ def plot_data(benchmarks, data, labels, name, scale_fix=None):
     plt.show()
 
 
-def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=None, rotate=False):
-    # data: {data_set_1 : [values] , data_set_2: [values]}
+def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=None, rotate=False, alpha=1.0,
+                   base_line=0):
     if x_labels is None:
         x_labels = np.arange(len(data.values[0]))
-
-    # data['layer']
     if rotate:
         plt.xticks(rotation='vertical', fontsize=8)
     print(data)
+    # if base_line is not 0:
+    #     plt.hlines(base_line, xmin=0, xmax=1, colors='b')
     for key, value in data.items():
-        plt.plot(x_labels, data[key], label=key, linestyle="", marker="o")
-    # plt.plot(x, data['std'], label='std', linestyle="",marker="o")
+        if key is 'base':
+            plt.plot(x_labels, data[key], label=key, linestyle="solid", marker="", alpha=alpha)
+        else:
+            plt.plot(x_labels, data[key], label=key, linestyle="", marker="o", alpha=alpha)
     plt.title(name)
     plt.xlabel(x_name)
     plt.ylabel(y_name)
@@ -83,7 +85,8 @@ def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=No
     if scale_fix:
         plt.ylim(scale_fix[0], scale_fix[1])
     plt.tight_layout()
-    plt.savefig(f'{name}.png')
+    file_name = name.replace(' ', '_')
+    plt.savefig(f'{file_name}.png')
     plt.show()
 
 
@@ -107,10 +110,11 @@ def plot_data_map(data, name, label_field='layer', x_name='', y_name='', scale_f
     plt.show()
 
 
-def plot_1_dim_data(data, name, x_name='', y_name='', scale_fix=None):
-    x = np.arange(len(data))
+def plot_1_dim_data(data, name, x_labels=None, x_name='', y_name='', scale_fix=None):
+    if x_labels is None:
+        x_labels = np.arange(len(data))
     print(data)
-    plt.plot(x, data, linestyle="", marker="o")
+    plt.plot(x_labels, data, linestyle="", marker="o")
     plt.title(name)
     plt.xlabel(x_name)
     plt.ylabel(y_name)
@@ -132,3 +136,75 @@ def plot_histogram(data, layer, model):
     plt.show()
 
 
+def plot_heatmap(data, col_labels, row_labels, title, **kwargs):
+    # vegetables = ["cucumber", "tomato", "lettuce", "asparagus",
+    #                              "potato", "wheat", "barley"]
+    # farmers = ["Farmer Joe", "Upland Bros.", "Smith Gardening",
+    #            "Agrifun", "Organiculture", "BioGoods Ltd.", "Cornylee Corp."]
+    #
+    # harvest = np.array([[0.8, 2.4, 2.5, 3.9, 0.0, 4.0, 0.0],
+    #                     [2.4, 0.0, 4.0, 1.0, 2.7, 0.0, 0.0],
+    #                     [1.1, 2.4, 0.8, 4.3, 1.9, 4.4, 0.0],
+    #                     [0.6, 0.0, 0.3, 0.0, 3.1, 0.0, 0.0],
+    #                     [0.7, 1.7, 0.6, 2.6, 2.2, 6.2, 0.0],
+    #                     [1.3, 1.2, 0.0, 0.0, 0.0, 3.2, 5.1],
+    #                     [0.1, 2.0, 0.0, 1.4, 0.0, 1.9, 6.3]])
+
+    # fig, ax = plt.subplots()
+    # im = ax.imshow(data)
+    #
+    # # We want to show all ticks...
+    # ax.set_xticks(np.arange(len(x_labels)))
+    # ax.set_yticks(np.arange(len(y_labels)))
+    # # ... and label them with the respective list entries
+    # ax.set_xticklabels(x_labels)
+    # ax.set_yticklabels(y_labels)
+    #
+    # # Rotate the tick labels and set their alignment.
+    # plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+    #          rotation_mode="anchor")
+    #
+    # # Loop over data dimensions and create text annotations.
+    # for i in range(len(x_labels)):
+    #     for j in range(len(y_labels)):
+    #         text = ax.text(j, i, data[i, j],
+    #                        ha="center", va="center", color="w")
+    #
+    # ax.set_title(title)
+    # fig.tight_layout()
+    # plt.show()
+    fig, ax = plt.subplots()
+
+    # Plot the heatmap
+    im = ax.imshow(data, **kwargs)
+
+    # Create colorbar
+    cbar = ax.figure.colorbar(im, ax=ax)
+    cbar.ax.set_ylabel('Impact', rotation=-90, va="bottom")
+
+    # We want to show all ticks...
+    ax.set_xticks(np.arange(data.shape[1]))
+    ax.set_yticks(np.arange(data.shape[0]))
+    # ... and label them with the respective list entries.
+    ax.set_xticklabels(col_labels)
+    ax.set_yticklabels(row_labels)
+
+    # Let the horizontal axes labeling appear on top.
+    # ax.tick_params(top=True, bottom=False,
+    #                labeltop=True, labelbottom=False)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=-30, ha="right",
+             rotation_mode="anchor")
+
+    # Turn spines off and create white grid.
+    for edge, spine in ax.spines.items():
+        spine.set_visible(False)
+
+    ax.set_xticks(np.arange(data.shape[1] + 1) - .5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.tick_params(which="minor", bottom=False, left=False)
+    ax.set_title(title)
+    fig.tight_layout()
+    plt.show()

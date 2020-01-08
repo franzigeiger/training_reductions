@@ -1,11 +1,11 @@
 from brainscore.utils import LazyLoad
-from candidate_models.base_models import pytorch_model
-from cornet import cornet_s
 from submission.ml_pool import MLBrainPool
 from submission.utils import UniqueKeyDict
 
 from model_impls import test_models as model_file
 from model_impls.test_models import cornet_s_brainmodel, model_layers
+from transformations.configurable import apply_nullify_small, apply_nullify_high, apply_low_variance_cut, \
+    apply_high_variance_cut
 from transformations.layer_based import *
 
 
@@ -61,11 +61,33 @@ brain_models = {
         lambda: cornet_s_brainmodel('norm_dist_kernel', True, apply_norm_dist_kernel)),
 }
 
-for percent in [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
-    brain_models[f'CORnet-S_small_zero_{percent}'] = LazyLoad(
-        lambda: cornet_s_brainmodel('small_zero_{percent}', False, apply_nullify_small, config=[percent]))
+for percent in [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]:
+    brain_models[f'CORnet-S_low_zero_{percent}'] = LazyLoad(
+        lambda percent_fix=percent: cornet_s_brainmodel(f'low_zero_{percent_fix}', False, apply_nullify_small,
+                                                        config=[percent_fix]))
     brain_models[f'CORnet-S_high_zero_{percent}'] = LazyLoad(
-        lambda: cornet_s_brainmodel('high_zero_{percent}', False, apply_nullify_high, config=[percent])),
+        lambda percent_fix=percent: cornet_s_brainmodel(f'high_zero_{percent_fix}', False, apply_nullify_high,
+                                                        config=[percent_fix]))
+    brain_models[f'CORnet-S_low_variance_{percent}'] = LazyLoad(
+        lambda percent_fix=percent: cornet_s_brainmodel(f'low_variance_{percent_fix}', False, apply_low_variance_cut,
+                                                        config=[percent_fix]))
+    brain_models[f'CORnet-S_high_variance_{percent}'] = LazyLoad(
+        lambda percent_fix=percent: cornet_s_brainmodel(f'high_variance_{percent_fix}', False, apply_high_variance_cut,
+                                                        config=[percent_fix]))
+    brain_models[f'CORnet-S_trained_low_zero_{percent}'] = LazyLoad(
+        lambda percent_fix=percent: cornet_s_brainmodel(f'trained_low_zero_{percent_fix}', True, apply_nullify_small,
+                                                        config=[percent_fix]))
+    brain_models[f'CORnet-S_trained_high_zero_{percent}'] = LazyLoad(
+        lambda percent_fix=percent: cornet_s_brainmodel(f'trained_high_zero_{percent_fix}', True, apply_nullify_high,
+                                                        config=[percent_fix]))
+    brain_models[f'CORnet-S_trained_low_variance_{percent}'] = LazyLoad(
+        lambda percent_fix=percent: cornet_s_brainmodel(f'trained_low_variance_{percent_fix}', True,
+                                                        apply_low_variance_cut,
+                                                        config=[percent_fix]))
+    brain_models[f'CORnet-S_trained_high_variance_{percent}'] = LazyLoad(
+        lambda percent_fix=percent: cornet_s_brainmodel(f'trained_high_variance_{percent_fix}', True,
+                                                        apply_high_variance_cut,
+                                                        config=[percent_fix]))
 
 base_model_pool = BaseModelPool()
 

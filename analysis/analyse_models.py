@@ -7,14 +7,18 @@ from matplotlib import pyplot
 from model_tools.brain_transformation import ModelCommitment
 from scipy.stats import norm
 
-from model_impls.pool import brain_translated_pool
+from model_impls.pool import brain_translated_pool, base_model_pool
+from model_impls.test_models import alexnet
 from plot.plot_data import plot_data_map
 
 
 def load_model(model_name):
+    if model_name == 'alexnet':
+        return alexnet('', True)._model
     base = brain_translated_pool[model_name]
     base._ensure_loaded()
     if isinstance(base.content, ModelCommitment):
+        model = base_model_pool[model_name]
         model = base.layer_model.activations_model._model
     else:
         model = base.activations_model._model
@@ -137,7 +141,7 @@ def visualize_first_layer(model_name):
             weights = (weights - f_min) / (f_max - f_min)
             number = math.ceil(math.sqrt(weights.shape[0]))
             filter_weights = weights.data.squeeze()
-            img = np.transpose(np.abs(filter_weights), (0, 2, 3, 1))
+            img = np.transpose(filter_weights, (0, 2, 3, 1))
             idx = 0
             # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
             for j in range(number): # in zip(axes, range(weights.shape[0])):
@@ -152,13 +156,46 @@ def visualize_first_layer(model_name):
             return
 
 
+def visualize_second_layer(model_name):
+    import torch.nn as nn
+    model = load_model(model_name)
+    counter = 0
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d and counter >= 1:
+            weights = m.weight.data.squeeze()
+            filter_weights = np.zeros((weights.shape[0], weights.shape[2], weights.shape[3]))
+            for i in range(weights.shape[0]):
+                # do for all kernels
+                filter_weights[i] = weights[i][49]
+            f_min, f_max = filter_weights.min(), filter_weights.max()
+            filter_weights = (filter_weights - f_min) / (f_max - f_min)
+            number = math.ceil(math.sqrt(weights.shape[0]))
+
+            img = np.transpose(filter_weights, (0, 1, 2))
+            idx = 0
+            # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
+            for j in range(8):  # in zip(axes, range(weights.shape[0])):
+                for i in range(8):
+                    if idx < img.shape[0]:
+                        ax = pyplot.subplot(8, 8, idx + 1)
+                        ax.set_xticks([])
+                        ax.set_yticks([])
+                        # imgs = img[range(j*8, (j*8)+number)]
+                        pyplot.imshow(img[idx], cmap='gray')
+                        idx += 1
+            pyplot.show(figsize=(20, 20))
+            return
+        elif type(m) == nn.Conv2d:
+            counter += 1
+
+
 if __name__ == '__main__':
     # function_name = 'weight_mean_std'
     # function_name = 'kernel_weight_dist'
     # function_name = 'kernel_channel_weight_dist'
-    function_name = 'visualize_first_layer'
+    function_name = 'visualize_second_layer'
     func = getattr(sys.modules[__name__], function_name)
     # func('CORnet-S')
-    func('CORnet-S_random')
+    func('alexnet')
     # func('densenet169')
     # func('resnet101')

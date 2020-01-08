@@ -1,8 +1,6 @@
 import datetime
 import logging
-import logging
 import os
-import statistics
 import sys
 import traceback
 
@@ -44,13 +42,14 @@ def score_models(model, benchmark, filename):
     score = 0
     raw_scores = []
     try:
-        repeat = models[model]
-        iterations = 4 if repeat else 1
+        # repeat = models[model]
+        iterations = 1
         for i in range(iterations):
                 d = datetime.datetime.now()
                 raw_score = run_benchmark(benchmark, model)
                 result = raw_score.sel(aggregation='center')
                 result = result.values
+                print(result)
                 store_score(db, (base_model,benchmark,d, result.item(0), model, batchnorm_shuffle))
                 raw_scores.append(result.item(0))
     except Exception as e:
@@ -77,16 +76,16 @@ if __name__ == '__main__':
     benchmarks = [
         # 'movshon.FreemanZiemba2013.V1-pls',
         # 'movshon.FreemanZiemba2013.V2-pls',
-        'dicarlo.Majaj2015.V4-pls',
+        # 'dicarlo.Majaj2015.V4-pls',
         # 'dicarlo.Majaj2015.IT-pls',
-        # 'dicarlo.Rajalingham2018-i2n',
+        'dicarlo.Rajalingham2018-i2n',
         # 'fei-fei.Deng2009-top1'
     ]
     for benchmark in benchmarks:
         # score_models('CORnet-S', benchmark, filename)
         # score_models('alexnet_jumbler', benchmark, filename)
         # score_models('alexnet_kernel_jumbler', benchmark, filename)
-        score_models('alexnet_channel_jumbler', benchmark, filename)
+        score_models('CORnet-S_high_zero_0.3', benchmark, filename)
         # score_models('alexnet_norm_dist_kernel', benchmark, filename)
         # score_models('CORnet-S_norm_dist', benchmark, filename)
         # score_models('resnet101', benchmark, filename)

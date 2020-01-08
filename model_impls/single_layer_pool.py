@@ -1,13 +1,10 @@
-from copy import deepcopy
-
 from brainscore.utils import LazyLoad
 from submission.utils import UniqueKeyDict
 from torch import nn
 
 from model_impls.test_models import cornet_s_brainmodel
-
 # cornet has
-from transformations.layer_based import apply_norm_dist, apply_all_jumbler, apply_fixed_value
+from transformations.layer_based import apply_norm_dist, apply_all_jumbler, apply_fixed_value, apply_fixed_value_small
 
 brain_models = {}
 
@@ -27,7 +24,9 @@ def load_single_layer_models():
                 lambda layer_number=layer_number: cornet_s_brainmodel(f'fixed_value_L{layer_number}', True, function=apply_fixed_value, config=[layer_number],
                                                                       type='model'))
             brain_models[f'CORnet-S_fixed_value_small_L{layer_number}'] = LazyLoad(
-                lambda layer_number=layer_number: cornet_s_brainmodel(f'fixed_value_small_L{layer_number}', True, function=apply_fixed_value, config=[layer_number],
+                lambda layer_number=layer_number: cornet_s_brainmodel(f'fixed_value_small_L{layer_number}', True,
+                                                                      function=apply_fixed_value_small,
+                                                                      config=[layer_number],
                                                                       type='model'))
 
 load_single_layer_models()

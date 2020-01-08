@@ -22,7 +22,7 @@ def precomputed():
 def model_perturbation_scores():
     # Per model results
     # models = ['CORnet-S_jumbler', 'CORnet-S_norm_dist', 'CORnet-S_random', 'CORnet-S']
-    models = get_list_all_pert(['alexnet'])
+    models = get_list_all_pert(['CORnet-S'])
     data = load_data(models, benchmarks)
     plot_data(benchmarks, data, ['V4', 'IT', 'Behaviour', 'Imagenet'], 'alexnet_all')
 

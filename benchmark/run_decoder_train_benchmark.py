@@ -1,8 +1,6 @@
 import datetime
 import logging
-import logging
 import os
-import statistics
 import sys
 import traceback
 
@@ -22,8 +20,6 @@ def run_benchmark(benchmark_identifier, model_name):
 
 
 def score_models(model, benchmark, filename):
-    # if model.endswith('one_layer'):
-    # os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,submission"
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
     path = f'{dir_path}/../scores.sqlite'
@@ -31,17 +27,6 @@ def score_models(model, benchmark, filename):
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     d = datetime.datetime.today()
     base_model = model.split('_')[0]
-    models = {
-        f'{base_model}_jumbler': True,
-        f'{base_model}_norm_dist': False,
-        # f'{name}_uniform_dist': False,
-        f'{base_model}_random': False,
-        f'{base_model}_kernel_jumbler': True,
-        f'{base_model}_channel_jumbler': True,
-        f'{base_model}_norm_dist_kernel': False,
-        f'{base_model}': False
-    }
-    score = 0
     raw_scores = []
     try:
         # repeat = models[model]

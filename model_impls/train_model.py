@@ -1,5 +1,6 @@
 import glob
 import io
+import logging
 import os
 import pickle
 import pprint
@@ -16,8 +17,10 @@ import torch.utils.model_zoo
 import torchvision
 import tqdm
 from PIL import Image
+from torch.nn import Module
 
 Image.warnings.simplefilter('ignore')
+logger = logging.getLogger(__name__)
 
 np.random.seed(0)
 torch.manual_seed(0)
@@ -25,9 +28,9 @@ torch.manual_seed(0)
 torch.backends.cudnn.benchmark = False
 normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
-ngpus = 1
+ngpus = 2
 epochs = 20
-output_path = os.path.join(os.path.dirname(__file__), '../model_output/')
+output_path = os.path.join(os.path.dirname(__file__), 'model_weights/')
 data_path = '/braintree/data2/active/common/imagenet_raw/'
 batch_size = 256
 weight_decay = 1e-4
@@ -39,14 +42,14 @@ if ngpus > 0:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def set_gpus(n=1):
+def set_gpus(n=2):
     """
     Finds all GPUs on the system and restricts to n of them that have the most
     free memory.
     """
     gpus = subprocess.run(shlex.split(
         'nvidia-smi --query-gpu=index,memory.free,memory.total --format=csv,nounits'), check=True,
-        stdout=subprocess.PIPE, shell=True).stdout
+        stdout=subprocess.PIPE).stdout
     gpus = pandas.read_csv(io.BytesIO(gpus), sep=', ', engine='python')
     gpus = gpus[gpus['memory.total [MiB]'] > 10000]  # only above 10 GB
     if os.environ.get('CUDA_VISIBLE_DEVICES') is not None:
@@ -57,7 +60,6 @@ def set_gpus(n=1):
     os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(
         [str(i) for i in gpus['index'].iloc[:n]])
-
 
 
 
@@ -86,19 +88,40 @@ def get_model(pretrained=False):
 #         results[validator.name] = validator()
 #         trainer.model.train()
 
-def train(model,
+def train(identifier,
+          model,
           restore_path=None,  # useful when you want to restart training
           save_train_epochs=.1,  # how often save output during training
           save_val_epochs=.5,  # how often save output during validation
           save_model_epochs=5,  # how often save model weigths
           save_model_secs=60 * 10  # how often save model (in sec)
           ):
-    # if ngpus > 0:
-    #     set_gpus(ngpus)
+    if os.path.exists(output_path + f'{identifier}_epoch_20.pth.tar'):
+        class Wrapper(Module):
+            def __init__(self, model):
+                super(Wrapper, self).__init__()
+                self.module = model
+
+        model = Wrapper(model)
+        logger.info('Resore weights from stored results')
+        checkpoint = torch.load(output_path + f'{identifier}_epoch_20.pth.tar',
+                                map_location=lambda storage, loc: storage)  # map onto cpu
+        model.load_state_dict(checkpoint['state_dict'])
+        model = model.module
+        return model
+    logger.info('We start training the model')
     if ngpus > 1 and torch.cuda.device_count() > 1:
+        set_gpus(n=2)
+        logger.info('We have multiple GPUs detected')
         model = nn.DataParallel(model)
-    elif ngpus > 0:
+        model = model.cuda()
+        # model = model.to(device)
+    elif ngpus > 0 and torch.cuda.device_count() is 1:
+        set_gpus(n=1)
+        logger.info('We run on GPU')
         model = model.to(device)
+    else:
+        logger.info('No GPU detected!')
 
     trainer = ImageNetTrain(model)
     validator = ImageNetVal(model)
@@ -144,7 +167,7 @@ def train(model,
             if output_path is not None:
                 records.append(results)
                 if len(results) > 1:
-                    pickle.dump(records, open(output_path + 'results.pkl', 'wb'))
+                    pickle.dump(records, open(output_path + f'results_{identifier}.pkl', 'wb+'))
 
                 ckpt_data = {}
                 # ckpt_data['flags'] = __dict__.copy()
@@ -155,20 +178,19 @@ def train(model,
                 if save_model_secs is not None:
                     if time.time() - recent_time > save_model_secs:
                         torch.save(ckpt_data, output_path +
-                                   'latest_checkpoint.pth.tar')
+                                   f'{identifier}_latest_checkpoint.pth.tar')
                         recent_time = time.time()
 
                 if save_model_steps is not None:
                     if global_step in save_model_steps:
                         torch.save(ckpt_data, output_path +
-                                   f'epoch_{epoch:02d}.pth.tar')
+                                   f'{identifier}_epoch_{epoch:02d}.pth.tar')
 
             else:
                 if len(results) > 1:
                     pprint.pprint(results)
 
             if epoch < epochs:
-                print('we do this 2')
                 frac_epoch = (global_step + 1) / len(trainer.data_loader)
                 record = trainer(frac_epoch, *data)
                 record['data_load_dur'] = data_load_time
@@ -181,6 +203,7 @@ def train(model,
                         results[trainer.name] = record
 
             data_load_start = time.time()
+    return model
 
 
 def test(layer='decoder', sublayer='avgpool', time_step=0, imsize=224):
