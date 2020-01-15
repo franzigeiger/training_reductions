@@ -4,7 +4,7 @@ import os
 import sys
 import traceback
 
-from submission import score_model
+from brainscore import score_model
 
 # from submission import brain_translated_pool
 from benchmark.database import create_connection, store_score
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         # score_models('CORnet-S', benchmark, filename)
         # score_models('alexnet_jumbler', benchmark, filename)
         # score_models('alexnet_kernel_jumbler', benchmark, filename)
-        score_models('CORnet-S_train_random', benchmark, filename)
+        score_models('CORnet-S_train_IT_random', benchmark, filename)
         # score_models('alexnet_norm_dist_kernel', benchmark, filename)
         # score_models('CORnet-S_norm_dist', benchmark, filename)
         # score_models('resnet101', benchmark, filename)

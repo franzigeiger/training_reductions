@@ -8,20 +8,19 @@ from model_tools.brain_transformation import ModelCommitment
 from scipy.stats import norm
 
 from model_impls.pool import brain_translated_pool, base_model_pool
-from model_impls.test_models import alexnet
-from plot.plot_data import plot_data_map
+from model_impls.test_models import alexnet, cornet_s_brainmodel
+from plot.plot_data import plot_data_map, plot_data_base
 
 
-def load_model(model_name):
+def load_model(model_name, random):
     if model_name == 'alexnet':
         return alexnet('', True)._model
     base = brain_translated_pool[model_name]
-    base._ensure_loaded()
     if isinstance(base.content, ModelCommitment):
         model = base_model_pool[model_name]
         model = base.layer_model.activations_model._model
     else:
-        model = base.activations_model._model
+        model = cornet_s_brainmodel('base', (not random)).activations_model._model
     return model
 
 
@@ -33,7 +32,9 @@ def weight_mean_std(model_name):
     norm_dists['mean'] = []
     norm_dists['std'] = []
     # pytorch model
+    layers = []
     for name, m in model.named_modules():
+        layers.append(name)
         if type(m) == nn.Conv2d:
             name.split('.')
             weights = m.weight.data.cpu().numpy()
@@ -107,6 +108,63 @@ def kernel_weight_dist(model_name):
     plot_data_map(all_kernels, f'{model_name}.kernel.dist', 'name', 'Layer number', 'value', scale_fix=[-0.75, 1.0])
 
 
+def mean_var_overview(model_name, random):
+    import torch.nn as nn
+    model = load_model(model_name, random)
+    means = []
+    stds = []
+    layers = []
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            layers.append(name)
+            weights = m.weight.data.cpu().numpy()
+            kernel_means = []
+            kernel_stds = []
+            for kernel_no in range(weights.shape[0]):
+                kernel = weights[kernel_no]
+                kernel_weights = kernel.flatten()
+                kernel_means.append(np.mean(kernel_weights))
+                kernel_stds.append(np.std(kernel_weights))
+            means.append(np.mean(kernel_means))
+            stds.append(np.mean(kernel_stds))
+    plot_data_base({'means': means, 'stds': stds},
+                   f'Mean and Variance of kernels ' + ('Trained' if not random else 'Untrained'), layers,
+                   x_name='Layer number',
+                   y_name='value', scale_fix=[-0.05, 0.2])
+
+
+def mean_compared(model_name, random):
+    import torch.nn as nn
+    model_untrained = load_model(model_name, True)
+    model_trained = load_model(model_name, False)
+    means_untrained = []
+    means_trained = []
+    layers = []
+    for name, m in model_untrained.named_modules():
+        if type(m) == nn.Conv2d:
+            layers.append(name)
+            weights = m.weight.data.cpu().numpy()
+            kernel_means = []
+            for kernel_no in range(weights.shape[0]):
+                kernel = weights[kernel_no]
+                kernel_weights = kernel.flatten()
+                kernel_means.append(np.mean(np.abs(kernel_weights)))
+            means_untrained.append(np.mean(kernel_means))
+    for name, m in model_trained.named_modules():
+        if type(m) == nn.Conv2d:
+            # layers.append(name)
+            weights = m.weight.data.cpu().numpy()
+            kernel_means = []
+            for kernel_no in range(weights.shape[0]):
+                kernel = weights[kernel_no]
+                kernel_weights = kernel.flatten()
+                kernel_means.append(np.mean(np.abs(kernel_weights)))
+            means_trained.append(np.mean(kernel_means))
+    plot_data_base({'means_untrained': means_untrained, 'means_trained': means_trained}, f'Mean trained and untrained',
+                   layers, x_name='Layer number',
+                   y_name='value', rotate=True)
+
+
 def kernel_channel_weight_dist(model_name):
     import torch.nn as nn
     model = load_model(model_name)
@@ -144,14 +202,14 @@ def visualize_first_layer(model_name):
             img = np.transpose(filter_weights, (0, 2, 3, 1))
             idx = 0
             # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
-            for j in range(number): # in zip(axes, range(weights.shape[0])):
+            for j in range(number):  # in zip(axes, range(weights.shape[0])):
                 for i in range(number):
-                    ax = pyplot.subplot(number, number, idx+1)
+                    ax = pyplot.subplot(number, number, idx + 1)
                     ax.set_xticks([])
                     ax.set_yticks([])
                     # imgs = img[range(j*8, (j*8)+number)]
                     pyplot.imshow(img[idx])
-                    idx+=1
+                    idx += 1
             pyplot.show()
             return
 
@@ -193,9 +251,9 @@ if __name__ == '__main__':
     # function_name = 'weight_mean_std'
     # function_name = 'kernel_weight_dist'
     # function_name = 'kernel_channel_weight_dist'
-    function_name = 'visualize_second_layer'
+    function_name = 'mean_compared'
     func = getattr(sys.modules[__name__], function_name)
-    # func('CORnet-S')
-    func('alexnet')
+    func('CORnet-S', True)
+    # func('alexnet')
     # func('densenet169')
     # func('resnet101')

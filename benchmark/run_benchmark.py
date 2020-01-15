@@ -4,7 +4,7 @@ import os
 import sys
 import traceback
 
-from submission import score_model
+from brainscore import score_model
 
 # from submission import brain_translated_pool
 from benchmark.database import create_connection, store_score
@@ -21,7 +21,7 @@ def run_benchmark(benchmark_identifier, model_name):
 
 def score_models(model, benchmark, filename):
     # if model.endswith('one_layer'):
-    # os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,submission"
+    os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,submission"
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
     path = f'{dir_path}/../scores.sqlite'
@@ -85,7 +85,7 @@ if __name__ == '__main__':
         # score_models('CORnet-S', benchmark, filename)
         # score_models('alexnet_jumbler', benchmark, filename)
         # score_models('alexnet_kernel_jumbler', benchmark, filename)
-        score_models('CORnet-S_high_zero_0.3', benchmark, filename)
+        score_models('CORnet-S_std_function', benchmark, filename)
         # score_models('alexnet_norm_dist_kernel', benchmark, filename)
         # score_models('CORnet-S_norm_dist', benchmark, filename)
         # score_models('resnet101', benchmark, filename)

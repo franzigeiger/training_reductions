@@ -18,6 +18,24 @@ brain_models = {
         lambda: cornet_s_brainmodel('train_channel_jumbler', True, apply_channel_jumbler, train_decoder=True)),
     'CORnet-S_train_norm_dist_kernel': LazyLoad(
         lambda: cornet_s_brainmodel('train_norm_dist_kernel', True, apply_norm_dist_kernel, train_decoder=True)),
+    'CORnet-S_train_IT_random': LazyLoad(
+        lambda: cornet_s_brainmodel('train_IT_random', False, train_decoder=True, config=['IT', 'decoder'])),
+    'CORnet-S_train_IT_norm_dist': LazyLoad(
+        lambda: cornet_s_brainmodel('train_IT_norm_dist', True, apply_norm_dist, train_decoder=True,
+                                    config=['IT', 'decoder'])),
+    # 'CORnet-S_train_uniform_dist': LazyLoad(lambda: cornet_s_brainmodel('uniform_dist', True, apply_uniform_dist, train_decoder=True)),
+    'CORnet-S_train_IT_jumbler': LazyLoad(
+        lambda: cornet_s_brainmodel('train_IT_jumbler', True, apply_all_jumbler, train_decoder=True,
+                                    config=['IT', 'decoder'])),
+    'CORnet-S_train_IT_kernel_jumbler': LazyLoad(
+        lambda: cornet_s_brainmodel('train_IT_kernel_jumbler', True, apply_in_kernel_jumbler, train_decoder=True,
+                                    config=['IT', 'decoder'])),
+    'CORnet-S_train_IT_channel_jumbler': LazyLoad(
+        lambda: cornet_s_brainmodel('train_IT_channel_jumbler', True, apply_channel_jumbler, train_decoder=True,
+                                    config=['IT', 'decoder'])),
+    'CORnet-S_train_IT_norm_dist_kernel': LazyLoad(
+        lambda: cornet_s_brainmodel('train_IT_norm_dist_kernel', True, apply_norm_dist_kernel, train_decoder=True,
+                                    config=['IT', 'decoder'])),
 }
 
 brain_translated_pool = UniqueKeyDict()

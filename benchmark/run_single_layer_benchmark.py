@@ -1,16 +1,14 @@
 import datetime
 import logging
-import logging
 import os
-import statistics
 import sys
 import traceback
 
-from submission import score_model
-
 # from submission import brain_translated_pool
+from brainscore import score_model
+
 from benchmark.database import create_connection, store_score
-from model_impls.single_layer_pool import brain_translated_pool
+from model_impls.model_based_pool import brain_translated_pool
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +84,7 @@ if __name__ == '__main__':
         # score_models('CORnet-S', benchmark, filename)
         # score_models('alexnet_jumbler', benchmark, filename)
         # score_models('alexnet_kernel_jumbler', benchmark, filename)
-        score_models('CORnet-S_norm_dist_L1', benchmark, filename)
+        score_models('CORnet-S_incremental_init', benchmark, filename)
         # score_models('alexnet_norm_dist_kernel', benchmark, filename)
         # score_models('CORnet-S_norm_dist', benchmark, filename)
         # score_models('resnet101', benchmark, filename)

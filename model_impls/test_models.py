@@ -64,7 +64,7 @@ def get_model(identifier, init_weights=True, type='layer', function=None, config
         elif type is 'model':
             model = apply_to_one_layer(model, function, config)
         elif type is 'custom':
-            model = config[0]()
+            model = config[0](model, function, config)
     return model
 
 

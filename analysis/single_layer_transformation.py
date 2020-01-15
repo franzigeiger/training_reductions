@@ -50,6 +50,43 @@ def plot_single_layer_perturbation():
     plot_data_base(behavior_data, 'Behavior Benchmark single layer', labels, 'Conv Layers', 'Score', [0.0, 0.6])
 
 
+def plot_overflow():
+    overflow_models = []
+
+    for i in (0.05, 0.1, 0.2, 0.3, 0.4, 0.5):
+        overflow_models.append(f'CORnet-S_overflow_{i}')
+    conn = get_connection()
+    result_overflow_models = load_scores(conn, overflow_models,
+                                         ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_base_random = load_scores(conn, ['CORnet-S_random'],
+                                     ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_base = load_scores(conn, ['CORnet-S'], ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+
+    it_data = {}
+    it_data['overflow_init'] = []
+    it_data['base_untrained'] = []
+    it_data['base_trained'] = []
+    behavior_data = {}
+    behavior_data['overflow_init'] = []
+    behavior_data['base_untrained'] = []
+    behavior_data['base_trained'] = []
+    labels = []
+    for i in (0.05, 0.1, 0.2, 0.3, 0.4, 0.5):
+        labels.append(i)
+        it_data['overflow_init'].append(result_overflow_models[f'CORnet-S_overflow_{i}'][0])
+        it_data['base_untrained'].append(result_base_random[f'CORnet-S_random'][0])
+        it_data['base_trained'].append(result_base[f'CORnet-S'][0])
+        behavior_data['overflow_init'].append(result_overflow_models[f'CORnet-S_overflow_{i}'][1])
+        behavior_data['base_untrained'].append(result_base_random[f'CORnet-S_random'][1])
+        behavior_data['base_trained'].append(result_base[f'CORnet-S'][1])
+
+    plot_data_base(it_data, 'IT benchmark overflow_initialization', labels, 'Overflow initialization in %', 'Score',
+                   [0.0, 0.6])
+    plot_data_base(behavior_data, 'Behavior benchmark overflow initialization', labels, 'Overflow initialization in %',
+                   'Score',
+                   [0.0, 0.6])
+
+
 def plot_high_low_variance():
     high_var_models = []
     high_var_trained_models = []
@@ -273,10 +310,10 @@ def plot_high_low_nullify_separate():
                    base_line=result_base[f'CORnet-S'][1])
 
 
-
 if __name__ == '__main__':
     # plot_high_low_variance()
     # plot_high_low_nullify()
     # plot_single_layer_perturbation()
-    plot_high_low_nullify_separate()
+    # plot_high_low_nullify_separate()
     # plot_high_low_variance_separate()
+    plot_overflow()

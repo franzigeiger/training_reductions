@@ -3,10 +3,14 @@ import logging
 import sys
 
 import fire
+import numpy as np
+import torch
+from numpy.random.mtrand import RandomState
 
 from benchmark.run_benchmark import score_models as score_models_full
 from benchmark.run_decoder_train_benchmark import score_models as score_models_train
 from benchmark.run_single_layer_benchmark import score_models as score_models_single
+from transformations import layer_based
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +26,8 @@ parser.add_argument('--batchnorm', type=bool,
                     help='Set if we apply changes also to batchnorm')
 parser.add_argument('--pool', type=str, default='NET',
                     help='Pool to use: SINGLE|NET|TRAIN')
+parser.add_argument('--seed', type=int, default='0',
+                    help='Random seed to change random weights')
 args, remaining_args = parser.parse_known_args()
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level),
                     format='%(asctime)-15s %(levelname)s:%(name)s:%(message)s')
@@ -34,11 +40,16 @@ def score_model_console():
     logger.info(f'Benchmarks configured:{args.benchmark}')
     logger.info(f'Models configured:{args.model}')
     if args.pool == 'SINGLE':
-        score_models_single(model=args.model, benchmark= args.benchmark, filename=args.file_name)
-    elif args.pool == 'NET' :
-        score_models_full(model=args.model, benchmark= args.benchmark, filename=args.file_name)
+        score_models_single(model=args.model, benchmark=args.benchmark, filename=args.file_name)
+    elif args.pool == 'NET':
+        score_models_full(model=args.model, benchmark=args.benchmark, filename=args.file_name)
     elif args.pool == 'TRAIN':
-        score_models_train(model=args.model, benchmark= args.benchmark, filename=args.file_name)
+        score_models_train(model=args.model, benchmark=args.benchmark, filename=args.file_name)
+
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    layer_based.random_state = RandomState(args.seed)
+
 
 logger.info(f"Running {' '.join(sys.argv)}")
 fire.Fire(command='score_model_console')

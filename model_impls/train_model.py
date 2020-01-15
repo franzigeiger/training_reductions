@@ -22,9 +22,6 @@ from torch.nn import Module
 Image.warnings.simplefilter('ignore')
 logger = logging.getLogger(__name__)
 
-np.random.seed(0)
-torch.manual_seed(0)
-
 torch.backends.cudnn.benchmark = False
 normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
@@ -39,7 +36,7 @@ step_size = 32
 lr =.1
 workers = 32
 if ngpus > 0:
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def set_gpus(n=2):
@@ -49,19 +46,20 @@ def set_gpus(n=2):
     """
     gpus = subprocess.run(shlex.split(
         'nvidia-smi --query-gpu=index,memory.free,memory.total --format=csv,nounits'), check=True,
-        stdout=subprocess.PIPE).stdout
+        stdout=subprocess.PIPE, shell=True).stdout
     gpus = pandas.read_csv(io.BytesIO(gpus), sep=', ', engine='python')
+    print(gpus)
+
     gpus = gpus[gpus['memory.total [MiB]'] > 10000]  # only above 10 GB
     if os.environ.get('CUDA_VISIBLE_DEVICES') is not None:
         visible = [int(i)
                    for i in os.environ['CUDA_VISIBLE_DEVICES'].split(',')]
         gpus = gpus[gpus['index'].isin(visible)]
+    print(f'GPUs {gpus}')
     gpus = gpus.sort_values(by='memory.free [MiB]', ascending=False)
     os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(
         [str(i) for i in gpus['index'].iloc[:n]])
-
-
 
 
 def get_model(pretrained=False):
@@ -79,23 +77,17 @@ def get_model(pretrained=False):
     return model
 
 
-# def train_model(model):
-#     # train(model, save_model_epochs=50, save_model_secs=60*100)
-#     trainer = ImageNetTrain(model)
-#     validator = ImageNetVal(model)
-#     results = {}
-#     for i in range(5):
-#         results[validator.name] = validator()
-#         trainer.model.train()
-
 def train(identifier,
           model,
           restore_path=None,  # useful when you want to restart training
           save_train_epochs=.1,  # how often save output during training
           save_val_epochs=.5,  # how often save output during validation
           save_model_epochs=5,  # how often save model weigths
-          save_model_secs=60 * 10  # how often save model (in sec)
+          save_model_secs=60 * 10,  # how often save model (in sec)
+          areas=None
           ):
+    devices = os.environ.get('CUDA_VISIBLE_DEVICES')
+    print(f'>>>>>>>>>> {devices} ')
     if os.path.exists(output_path + f'{identifier}_epoch_20.pth.tar'):
         class Wrapper(Module):
             def __init__(self, model):
@@ -111,19 +103,17 @@ def train(identifier,
         return model
     logger.info('We start training the model')
     if ngpus > 1 and torch.cuda.device_count() > 1:
-        set_gpus(n=2)
+        # set_gpus(n=2)
         logger.info('We have multiple GPUs detected')
         model = nn.DataParallel(model)
-        model = model.cuda()
-        # model = model.to(device)
+        model = model.to(device)
     elif ngpus > 0 and torch.cuda.device_count() is 1:
-        set_gpus(n=1)
         logger.info('We run on GPU')
         model = model.to(device)
     else:
         logger.info('No GPU detected!')
 
-    trainer = ImageNetTrain(model)
+    trainer = ImageNetTrain(model, areas)
     validator = ImageNetVal(model)
 
     start_epoch = 0
@@ -263,11 +253,13 @@ def test(layer='decoder', sublayer='avgpool', time_step=0, imsize=224):
 
 class ImageNetTrain(object):
 
-    def __init__(self, model):
+    def __init__(self, model, config):
         self.name = 'train'
         self.model = model
         self.data_loader = self.data()
-        self.optimizer = torch.optim.SGD(self.model.parameters(),
+        train = []
+
+        self.optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
                                          lr,
                                          momentum=momentum,
                                          weight_decay=weight_decay)

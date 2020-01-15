@@ -75,3 +75,22 @@ def apply_low_variance_cut(m, config):
         f'Low variance values set to zero: {counter} from total number of kernels {weights.shape[0]}, configuration:'
         f'{config[0]}')
     m.weight.data = torch.Tensor(weights)
+
+
+def apply_overflow_weights(m, configs=None):
+    if configs is None:
+        overflow = 0.2
+    else:
+        overflow = configs[0]
+    weights = m.weight.data.cpu().numpy()
+    init_number = weights.shape[0] + int(weights.shape[0] * overflow) + 1
+    big_weights = torch.nn.init.xavier_normal(
+        torch.empty(init_number, weights.shape[1], weights.shape[2], weights.shape[3])).data.cpu().numpy()
+    _, stds = calculate_variances(big_weights, 0.3)
+    sorted_stds = np.sort(stds)
+    pivot = sorted_stds[weights.shape[0]]
+    counter = 0
+    for i in range(init_number):
+        if stds[i] < pivot:
+            weights[counter] = big_weights[i]
+    m.weight.data = torch.Tensor(weights)

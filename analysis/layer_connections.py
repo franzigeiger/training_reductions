@@ -102,7 +102,7 @@ def impact_mean_std(type='Sum impact', func=connections, random=True, upper_boun
         means.append(np.mean(inf))
         stds.append(np.std(inf))
         relative.append(stds[i] / means[i])
-    plot_data_base({'std': stds, 'mean': means}, f'{type} ' + ('untrained' if random else 'trained'),
+    plot_data_base({'mean': means, 'std': stds}, f'{type} ' + ('untrained' if random else 'trained'),
                    layer[0:(len(layer) - 1)],
                    rotate=True, scale_fix=(0.0, upper_bound))
     print(relative)

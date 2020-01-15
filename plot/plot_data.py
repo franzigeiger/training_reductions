@@ -8,6 +8,8 @@ from benchmark.database import load_scores, create_connection
 benchmarks = ['dicarlo.Majaj2015.V4-pls', 'dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n',
               'fei-fei.Deng2009-top1']
 
+benchmarks_small = ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n']
+
 
 def get_connection():
     path = os.path.abspath(__file__)
@@ -74,7 +76,7 @@ def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=No
     # if base_line is not 0:
     #     plt.hlines(base_line, xmin=0, xmax=1, colors='b')
     for key, value in data.items():
-        if key is 'base':
+        if key in ['base', 'base_untrained', 'base_trained']:
             plt.plot(x_labels, data[key], label=key, linestyle="solid", marker="", alpha=alpha)
         else:
             plt.plot(x_labels, data[key], label=key, linestyle="", marker="o", alpha=alpha)
