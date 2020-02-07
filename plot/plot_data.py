@@ -2,6 +2,8 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
+from matplotlib.ticker import ScalarFormatter
 
 from benchmark.database import load_scores, create_connection
 
@@ -11,10 +13,10 @@ benchmarks = ['dicarlo.Majaj2015.V4-pls', 'dicarlo.Majaj2015.IT-pls', 'dicarlo.R
 benchmarks_small = ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n']
 
 
-def get_connection():
+def get_connection(name='scores'):
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
-    path = f'{dir_path}/../scores.sqlite'
+    path = f'{dir_path}/../{name}.sqlite'
     return create_connection(path)
 
 
@@ -47,9 +49,14 @@ def load_data(models, benchmarks):
     return load_scores(db, models, benchmarks)
 
 
+def load_data_openmind(models, benchmarks):
+    db = get_connection('scores_openmind')
+    return load_scores(db, models, benchmarks)
+
+
 def plot_data(benchmarks, data, labels, name, scale_fix=None):
-    # res, ax = plt.subplots()
-    y = np.array([0, 1, 2])
+    sns.set()
+    sns.set_context("paper")
     x = np.arange(len(benchmarks))
     plt.xticks(x, labels, rotation='vertical', fontsize=8)
     # plt.yticks(y, models)
@@ -67,7 +74,9 @@ def plot_data(benchmarks, data, labels, name, scale_fix=None):
 
 
 def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=None, rotate=False, alpha=1.0,
-                   base_line=0):
+                   x_ticks=None, log=False):
+    sns.set()
+    sns.set_context("paper")
     if x_labels is None:
         x_labels = np.arange(len(data.values[0]))
     if rotate:
@@ -79,13 +88,55 @@ def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=No
         if key in ['base', 'base_untrained', 'base_trained']:
             plt.plot(x_labels, data[key], label=key, linestyle="solid", marker="", alpha=alpha)
         else:
-            plt.plot(x_labels, data[key], label=key, linestyle="", marker="o", alpha=alpha)
+            plt.plot(x_labels, data[key], label=key, scalex=True, linestyle="-", marker=".", alpha=alpha)
     plt.title(name)
     plt.xlabel(x_name)
     plt.ylabel(y_name)
+    if log:
+        plt.xscale('symlog')
+        ax = plt.gca()
+        ax.xaxis.set_major_formatter(ScalarFormatter())
+    if x_ticks:
+        plt.xticks(x_ticks)
     plt.legend()
     if scale_fix:
         plt.ylim(scale_fix[0], scale_fix[1])
+    plt.tight_layout()
+    file_name = name.replace(' ', '_')
+    plt.savefig(f'{file_name}.png')
+    plt.show()
+
+
+def plot_two_scales(data, name, x_labels=None, x_name='', y_name='', y_name2='', scale_fix=None, rotate=False,
+                    alpha=1.0,
+                    base_line=0):
+    if x_labels is None:
+        x_labels = np.arange(len(data.values[0]))
+    if rotate:
+        plt.xticks(rotation='vertical', fontsize=8)
+    print(data)
+    # if base_line is not 0:
+    #     plt.hlines(base_line, xmin=0, xmax=1, colors='b')
+    isFirst = True
+    fig, ax1 = plt.subplots()
+    for key, value in data.items():
+        if isFirst:
+            ax1.set_ylabel(y_name, color='blue')
+            ax1.plot(x_labels, data[key], linestyle="", marker="o", alpha=alpha)
+            ax1.tick_params(axis='y')
+            ax1.tick_params(labelrotation=45)
+            isFirst = False
+        else:
+            ax2 = plt.twinx()
+            ax2.plot(x_labels, data[key], linestyle="", marker="o", alpha=alpha, color='orange')
+            ax2.set_ylabel(y_name2, color='orange')
+            ax2.tick_params(axis='y', color='orange')
+    plt.title(name)
+    ax1.set_xlabel(x_name)
+    # plt.ylabel(y_name)
+    plt.legend()
+    # if scale_fix:
+    #     plt.ylim(scale_fix[0], scale_fix[1])
     plt.tight_layout()
     file_name = name.replace(' ', '_')
     plt.savefig(f'{file_name}.png')
@@ -108,7 +159,8 @@ def plot_data_map(data, name, label_field='layer', x_name='', y_name='', scale_f
     if scale_fix:
         plt.ylim(scale_fix[0], scale_fix[1])
     plt.tight_layout()
-    plt.savefig(f'{name}.png')
+    file_name = name.replace(' ', '_')
+    plt.savefig(f'{file_name}.png')
     plt.show()
 
 
@@ -128,53 +180,17 @@ def plot_1_dim_data(data, name, x_labels=None, x_name='', y_name='', scale_fix=N
     plt.show()
 
 
-def plot_histogram(data, layer, model):
-    assert data.ndim == 1
-    weights = np.ones(len(data)) / len(data)
-    plt.hist(data, alpha=0.5, bins=100, range=(-0.4, 0.4), weights=weights, fill=True)
-    plt.gca().set(title=layer, xlabel='Weight distribution')
+def plot_histogram(data, name, bins=100, labels=[], x_axis='Weight distribution'):
+    plt.hist(data, alpha=0.5, bins=bins, fill=True, histtype='bar', density=True, label=labels)
+    plt.legend(prop={'size': 10})
+    plt.gca().set(title=name, xlabel=x_axis)
     plt.tight_layout()
-    plt.savefig(f'hist_{model}_{layer}.png')
+    file_name = name.replace(' ', '_')
+    plt.savefig(f'{file_name}.png')
     plt.show()
 
 
 def plot_heatmap(data, col_labels, row_labels, title, **kwargs):
-    # vegetables = ["cucumber", "tomato", "lettuce", "asparagus",
-    #                              "potato", "wheat", "barley"]
-    # farmers = ["Farmer Joe", "Upland Bros.", "Smith Gardening",
-    #            "Agrifun", "Organiculture", "BioGoods Ltd.", "Cornylee Corp."]
-    #
-    # harvest = np.array([[0.8, 2.4, 2.5, 3.9, 0.0, 4.0, 0.0],
-    #                     [2.4, 0.0, 4.0, 1.0, 2.7, 0.0, 0.0],
-    #                     [1.1, 2.4, 0.8, 4.3, 1.9, 4.4, 0.0],
-    #                     [0.6, 0.0, 0.3, 0.0, 3.1, 0.0, 0.0],
-    #                     [0.7, 1.7, 0.6, 2.6, 2.2, 6.2, 0.0],
-    #                     [1.3, 1.2, 0.0, 0.0, 0.0, 3.2, 5.1],
-    #                     [0.1, 2.0, 0.0, 1.4, 0.0, 1.9, 6.3]])
-
-    # fig, ax = plt.subplots()
-    # im = ax.imshow(data)
-    #
-    # # We want to show all ticks...
-    # ax.set_xticks(np.arange(len(x_labels)))
-    # ax.set_yticks(np.arange(len(y_labels)))
-    # # ... and label them with the respective list entries
-    # ax.set_xticklabels(x_labels)
-    # ax.set_yticklabels(y_labels)
-    #
-    # # Rotate the tick labels and set their alignment.
-    # plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-    #          rotation_mode="anchor")
-    #
-    # # Loop over data dimensions and create text annotations.
-    # for i in range(len(x_labels)):
-    #     for j in range(len(y_labels)):
-    #         text = ax.text(j, i, data[i, j],
-    #                        ha="center", va="center", color="w")
-    #
-    # ax.set_title(title)
-    # fig.tight_layout()
-    # plt.show()
     fig, ax = plt.subplots()
 
     # Plot the heatmap

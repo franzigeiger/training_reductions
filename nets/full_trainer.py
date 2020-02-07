@@ -1,4 +1,5 @@
 import glob
+import importlib
 import io
 import logging
 import os
@@ -26,15 +27,15 @@ torch.backends.cudnn.benchmark = False
 normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
 ngpus = 2
-epochs = 20
-output_path = os.path.join(os.path.dirname(__file__), 'model_weights/')
+epochs = 43
+output_path = '/braintree/home/fgeiger/weight_initialization/nets/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
 data_path = '/braintree/data2/active/common/imagenet_raw/'
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9
-step_size = 32
-lr =.1
-workers = 32
+step_size = 20
+lr = .1
+workers = 20
 if ngpus > 0:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -65,9 +66,6 @@ def set_gpus(n=2):
 def get_model(pretrained=False):
     map_location = None if ngpus > 0 else 'cpu'
     model = getattr(cornet, f'cornet_S')
-    # if model.lower() == 'r':
-    #     model = model(pretrained=pretrained, map_location=map_location, times=times)
-    # else:
     model = model(pretrained=pretrained, map_location=map_location)
 
     if ngpus == 0:
@@ -82,28 +80,16 @@ def train(identifier,
           restore_path=None,  # useful when you want to restart training
           save_train_epochs=.1,  # how often save output during training
           save_val_epochs=.5,  # how often save output during validation
-          save_model_epochs=5,  # how often save model weigths
+          save_model_epochs=1,  # how often save model weigths
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
-    devices = os.environ.get('CUDA_VISIBLE_DEVICES')
-    print(f'>>>>>>>>>> {devices} ')
-    if os.path.exists(output_path + f'{identifier}_epoch_20.pth.tar'):
-        class Wrapper(Module):
-            def __init__(self, model):
-                super(Wrapper, self).__init__()
-                self.module = model
-
-        model = Wrapper(model)
-        logger.info('Resore weights from stored results')
-        checkpoint = torch.load(output_path + f'{identifier}_epoch_20.pth.tar',
-                                map_location=lambda storage, loc: storage)  # map onto cpu
-        model.load_state_dict(checkpoint['state_dict'])
-        model = model.module
-        return model
+    if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
+        logger.info('Model already trained')
+        return
+    restore_path = output_path
     logger.info('We start training the model')
     if ngpus > 1 and torch.cuda.device_count() > 1:
-        # set_gpus(n=2)
         logger.info('We have multiple GPUs detected')
         model = nn.DataParallel(model)
         model = model.to(device)
@@ -112,14 +98,16 @@ def train(identifier,
         model = model.to(device)
     else:
         logger.info('No GPU detected!')
-
     trainer = ImageNetTrain(model, areas)
     validator = ImageNetVal(model)
 
     start_epoch = 0
-    if restore_path is not None:
+    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
+    if len(stored) > 0:
+        restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
         ckpt_data = torch.load(restore_path)
         start_epoch = ckpt_data['epoch']
+        logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
         model.load_state_dict(ckpt_data['state_dict'])
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
@@ -141,7 +129,7 @@ def train(identifier,
                         'epoch': start_epoch,
                         'wall_time': time.time()}
                }
-    for epoch in tqdm.trange(0, epochs + 1, initial=start_epoch, desc='epoch'):
+    for epoch in tqdm.trange(start_epoch, epochs + 1, initial=start_epoch, desc='epoch'):
         data_load_start = np.nan
         for step, data in enumerate(tqdm.tqdm(trainer.data_loader, desc=trainer.name)):
             data_load_time = time.time() - data_load_start
@@ -193,6 +181,8 @@ def train(identifier,
                         results[trainer.name] = record
 
             data_load_start = time.time()
+    if ngpus > 1 and torch.cuda.device_count() > 1:
+        return model.module
     return model
 
 
@@ -257,8 +247,6 @@ class ImageNetTrain(object):
         self.name = 'train'
         self.model = model
         self.data_loader = self.data()
-        train = []
-
         self.optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
                                          lr,
                                          momentum=momentum,
@@ -348,9 +336,9 @@ class ImageNetVal(object):
         with torch.no_grad():
             for (inp, target) in tqdm.tqdm(self.data_loader, desc=self.name):
                 if ngpus > 0:
-                    inp =inp.to(device)
+                    inp = inp.to(device)
                     target = target.to(device)
-                        # = target.cuda(non_blocking=True)
+                    # = target.cuda(non_blocking=True)
                 output = self.model(inp)
 
                 record['loss'] += self.loss(output, target).item()
@@ -373,3 +361,60 @@ def accuracy(output, target, topk=(1,)):
         correct = pred.eq(target.view(1, -1).expand_as(pred))
         res = [correct[:k].sum().item() for k in topk]
         return res
+
+
+if __name__ == '__main__':
+    with open(output_path + f'results_CORnet-S_train_IT_random_2_gpus.pkl', 'rb') as f:
+        data = pickle.load(f)
+        print(data[0])
+        print(data[len(data) - 1])
+    # np.random.seed(0)
+    # torch.manual_seed(0)
+    # layer_based.random_state = RandomState(0)
+    identifier = 'CORnet-S_train_IT_seed_0'
+    mod = importlib.import_module(f'cornet.cornet_s')
+    model_ctr = getattr(mod, f'CORnet_S')
+    model = model_ctr()
+    # model = cornet.cornet_s(True)
+    model3 = cornet.cornet_s(False)
+    model2 = cornet.cornet_s(False)
+    if os.path.exists(output_path + f'{identifier}_epoch_20.pth.tar'):
+        logger.info('Resore weights from stored results')
+        checkpoint = torch.load(output_path + f'{identifier}_epoch_20.pth.tar',
+                                map_location=lambda storage, loc: storage)
+        model2.load_state_dict(checkpoint['state_dict'])
+        checkpoint2 = torch.load(output_path + f'CORnet-S_random.pth.tar',
+                                 map_location=lambda storage, loc: storage)
+
+
+        class Wrapper(Module):
+            def __init__(self, model):
+                super(Wrapper, self).__init__()
+                self.module = model
+
+
+        model = Wrapper(model)
+        model.load_state_dict(checkpoint2['state_dict'])
+        model3 = model.module
+    # if os.path.exists(output_path + f'{identifier}_2_gpus_epoch_00.pth.tar'):
+    #     logger.info('Resore weights from stored results')
+    #     checkpoint = torch.load(output_path + f'{identifier}_epoch_00.pth.tar',
+    #                             map_location=lambda storage, loc: storage)  # map onto cpu
+    # model.load_state_dict(checkpoint['state_dict'])
+    for name, m in model2.module.named_parameters():
+        for name2, m2 in model3.named_parameters():
+            if name == name2:
+                print(name)
+                value1 = m.data.cpu().numpy()
+                value2 = m2.data.cpu().numpy()
+                print((value1 == value2).all())
+
+    # values1 = model.module.V1.conv2.weight.data.cpu().numpy()
+    # values2 = model2.module.V1.conv2.weight.data.cpu().numpy()
+    # values3 = model3.module.V1.conv2.weight.data.cpu().numpy()
+    # diffs = values2 - values3
+    # # print(diffs)
+    # print((values1 == values2).all())
+    #
+    # print((values3 == values1).all())
+    # print(identifier)

@@ -55,7 +55,8 @@ def plot_overflow():
 
     for i in (0.05, 0.1, 0.2, 0.3, 0.4, 0.5):
         overflow_models.append(f'CORnet-S_overflow_{i}')
-    conn = get_connection()
+    # conn = get_connection()
+    conn = get_connection('scores_openmind')
     result_overflow_models = load_scores(conn, overflow_models,
                                          ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_base_random = load_scores(conn, ['CORnet-S_random'],
@@ -80,6 +81,8 @@ def plot_overflow():
         behavior_data['base_untrained'].append(result_base_random[f'CORnet-S_random'][1])
         behavior_data['base_trained'].append(result_base[f'CORnet-S'][1])
 
+    print(it_data)
+    print(behavior_data)
     plot_data_base(it_data, 'IT benchmark overflow_initialization', labels, 'Overflow initialization in %', 'Score',
                    [0.0, 0.6])
     plot_data_base(behavior_data, 'Behavior benchmark overflow initialization', labels, 'Overflow initialization in %',
@@ -208,7 +211,8 @@ def plot_high_low_nullify():
         high_var_trained_models.append(f'CORnet-S_trained_high_zero_{i}')
         low_var_models.append(f'CORnet-S_low_zero_{i}')
         low_var_trained_models.append(f'CORnet-S_trained_low_zero_{i}')
-    conn = get_connection()
+    # conn = get_connection()
+    conn = get_connection('scores_openmind')
     result_high_var = load_scores(conn, high_var_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_high_var_trained = load_scores(conn, high_var_trained_models,
                                           ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
@@ -219,20 +223,10 @@ def plot_high_low_nullify():
                                      ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_base = load_scores(conn, ['CORnet-S'], ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
 
-    it_data = {}
-    it_data['high_zero_untrained'] = []
-    it_data['low_zero_untrained'] = []
-    it_data['high_zero_trained'] = []
-    it_data['low_zero_trained'] = []
-    it_data['base_untrained'] = []
-    it_data['base_trained'] = []
-    behavior_data = {}
-    behavior_data['high_zero_untrained'] = []
-    behavior_data['low_zero_untrained'] = []
-    behavior_data['high_zero_trained'] = []
-    behavior_data['low_zero_trained'] = []
-    behavior_data['base_untrained'] = []
-    behavior_data['base_trained'] = []
+    it_data = {'high_zero_untrained': [], 'low_zero_untrained': [], 'high_zero_trained': [], 'low_zero_trained': [],
+               'base_untrained': [], 'base_trained': []}
+    behavior_data = {'high_zero_untrained': [], 'low_zero_untrained': [], 'high_zero_trained': [],
+                     'low_zero_trained': [], 'base_untrained': [], 'base_trained': []}
     labels = []
     for i in (0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95):
         labels.append(i)

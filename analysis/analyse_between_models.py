@@ -23,20 +23,27 @@ def model_perturbation_scores():
     # Per model results
     # models = ['CORnet-S', 'CORnet-S_random', 'CORnet-S_trained_incremental_init', 'CORnet-S_incremental_init']
     # models = get_list_all_pert(['CORnet-S'])
-    models = ['CORnet-S', 'CORnet-S_train_IT_random']
+    # models = ['CORnet-S', 'CORnet-S_random_2', 'CORnet-S_random', 'CORnet-S_train_IT_random']
+    models = ['CORnet-S', 'CORnet-S_train_all_epoch_20']
+    # models = ['CORnet-S', 'CORnet-S_random']
     data = load_data(models, ['movshon.FreemanZiemba2013.V1-pls', 'movshon.FreemanZiemba2013.V2-pls'] + benchmarks)
-    plot_data(benchmarks, data, ['V1', 'V2', 'V4', 'IT', 'Behaviour', 'Imagenet'], 'cornet_it_train_all')
+    plot_data(['movshon.FreemanZiemba2013.V1-pls', 'movshon.FreemanZiemba2013.V2-pls'] + benchmarks, data,
+              ['V1', 'V2', 'V4', 'IT', 'Behaviour', 'Imagenet'], 'cornet_IT_train_all')
 
 
 def small_model_perturbation_score():
     # Per model results
-    models = ['CORnet-S', 'CORnet-S_random', 'CORnet-S_std_function_1', 'CORnet-S_std_function_2',
-              'CORnet-S_std_function_3', 'CORnet-S_std_function_4']
+    # models = ['CORnet-S', 'CORnet-S_random', 'CORnet-S_norm_dist', 'CORnet-S_std_function_1', 'CORnet-S_std_function_2',
+    #           'CORnet-S_std_function_3', 'CORnet-S_std_function_4']
     # models = ['CORnet-S', 'CORnet-S_random', 'CORnet-S_trained_incremental_init', 'CORnet-S_incremental_init']
+    # models = ['CORnet-S', 'CORnet-S_random', 'CORnet-S_train_norm_dist', 'CORnet-S_train_norm_dist_kernel']
+    # models = ['CORnet-S', 'CORnet-S_random_2', 'CORnet-S_train_IT_random']
+    models = ['CORnet-S', 'CORnet-S_train_all_epoch_20']
     # models = get_list_all_pert(['CORnet-S'])
-    data = load_data(models, benchmarks_small)
+    data = load_data(models, (['dicarlo.Majaj2015.V4-pls'] + benchmarks_small + ['fei-fei.Deng2009-top1']))
     # plot_data(benchmarks, data, ['V4', 'IT', 'Behaviour', 'Imagenet'], 'alexnet_all')
-    plot_data(benchmarks_small, data, ['IT', 'Behaviour'], 'std_function')
+    plot_data(['dicarlo.Majaj2015.V4-pls'] + benchmarks_small + ['fei-fei.Deng2009-top1'], data,
+              ['V4', 'IT', 'Behaviour', 'Imagenet'], 'delete')
 
 
 def correlation_per_all_perturbation():
@@ -54,5 +61,5 @@ def correlate_per_perturbation(perturbation):
 if __name__ == '__main__':
     # precomputed_smaller_benchmarkset()
     # correlation_per_all_perturbation()
-    # small_model_perturbation_score()
-    model_perturbation_scores()
+    small_model_perturbation_score()
+    # model_perturbation_scores()

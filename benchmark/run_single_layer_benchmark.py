@@ -8,7 +8,7 @@ import traceback
 from brainscore import score_model
 
 from benchmark.database import create_connection, store_score
-from model_impls.model_based_pool import brain_translated_pool
+from nets.model_based_pool import brain_translated_pool
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def run_benchmark(benchmark_identifier, model_name):
 
 def score_models(model, benchmark, filename):
     # if model.endswith('one_layer'):
-    # os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,submission"
+    os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,submission"
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
     path = f'{dir_path}/../scores.sqlite'

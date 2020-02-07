@@ -3,6 +3,7 @@ import importlib
 import logging
 import os
 
+import numpy as np
 import torch
 from candidate_models.base_models.cornet import TemporalPytorchWrapper
 from candidate_models.model_commitments.cornets import CORnetCommitment
@@ -11,16 +12,23 @@ from model_tools.utils import s3
 from submission.utils import UniqueKeyDict
 from torch.nn import Module
 
-from model_impls.train_model import train
+from nets.trainer import output_path
+from nets.trainer import train
 from transformations.layer_based import apply_to_net
 from transformations.model_based import apply_to_one_layer
 
 _logger = logging.getLogger(__name__)
 
+seed = 0
 
-def cornet(identifier, init_weights=True, type='layer', function=None, config=None):
+
+# def cornet_long(identifier, init_weights=True, type='layer', function=None, config=None):
+#
+#     cornet(identifier, init_weights, else config + {'model_func': function})
+
+def cornet(identifier, init_weights=True, config=None):
     _logger.info('Run normal benchmark')
-    model = get_model(identifier, init_weights, type, function, config)
+    model = get_model(identifier, init_weights, config)
     from model_tools.activations.pytorch import load_preprocess_images
     preprocessing = functools.partial(load_preprocess_images, image_size=224)
     wrapper = TemporalPytorchWrapper(identifier='%s_%s' % ('CORnet-S', identifier), model=model,
@@ -30,23 +38,55 @@ def cornet(identifier, init_weights=True, type='layer', function=None, config=No
     return wrapper
 
 
-def get_model(identifier, init_weights=True, type='layer', function=None, config=None):
+def get_model(identifier, init_weights=True, config=None):
+    if config is None:
+        config = {}
     cornet_type = 'S'
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     mod = importlib.import_module(f'cornet.cornet_{cornet_type.lower()}')
     model_ctr = getattr(mod, f'CORnet_{cornet_type.upper()}')
     model = model_ctr()
-
     if init_weights:
-        WEIGHT_MAPPING = {
-            'S': 'cornet_s_epoch43.pth.tar'
-        }
-
+        _logger.info('Initialize weights')
         class Wrapper(Module):
             def __init__(self, model):
                 super(Wrapper, self).__init__()
                 self.module = model
-
         model = Wrapper(model)  # model was wrapped with DataParallel, so weights require `module.` prefix
+        weights_path = get_weights(identifier)
+        checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)  # map onto cpu
+        model.load_state_dict(checkpoint['state_dict'])
+        model = model.module  # unwrap
+    if 'model_func' in config or 'layer_func' in config:
+        _logger.info('Apply function')
+        if config['model_func']:
+            print('>>>run with function ', config['model_func'])
+            model = config['model_func'](model, config)
+        else:
+            print('>>>run with net function and add', config)
+            model = apply_to_net(model, config)
+    # else:
+    #     class Wrapper(Module):
+    #         def __init__(self, model):
+    #             super(Wrapper, self).__init__()
+    #             self.module = model
+    #     model = Wrapper(model)
+    #     ckpt_data = {}
+    #     # ckpt_data['flags'] = __dict__.copy()
+    #     ckpt_data['epoch'] = 0
+    #     ckpt_data['state_dict'] = model.state_dict()
+    #     torch.save(ckpt_data, output_path +
+    #                f'{identifier}.pth.tar')
+    return model
+
+
+def get_weights(identifier):
+    if identifier == 'CORnet-S_base':
+        WEIGHT_MAPPING = {
+            'S': 'cornet_s_epoch43.pth.tar'
+        }
+        cornet_type = 'S'
         framework_home = os.path.expanduser(os.getenv('CM_HOME', '~/.candidate_models'))
         weightsdir_path = os.getenv('CM_TSLIM_WEIGHTS_DIR', os.path.join(framework_home, 'model-weights', 'cornet'))
         weights_path = os.path.join(weightsdir_path, WEIGHT_MAPPING[cornet_type.upper()])
@@ -54,43 +94,26 @@ def get_model(identifier, init_weights=True, type='layer', function=None, config
             _logger.debug(f"Downloading weights for {identifier} to {weights_path}")
             os.makedirs(weightsdir_path, exist_ok=True)
             s3.download_file(WEIGHT_MAPPING[cornet_type.upper()], weights_path, bucket='cornet-models')
-        checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)  # map onto cpu
-        model.load_state_dict(checkpoint['state_dict'])
-        model = model.module  # unwrap
-    if function:
-        if type is 'layer':
-            print('>>>run with function ', function)
-            model = apply_to_net(model, function, config)
-        elif type is 'model':
-            model = apply_to_one_layer(model, function, config)
-        elif type is 'custom':
-            model = config[0](model, function, config)
-    return model
+    else:
+        weights_path = output_path + f'{identifier}.pth.tar'
+    return weights_path
 
 
-def cornets_decoder_train(identifier, init_weights=True, type='layer', function=None, config=None):
-    _logger.info('We train the decoder')
-    model = get_model(identifier, init_weights, type, function, config)
-    model = train_model(identifier, model, config)
-    from model_tools.activations.pytorch import load_preprocess_images
-    preprocessing = functools.partial(load_preprocess_images, image_size=224)
-    wrapper = TemporalPytorchWrapper(identifier='%s_%s' % ('CORnet-S', identifier), model=model,
-                                     preprocessing=preprocessing,
-                                     separate_time=True)
-    wrapper.image_size = 224
-    return wrapper
-
-
-def train_model(identifier, model, config=None):
+def run_model_training(identifier, init_weights=True, config=None, train_func=None):
+    model = get_model(identifier, init_weights, config)
     if config is None:
-        config = ['decoder']
-    for name, m in model.named_modules():
-        if any(value in name for value in config):
+        config = {'layers': ['decoder']}
+    for name, m in model.named_parameters():
+        # if type(m) == torch.nn.Conv2d or type(m) == torch.nn.Linear or type(m) == torch.nn.BatchNorm2d:
+        if any(value in name for value in config['layers']):
             m.requires_grad = True
         else:
             m.requires_grad = False
     # model.decoder.requires_grad = True
-    model = train(identifier, model)
+    if train_func:
+        model = train_func(identifier, model)
+    else:
+        model = train(identifier, model)
     return model
 
 
@@ -102,9 +125,9 @@ def _build_time_mappings(time_mappings):
         for region, (time_start, time_step_size, timesteps) in time_mappings.items()}
 
 
-def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer',
-                        train_decoder=False):
-    identifier = '%s_%s' % ('CORnet-S', identifier)
+def cornet_s_brainmodel_short(identifier='', init_weigths=True, config=None):
+    if not identifier.startswith('CORnet-S'):
+        identifier = '%s_%s' % ('CORnet-S', identifier)
     # map region -> (time_start, time_step_size, timesteps)
     time_mappings = {
         'V1': (50, 100, 1),
@@ -113,12 +136,7 @@ def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=
         'V4': (90, 50, 4),
         'IT': (100, 100, 2),
     }
-    if train_decoder:
-        model = cornets_decoder_train(identifier=identifier, init_weights=init_weigths,
-                                      function=function, config=config, type=type)
-    else:
-        model = cornet(identifier=identifier, init_weights=init_weigths,
-                       function=function, config=config, type=type)
+    model = cornet(identifier=identifier, init_weights=init_weigths, config=config)
     return CORnetCommitment(identifier=identifier,
                             activations_model=model,
                             layers=['V1.output-t0'] +
@@ -127,6 +145,16 @@ def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=
                                     for timestep in timesteps] +
                                    ['decoder.avgpool-t0'],
                             time_mapping=_build_time_mappings(time_mappings))
+
+
+def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer'):
+    if function and type == 'layer':
+        config['layer_func'] = function
+    if type == 'model':
+        config = config + {'layer_func': function, 'model_func': apply_to_one_layer}
+    if type == 'custom':
+        config['model_func'] = function
+    return cornet_s_brainmodel_short(identifier, init_weigths, config)
 
 
 def alexnet(identifier, init_weights=True, function=None):
@@ -139,6 +167,22 @@ def densenet169(identifier, init_weights=True, function=None):
 
 def resnet101(identifier, init_weights=True, function=None):
     return pytorch_model('resnet101', '%s_%s' % ('resnet', identifier), 224, init_weights, function)
+
+
+def resnet_michael(identifier, init_weights=True, function=None):
+    from tbs import load_model
+    from tbs.tfkeras_wrapper_for_brainscore import TFKerasWrapper, resnet_preprocessing
+    epoch = int(identifier.split('_')[-1])
+    _logger.info(f'We load weights from epoch {epoch}')
+    model = load_model.ResNet50(weights='imagenet', epoch=epoch, batch_size=None, trainable=False)
+    return TFKerasWrapper(model,
+                          preprocessing=resnet_preprocessing,
+                          identifier='my_model_name')
+
+
+def resnet_michael_layers():
+    from tbs.tfkeras_wrapper_for_brainscore import resnet_layers
+    return resnet_layers
 
 
 def pytorch_model(function, identifier, image_size, init_weights=True, transformation=None):

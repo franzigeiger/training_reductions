@@ -2,8 +2,8 @@ from brainscore.utils import LazyLoad
 from submission.ml_pool import MLBrainPool
 from submission.utils import UniqueKeyDict
 
-from model_impls import test_models as model_file
-from model_impls.test_models import cornet_s_brainmodel, model_layers
+from nets import test_models as model_file
+from nets.test_models import cornet_s_brainmodel, model_layers
 from transformations.configurable import apply_nullify_small, apply_nullify_high, apply_low_variance_cut, \
     apply_high_variance_cut, apply_overflow_weights
 from transformations.layer_based import *
@@ -51,7 +51,10 @@ class BaseModelPool(UniqueKeyDict):
 
 
 brain_models = {'CORnet-S': LazyLoad(lambda: cornet_s_brainmodel('base', True)),
-                'CORnet-S_random': LazyLoad(lambda: cornet_s_brainmodel('random', False)),
+                'CORnet-S_random': LazyLoad(lambda: cornet_s_brainmodel('random', True)),
+                'CORnet-S_train_IT_seed_0_epoch_10': LazyLoad(
+                    lambda: cornet_s_brainmodel('CORnet-S_train_IT_seed_0_epoch_10', True)),
+                'CORnet-S_random_2': LazyLoad(lambda: cornet_s_brainmodel('random', False)),
                 'CORnet-S_norm_dist': LazyLoad(lambda: cornet_s_brainmodel('norm_dist', True, apply_norm_dist)),
                 'CORnet-S_uniform_dist': LazyLoad(
                     lambda: cornet_s_brainmodel('uniform_dist', True, apply_uniform_dist)),
@@ -63,21 +66,19 @@ brain_models = {'CORnet-S': LazyLoad(lambda: cornet_s_brainmodel('base', True)),
                 'CORnet-S_norm_dist_kernel': LazyLoad(
                     lambda: cornet_s_brainmodel('norm_dist_kernel', True, apply_norm_dist_kernel)),
                 'CORnet-S_kaiming': LazyLoad(
-                    lambda: cornet_s_brainmodel('kaiming', True, apply_kaiming)),
+                    lambda: cornet_s_brainmodel('kaiming', False, apply_kaiming)),
                 f'CORnet-S_incremental_init': LazyLoad(
                     lambda: cornet_s_brainmodel(f'incremental_init', False,
-                                                function=apply_norm_dist,
-                                                config=[apply_incremental_init],
+                                                function=apply_incremental_init,
                                                 type='custom')),
                 f'CORnet-S_trained_incremental_init': LazyLoad(
                     lambda: cornet_s_brainmodel(f'trained_incremental_init', True,
-                                                function=apply_norm_dist,
-                                                config=[apply_incremental_init],
+                                                function=apply_incremental_init,
                                                 type='custom')),
                 f'CORnet-S_std_function_2': LazyLoad(
                     lambda: cornet_s_brainmodel(f'trained_incremental_init', True,
-                                                function=apply_norm_dist,
-                                                config=[apply_fit_std_function, 2],
+                                                function=apply_fit_std_function,
+                                                config={'config': [2]},
                                                 type='custom'))
                 }
 
@@ -113,7 +114,7 @@ for level in [1, 2, 3, 4]:
     brain_models[f'CORnet-S_std_function_{level}'] = LazyLoad(
         lambda level_fix=level: cornet_s_brainmodel(f'trained_incremental_init', True,
                                                     function=apply_norm_dist,
-                                                    config=[apply_fit_std_function, level_fix],
+                                                    config={'func': apply_fit_std_function, 'config': [level_fix]},
                                                     type='custom'))
 
 for percent in [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:

@@ -7,9 +7,9 @@ from matplotlib import pyplot
 from model_tools.brain_transformation import ModelCommitment
 from scipy.stats import norm
 
-from model_impls.pool import brain_translated_pool, base_model_pool
-from model_impls.test_models import alexnet, cornet_s_brainmodel
-from plot.plot_data import plot_data_map, plot_data_base
+from nets.pool import brain_translated_pool, base_model_pool
+from nets.test_models import alexnet, cornet_s_brainmodel
+from plot.plot_data import plot_data_map, plot_data_base, plot_two_scales
 
 
 def load_model(model_name, random):
@@ -24,28 +24,29 @@ def load_model(model_name, random):
     return model
 
 
-def weight_mean_std(model_name):
+def weight_mean_std(model_name, random=False):
     import torch.nn as nn
-    model = load_model(model_name)
+    model = load_model(model_name, random)
     norm_dists = {}
-    norm_dists['layer'] = []
+    # norm_dists['layer'] = []
     norm_dists['mean'] = []
     norm_dists['std'] = []
     # pytorch model
     layers = []
     for name, m in model.named_modules():
-        layers.append(name)
         if type(m) == nn.Conv2d:
+            layers.append(name)
             name.split('.')
             weights = m.weight.data.cpu().numpy()
             flat = weights.flatten()
             mu, std = norm.fit(flat)
-            norm_dists['layer'].append(name)
+            # norm_dists['layer'].append(name)
             norm_dists['mean'].append(mu)
             norm_dists['std'].append(std)
             print(f'Norm dist mean: {mu} and std: {std}')
             # plot_histogram(flat, name, model_name)
-    plot_data_map(norm_dists, model_name, scale_fix=[-0.01, 0.15])
+    plot_two_scales(norm_dists, model_name, x_labels=layers, x_name='layers', y_name='Mean', y_name2='Std',
+                    scale_fix=[-0.01, 0.15], rotate=True)
     # model.apply(plot_distribution)
 
 
@@ -189,29 +190,29 @@ def kernel_channel_weight_dist(model_name):
             plot_data_map(kernel_values, f'{name}_kernels', 'name', scale_fix=[-0.75, 1.0])
 
 
-def visualize_first_layer(model_name):
+def visualize_kernel_sidewards(model_name):
     import torch.nn as nn
-    model = load_model(model_name)
+    model = load_model(model_name, False)
+    counter = 0
     for name, m in model.named_modules():
-        if type(m) == nn.Conv2d:
+        if type(m) == nn.Conv2d and counter >= 1:
             weights = m.weight
             f_min, f_max = weights.min(), weights.max()
             weights = (weights - f_min) / (f_max - f_min)
             number = math.ceil(math.sqrt(weights.shape[0]))
             filter_weights = weights.data.squeeze()
-            img = np.transpose(filter_weights, (0, 2, 3, 1))
+            img = np.transpose(filter_weights, (0, 3, 1, 2))
             idx = 0
-            # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
-            for j in range(number):  # in zip(axes, range(weights.shape[0])):
-                for i in range(number):
-                    ax = pyplot.subplot(number, number, idx + 1)
-                    ax.set_xticks([])
-                    ax.set_yticks([])
-                    # imgs = img[range(j*8, (j*8)+number)]
-                    pyplot.imshow(img[idx])
-                    idx += 1
+            for j in range(int(len(img))):
+                ax = pyplot.subplot(len(img) / 4, 4, idx + 1)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                pyplot.imshow(img[idx])
+                idx += 1
             pyplot.show()
             return
+        elif type(m) == nn.Conv2d:
+            counter += 1
 
 
 def visualize_second_layer(model_name):
@@ -247,13 +248,78 @@ def visualize_second_layer(model_name):
             counter += 1
 
 
+def analyze_filter_delta(model_name):
+    import torch.nn as nn
+    model = load_model(model_name, False)
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            weights = m.weight.data.squeeze()
+            ranges = []
+            maxes = []
+            mines = []
+            all_differences = []
+            for kernel in range(weights.shape[0]):
+                differences = []
+                deltas = [(0, 1), (0, 2), (1, 2)]
+                local_rang = []
+                mean_avgs = []
+                for i in [0, 1, 2]:
+                    filter = weights[kernel, i].numpy()
+                    min = np.min(filter)
+                    max = np.max(filter)
+                    filter = (filter - min) / (max - min)
+                    min = np.min(filter)
+                    max = np.max(filter)
+                    rang = (max - min)
+                    mean_avgs.append((np.average(filter), np.var(filter, dtype=float), rang, min))
+                    ranges.append(rang)
+                    local_rang.append(rang)
+                    maxes.append(max)
+                    mines.append(min)
+                for delta in deltas:
+                    filter1 = weights[kernel, delta[0]].numpy()
+                    min = np.min(filter1)
+                    max = np.max(filter1)
+                    filter1 = (filter1 - min) / (max - min)
+                    filter2 = weights[kernel, delta[1]].numpy()
+                    min = np.min(filter2)
+                    max = np.max(filter2)
+                    filter2 = (filter2 - min) / (max - min)
+                    avg_range = (local_rang[delta[0]] + local_rang[delta[1]]) / 2
+                    diff = np.average(np.true_divide(np.abs(filter1 - filter2), avg_range))
+                    differences.append(diff)
+                    all_differences.append(diff)
+                print(f'difference in kernel {kernel}: differences: {differences}, filter means and avgs: {mean_avgs}')
+            print(
+                f'Filter range average {sum(ranges)/len(ranges)}, filter min average: {sum(mines)/len(maxes)}, max avg: {sum(maxes)/len(maxes)}, avg diff: {sum(all_differences)/len(all_differences)}')
+            return
+
+
+def analyze_signs(model_name, random):
+    def weight_mean_std(model_name, random=False):
+        pass
+
+    model = load_model(model_name, random)
+
+
+def analyze_normalization(model_name):
+    import torch.nn as nn
+    model = load_model(model_name, False)
+    for name, m in model.named_modules():
+        if type(m) == nn.BatchNorm2d:
+            weights = m.weight.data.squeeze().numpy()
+            print(f'Avg:{np.mean(weights)}, std: {np.std(weights)}')
+
+
 if __name__ == '__main__':
     # function_name = 'weight_mean_std'
     # function_name = 'kernel_weight_dist'
     # function_name = 'kernel_channel_weight_dist'
-    function_name = 'mean_compared'
+    # function_name = 'mean_compared'
+    # function_name = 'visualize_kernel_sidewards'
+    function_name = 'analyze_filter_delta'
     func = getattr(sys.modules[__name__], function_name)
-    func('CORnet-S', True)
+    func('CORnet-S')
     # func('alexnet')
     # func('densenet169')
     # func('resnet101')

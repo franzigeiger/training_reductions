@@ -2,8 +2,8 @@ import numpy as np
 from scipy.stats import norm
 from torch import nn
 
-from model_impls.test_models import cornet_s_brainmodel
-from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap
+from nets.test_models import cornet_s_brainmodel
+from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap, plot_histogram
 
 
 def get_layer_weigh_list(random=True):
@@ -60,13 +60,12 @@ scales_sum = {1: (1.5, 2.7),
               4: (0.6, 1.5)}
 
 
-def connections(random, plot=False):
+def connections(random, plot=False, normalize=False):
     kernel_weights, layer, sizes, weights = get_layer_weigh_list(random)
     influences = []
     for i in range(1, len(weights)):
         previous = weights[i - 1]
         influence_overall = np.zeros(previous.shape[0])
-        number_k = []
         for j in range(sizes[i]):
             to_analyze = np.abs(kernel_weights[f'{layer[i]}_kernel{j}'])
             sum = np.sum(to_analyze.flatten())
@@ -74,11 +73,12 @@ def connections(random, plot=False):
             for k in range(to_analyze.shape[0]):
                 value = np.sum(to_analyze[k])
                 dim_weights.append(value / sum)
-            top_k = []
 
             for s in range(len(dim_weights)):
                 influence_overall[s] = influence_overall[s] + dim_weights[s]
-            number_k.append(len(top_k))
+        if normalize:
+            for s in range(len(influence_overall)):
+                influence_overall[s] = influence_overall[s] / sizes[i]
         if plot:
             print(layer)
             if i - 1 in scales_sum:
@@ -92,7 +92,18 @@ def connections(random, plot=False):
     return influences, layer
 
 
-def impact_mean_std(type='Sum impact', func=connections, random=True, upper_bound=1.3):
+def impact_histogram(type='Sum impact', func=connections, random=True, upper_bound=0.3):
+    influences, layer = func(False, False, normalize=True)
+    influences_rand, layer = func(True, False, normalize=True)
+    for i in range(len(influences)):
+        all = influences[i]
+        all_rand = influences_rand[i]
+        con = np.stack((all, all_rand), axis=0)
+        plot_histogram(con.T, f'Sum impact distribution trained and random layer {layer[i]}', bins=7,
+                       labels=['Trained', 'Random'], x_axis=type)
+
+
+def impact_mean_std(type='Sum impact', func=connections, random=True, upper_bound=0.3):
     influences, layer = func(random, False)
     means = []
     stds = []
@@ -102,7 +113,7 @@ def impact_mean_std(type='Sum impact', func=connections, random=True, upper_boun
         means.append(np.mean(inf))
         stds.append(np.std(inf))
         relative.append(stds[i] / means[i])
-    plot_data_base({'mean': means, 'std': stds}, f'{type} ' + ('untrained' if random else 'trained'),
+    plot_data_base({'std': stds}, f'{type} ' + ('untrained' if random else 'trained'),
                    layer[0:(len(layer) - 1)],
                    rotate=True, scale_fix=(0.0, upper_bound))
     print(relative)
@@ -227,11 +238,12 @@ if __name__ == '__main__':
     # impact_mean_std()
     # impact_mean(False)
     # impact_mean(True)
-    # impact_mean_std( func=connections, random=True, upper_bound=4.0)
-    # impact_mean_std( func=connections , random=False, upper_bound=4.0)
+    # impact_mean_std(func=connections, random=True, upper_bound=1.0)
+    # impact_mean_std(func=connections, random=False, upper_bound=1.0)
+    impact_histogram(func=connections, random=False, upper_bound=1.0)
     # impact_mean_std('Mean impact', impact_mean, True)
     # impact_mean_std('Mean impact', impact_mean, False)
     # impact_heatmap()
     # mean()
-    kernel_weight_size(True)
+    # kernel_weight_size(True)
     # kernel_weight_size(False)
