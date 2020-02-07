@@ -25,10 +25,8 @@ def score_kernel(X, theta, frequency, sigma, offset, stds):
 
 
 def objective_function(beta, X):
-    # print(beta)
     kernel = np.real(gabor_kernel(beta[0], theta=beta[1],
                                   sigma_x=beta[2], sigma_y=beta[2], offset=beta[3], n_stds=beta[4]))
-    # sigma_x=beta[2], sigma_y=beta[2], n_stds=beta[3], offset=beta[4]))
     kernel = resize(kernel, (X.shape[0], X.shape[0]),
                     anti_aliasing=True)
     f_min, f_max = kernel.min(), kernel.max()
@@ -42,7 +40,6 @@ def objective_function(beta, X):
 def hyperparam_gabor():
     model = get_model('CORnet-S_base', True)
     counter = 0
-    # visualize_first_layer('', model)
     gabor_params = np.zeros([64, 3, 5])
     np.random.seed(1)
     for name, m in model.named_modules():
