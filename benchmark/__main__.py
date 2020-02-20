@@ -48,7 +48,7 @@ def score_model_console():
     elif args.pool == 'NET':
         score_models_full(model=args.model, benchmark=args.benchmark)
     elif args.pool == 'TRAIN':
-        model = args.model + f'_epoch_{args.epoch:02d}' if args.epoch != 0 else args.epoch
+        model = args.model + f'_epoch_{args.epoch:02d}'  # if args.epoch != 0 else args.model
         score_models_train(model=model, benchmark=args.benchmark)
 
 

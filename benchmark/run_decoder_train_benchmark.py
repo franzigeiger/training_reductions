@@ -60,7 +60,7 @@ if __name__ == '__main__':
         # score_models('CORnet-S', benchmark, filename)
         # score_models('alexnet_jumbler', benchmark, filename)
         # score_models('alexnet_kernel_jumbler', benchmark, filename)
-        score_models('resnet_mil_trained_epoch_10', benchmark)
+        score_models('CORnet-S_train_gabor_fit_second_kernel_conv_epoch_05', benchmark)
         # score_models('alexnet_norm_dist_kernel', benchmark, filename)
         # score_models('CORnet-S_norm_dist', benchmark, filename)
         # score_models('resnet101', benchmark, filename)

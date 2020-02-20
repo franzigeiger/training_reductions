@@ -99,7 +99,9 @@ def impact_histogram(type='Sum impact', func=connections, random=True, upper_bou
         all = influences[i]
         all_rand = influences_rand[i]
         con = np.stack((all, all_rand), axis=0)
-        plot_histogram(con.T, f'Sum impact distribution trained and random layer {layer[i]}', bins=7,
+        # plot_histogram(con.T, f'{type} distribution trained and random layer {layer[i]}', bins=20,
+        #                labels=['Trained', 'Random'], x_axis=type, range=[0.0, 1.5])
+        plot_histogram(con.T, f'{type} distribution trained and random layer {layer[i]}', bins=7,
                        labels=['Trained', 'Random'], x_axis=type)
 
 
@@ -146,7 +148,7 @@ def kernel_weight_size(random=True):
                    layer[0:(len(layer) - 1)], rotate=True, scale_fix=(0, 2000))
 
 
-def impact_mean(random=True, print_plot=True):
+def impact_mean(random=True, print_plot=True, normalize=False):
     kernel_weights, layer, sizes, weights = get_layer_weigh_list(random)
     influences = []
     for i in range(1, 17):
@@ -240,10 +242,11 @@ if __name__ == '__main__':
     # impact_mean(True)
     # impact_mean_std(func=connections, random=True, upper_bound=1.0)
     # impact_mean_std(func=connections, random=False, upper_bound=1.0)
-    impact_histogram(func=connections, random=False, upper_bound=1.0)
+    # impact_histogram(func=connections, random=False, upper_bound=1.0)
+    # impact_histogram(type='Mean impact', func=impact_mean, random=False, upper_bound=1.0)
     # impact_mean_std('Mean impact', impact_mean, True)
     # impact_mean_std('Mean impact', impact_mean, False)
-    # impact_heatmap()
+    impact_heatmap()
     # mean()
     # kernel_weight_size(True)
     # kernel_weight_size(False)

@@ -6,13 +6,13 @@ import matplotlib.ticker as plticker
 import numpy as np
 from kymatio.scattering2d.filter_bank import filter_bank
 from kymatio.scattering2d.utils import fft2
-from matplotlib import gridspec
 from skimage.filters import gabor_kernel
 from skimage.transform import resize
 from torch import nn
 
 from nets import trained_models
 from nets.test_models import cornet_s_brainmodel, get_model
+from plot.plot_data import plot_images
 from utils.correlation import generate_correlation_map, auto_correlation
 
 
@@ -84,35 +84,8 @@ def plot_gabor_filters():
                         labels.append(
                             f'Theta {theta:.2}\n sigma {sigma}, std {stds}\n frequency {frequency}, \noffset {offset}')
                         print(f'Theta {theta}, sigma {sigma}, frequency {frequency}, stds {stds}')
-        plot_imags(kernels, 10, labels, f'Theta_{theta:.2}')
+        plot_images(kernels, 10, labels, f'Theta_{theta:.2}')
         kernels = []
-
-
-def plot_imags(img, size, labels, theta):
-    idx = 0
-    plt.figure(figsize=(20, 15))
-    gs = gridspec.GridSpec(int(len(img) / size) + 1, size, width_ratios=[1] * size,
-                           wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
-    for j in range(1 + int(len(img) / size)):  # in zip(axes, range(weights.shape[0])):
-        for i in range(size):
-            if idx < len(img):
-                ax = plt.subplot(gs[j, i])
-                ax.set_title(labels[idx], pad=3)
-                ax.set_xticks([])
-                ax.set_yticks([])
-                ax.title.set_fontsize(14)
-                # imgs = img[range(j*8, (j*8)+number)]
-
-                plt.imshow(img[idx], cmap='gray')
-                idx += 1
-
-    plt.subplots_adjust(hspace=0.0, wspace=0.0)
-    # plt.tight_layout()
-    plt.margins(0, 0)
-    plt.gca().xaxis.set_major_locator(plt.NullLocator())
-    plt.gca().yaxis.set_major_locator(plt.NullLocator())
-    plt.savefig(f'gabors_{theta}.png')
-    plt.show(bbox_inches='tight', pad_inches=0)
 
 
 def plot_correlation_weights(model_name, size):

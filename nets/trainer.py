@@ -33,9 +33,9 @@ data_path = '/braintree/data2/active/common/imagenet_raw/'
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9
-step_size = 32
-lr =.1
-workers = 32
+step_size = 20
+lr = .1
+workers = 20
 if ngpus > 0:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -94,7 +94,7 @@ def train(identifier,
         model = nn.DataParallel(model)
         model = model.to(device)
     elif ngpus > 0 and torch.cuda.device_count() is 1:
-        logger.info('We run on GPU')
+        logger.info('We run on one GPU')
         model = model.to(device)
     else:
         logger.info('No GPU detected!')
@@ -139,7 +139,6 @@ def train(identifier,
             if save_val_steps is not None:
 
                 if global_step in save_val_steps:
-                    print('we do this 1')
                     results[validator.name] = validator()
                     trainer.model.train()
 
@@ -280,12 +279,8 @@ class ImageNetTrain(object):
         with torch.autograd.detect_anomaly():
             if ngpus > 0:
                 inp = inp.to(device)
-                # target =target.to(device)
-                # inp.to('cuda')
                 target = target.cuda(non_blocking=True)
-            # print(inp)
             output = self.model(inp)
-            # print(output)
             record = {}
             loss = self.loss(output, target)
             record['loss'] = loss.item()
@@ -293,8 +288,6 @@ class ImageNetTrain(object):
             record['top1'] /= len(output)
             record['top5'] /= len(output)
             record['learning_rate'] = self.lr.get_lr()[0]
-            # print(loss)
-            # print(f'shape {loss.shape}')
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -339,7 +332,6 @@ class ImageNetVal(object):
                 if ngpus > 0:
                     inp =inp.to(device)
                     target = target.to(device)
-                        # = target.cuda(non_blocking=True)
                 output = self.model(inp)
 
                 record['loss'] += self.loss(output, target).item()
@@ -350,7 +342,7 @@ class ImageNetVal(object):
         for key in record:
             record[key] /= len(self.data_loader.dataset.samples)
         record['dur'] = (time.time() - start) / len(self.data_loader)
-
+        print(f'Validation accuracy: Top1{record["top5"]}')
         return record
 
 
@@ -367,7 +359,9 @@ def accuracy(output, target, topk=(1,)):
 if __name__ == '__main__':
     with open(output_path + f'results_CORnet-S_train_IT_random_2_gpus.pkl', 'rb') as f:
         data = pickle.load(f)
-        print(data[0])
+        # validation = data['val']
+        item = data[-1]
+        print(item)
         print(data[len(data) - 1])
     # np.random.seed(0)
     # torch.manual_seed(0)

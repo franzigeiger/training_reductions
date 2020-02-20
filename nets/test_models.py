@@ -56,7 +56,10 @@ def get_model(identifier, init_weights=True, config=None):
         model = Wrapper(model)  # model was wrapped with DataParallel, so weights require `module.` prefix
         weights_path = get_weights(identifier)
         checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)  # map onto cpu
-        model.load_state_dict(checkpoint['state_dict'])
+        try:
+            model.load_state_dict(checkpoint['state_dict'])
+        except:
+            model.module.load_state_dict(checkpoint['state_dict'])
         model = model.module  # unwrap
     if 'model_func' in config or 'layer_func' in config:
         _logger.info('Apply function')
@@ -66,20 +69,13 @@ def get_model(identifier, init_weights=True, config=None):
         else:
             print('>>>run with net function and add', config)
             model = apply_to_net(model, config)
-    # else:
-    #     class Wrapper(Module):
-    #         def __init__(self, model):
-    #             super(Wrapper, self).__init__()
-    #             self.module = model
-    #     model = Wrapper(model)
-    #     ckpt_data = {}
-    #     # ckpt_data['flags'] = __dict__.copy()
-    #     ckpt_data['epoch'] = 0
-    #     ckpt_data['state_dict'] = model.state_dict()
-    #     torch.save(ckpt_data, output_path +
-    #                f'{identifier}.pth.tar')
     return model
 
+
+def get_resnet50(init_weights=True):
+    module = importlib.import_module(f'torchvision.models')
+    model_ctr = getattr(module, 'resnet50')
+    return model_ctr(pretrained=init_weights)
 
 def get_weights(identifier):
     if identifier == 'CORnet-S_base':
@@ -169,15 +165,22 @@ def resnet101(identifier, init_weights=True, function=None):
     return pytorch_model('resnet101', '%s_%s' % ('resnet', identifier), 224, init_weights, function)
 
 
+def resnet50(identifier, init_weights=True, function=None):
+    return pytorch_model('resnet50', '%s_%s' % ('resnet', identifier), 224, init_weights, function)
+
+
 def resnet_michael(identifier, init_weights=True, function=None):
     from tbs import load_model
     from tbs.tfkeras_wrapper_for_brainscore import TFKerasWrapper, resnet_preprocessing
     epoch = int(identifier.split('_')[-1])
     _logger.info(f'We load weights from epoch {epoch}')
-    model = load_model.ResNet50(weights='imagenet', epoch=epoch, batch_size=None, trainable=False)
+    if epoch == 0:
+        model = load_model.ResNet50(weights='random_weights', batch_size=None, trainable=False)
+    else:
+        model = load_model.ResNet50(weights='imagenet', epoch=epoch, batch_size=None, trainable=False)
     return TFKerasWrapper(model,
                           preprocessing=resnet_preprocessing,
-                          identifier='my_model_name')
+                          identifier=identifier)
 
 
 def resnet_michael_layers():
