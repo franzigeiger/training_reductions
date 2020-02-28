@@ -2,7 +2,6 @@ import math
 from colorsys import hls_to_rgb
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as plticker
 import numpy as np
 from kymatio.scattering2d.filter_bank import filter_bank
 from kymatio.scattering2d.utils import fft2
@@ -12,7 +11,7 @@ from torch import nn
 
 from nets import trained_models
 from nets.test_models import cornet_s_brainmodel, get_model
-from plot.plot_data import plot_images
+from plot.plot_data import plot_images, plot_matrixImage
 from utils.correlation import generate_correlation_map, auto_correlation
 
 
@@ -130,7 +129,7 @@ def plot_conv2_weights(model_name):
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d and counter >= 1:
             weights = m.weight.data.cpu().numpy()
-            length = 64 * weights.shape[2]
+            length = weights.shape[0] * weights.shape[2]
             matrix = np.empty([length, 0])
             for i in range(0, 64):
                 row = np.empty([0, weights.shape[2]])
@@ -138,7 +137,6 @@ def plot_conv2_weights(model_name):
                     row = np.concatenate((row, weights[i, j]), axis=0)
                 f_min, f_max = np.min(row), np.max(row)
                 row = (row - f_min) / (f_max - f_min)
-                # row[0,0] = 0
                 matrix = np.concatenate((matrix, row), axis=1)
                 # matrix[0,0] = 1
             # f_min, f_max = np.min(matrix), np.max(matrix)
@@ -147,26 +145,6 @@ def plot_conv2_weights(model_name):
             return
         elif type(m) == nn.Conv2d:
             counter += 1
-
-
-def plot_matrixImage(matrix, title, size=3):
-    plt.figure(figsize=(20, 20))
-    fig, ax = plt.subplots(figsize=(20, 20))
-    loc = plticker.MultipleLocator(base=size)
-    ax.xaxis.set_major_locator(loc)
-    ax.yaxis.set_major_locator(loc)
-
-    ax.set_xlabel('Kernels')
-    ax.set_ylabel('Filters')
-    ax.xaxis.set_ticks(np.arange(0, matrix.shape[0]), size)
-    ax.yaxis.set_ticks(np.arange(0, matrix.shape[1]), size)
-    ax.grid(which='major', axis='both', linestyle='-')
-    plt.setp(ax.get_xticklabels(), visible=False)
-    plt.setp(ax.get_yticklabels(), visible=False)
-    extent = (0, matrix.shape[1], matrix.shape[0], 0)
-    plt.imshow(matrix, cmap='gray', extent=extent)
-    plt.savefig(f'{title}.png')
-    plt.show(figsize=(20, 20))
 
 
 def colorize(z):
@@ -245,9 +223,10 @@ def plot_wavelets(J, L, elems, it):
 
 
 if __name__ == '__main__':
-    wavelets()
+    # wavelets()
     # plot_gabor_filters()
-    # plot_conv2_weights('base')
+    # plot_conv2_weights('CORnet-S_train_second_kernel_conv_epoch_05')
+    plot_conv2_weights('CORnet-S_train_gabor_dist_second_kernel_conv_epoch_05')
     # plot_correlation_weights('CORnet-S_train_all_epoch_10', 3)
     # plot_correlation_weights('CORnet-S_train_all_epoch_10', 7)
     # plot_conv2_weights('CORnet-S_train_all_epoch_10')

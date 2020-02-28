@@ -7,7 +7,7 @@ from nets.test_models import cornet_s_brainmodel, resnet_michael, resnet_michael
 brain_translated_pool = UniqueKeyDict()
 
 for identifier in trained_models.keys():
-    for epoch in (0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 15, 20, 43):
+    for epoch in (0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 15, 20, 43, 37, 26):
         brain_translated_pool[f'{identifier}_epoch_{epoch:02d}'] = LazyLoad(
             lambda id=identifier, e=epoch: cornet_s_brainmodel(f'{id}_epoch_{e:02d}', True))
 

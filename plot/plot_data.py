@@ -1,6 +1,7 @@
 import os
 
 import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
 import numpy as np
 import seaborn as sns
 from matplotlib import gridspec
@@ -295,7 +296,7 @@ def plot_heatmap(data, col_labels, row_labels, title, **kwargs):
 def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots'):
     sns.set()
     sns.set_context("paper")
-    plt.figure(figsize=(15, 15))
+    plt.figure(figsize=(30, 30))
     bars = len(data)
     step_size = int(bars / 5) + 1
     x = np.arange(0, step_size * len(labels), step_size)  # the label locations
@@ -310,10 +311,10 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
         idx += 1
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel(y_label)
-    ax.set_title(title)
+    # ax.set_title(title)
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
-    ax.legend(loc=1, prop={'size': 5})
+    ax.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), prop={'size': 5}, borderaxespad=0, frameon=False, ncol=2)
 
     for rect in ax.patches:
         height = rect.get_height()
@@ -372,4 +373,23 @@ def plot_2d(x, y, name):
     plt.gca().set(title=name)
     file_name = name.replace(' ', '_')
     plt.savefig(f'{file_name}.png')
+    plt.show()
+
+
+def plot_matrixImage(matrix, title, size=3):
+    fig, ax = plt.subplots(figsize=(20, 20))
+    loc = plticker.MultipleLocator(base=size)
+    ax.xaxis.set_major_locator(loc)
+    ax.yaxis.set_major_locator(loc)
+
+    ax.set_xlabel('Kernels')
+    ax.set_ylabel('Filters')
+    ax.xaxis.set_ticks(np.arange(0, matrix.shape[0]), size)
+    ax.yaxis.set_ticks(np.arange(0, matrix.shape[1]), size)
+    ax.grid(which='major', axis='both', linestyle='-')
+    plt.setp(ax.get_xticklabels(), visible=False)
+    plt.setp(ax.get_yticklabels(), visible=False)
+    extent = (0, matrix.shape[1], matrix.shape[0], 0)
+    plt.imshow(matrix, cmap='gray', extent=extent)
+    plt.savefig(f'{title}.png')
     plt.show()

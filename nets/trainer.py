@@ -29,7 +29,7 @@ normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
 ngpus = 2
 epochs = 20
 output_path = '/braintree/home/fgeiger/weight_initialization/nets/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
-data_path = '/braintree/data2/active/common/imagenet_raw/'
+data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9
@@ -78,7 +78,7 @@ def get_model(pretrained=False):
 def train(identifier,
           model,
           restore_path=None,  # useful when you want to restart training
-          save_train_epochs=.1,  # how often save output during training
+          save_train_epochs=None,  # how often save output during training
           save_val_epochs=.5,  # how often save output during validation
           save_model_epochs=1,  # how often save model weigths
           save_model_secs=60 * 10,  # how often save model (in sec)
@@ -116,15 +116,13 @@ def train(identifier,
     recent_time = time.time()
 
     nsteps = len(trainer.data_loader)
-    if save_train_epochs is not None:
-        save_train_steps = (np.arange(0, epochs + 1,
-                                      save_train_epochs) * nsteps).astype(int)
-    if save_val_epochs is not None:
-        save_val_steps = (np.arange(0, epochs + 1,
-                                    save_val_epochs) * nsteps).astype(int)
-    if save_model_epochs is not None:
-        save_model_steps = (np.arange(0, epochs + 1,
-                                      save_model_epochs) * nsteps).astype(int)
+
+    save_train_steps = (np.arange(0, epochs + 1,
+                                  save_train_epochs) * nsteps).astype(int) if save_train_epochs else None
+    save_val_steps = (np.arange(0, epochs + 1,
+                                save_val_epochs) * nsteps).astype(int) if save_val_epochs else None
+    save_model_steps = (np.arange(0, epochs + 1,
+                                  save_model_epochs) * nsteps).astype(int) if save_model_epochs else None
 
     results = {'meta': {'step_in_epoch': 0,
                         'epoch': start_epoch,
@@ -145,6 +143,7 @@ def train(identifier,
             if output_path is not None:
                 records.append(results)
                 if len(results) > 1:
+                    print(records[-1])
                     pickle.dump(records, open(output_path + f'results_{identifier}.pkl', 'wb+'))
 
                 ckpt_data = {}
@@ -308,7 +307,7 @@ class ImageNetVal(object):
 
     def data(self):
         dataset = torchvision.datasets.ImageFolder(
-            os.path.join(data_path, 'val_in_folders'),
+            os.path.join(data_path, 'val'),
             torchvision.transforms.Compose([
                 torchvision.transforms.Resize(256),
                 torchvision.transforms.CenterCrop(224),
@@ -342,7 +341,7 @@ class ImageNetVal(object):
         for key in record:
             record[key] /= len(self.data_loader.dataset.samples)
         record['dur'] = (time.time() - start) / len(self.data_loader)
-        print(f'Validation accuracy: Top1{record["top5"]}')
+        print(f'Validation accuracy: Top1 {record["top1"]}, Top5 {record["top5"]}')
         return record
 
 

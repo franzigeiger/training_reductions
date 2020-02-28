@@ -93,7 +93,7 @@ def plot_benchmarks_over_epochs(model, epochs=None):
 
 
 if __name__ == '__main__':
-    plot_benchmarks_over_epochs('resnet_mil_trained', (0, 1, 2, 3, 4, 5, 10, 15, 20, 90))
+    # plot_benchmarks_over_epochs('resnet_mil_trained', (0, 1, 2, 3, 4, 5, 10, 15, 20, 90))
     # plot_benchmarks_over_epochs('CORnet-S_train_all')
     # plot_benchmarks_over_epochs('CORnet-S_full', (0, 1, 2, 3, 5, 7, 10, 15, 20, 43))
     # plot_benchmarks_over_epochs('CORnet-S_train_IT_seed_0', (5, 10, 15, 20))
@@ -103,18 +103,40 @@ if __name__ == '__main__':
     # plot_benchmarks_over_epochs('CORnet-S_train_second_no_batchnorm', (1, 2, 3, 5, 10, 15))
     # plot_over_epochs(['CORnet-S_train_all', 'CORnet-S_full'])
     # plot_over_epochs(['CORnet-S_train_all', 'CORnet-S_train_IT_seed_0', 'CORnet-S_gabor', 'CORnet-S_gabor_reshape'])
-    # models = {'CORnet-S_full' : 'Train all',
-    #           # 'CORnet-S_train_V2': 'Random init, V1.conv2-> train',
-    #           # 'CORnet-S_train_gabor': 'Fix gabors, V1.conv2 -> train',
-    #           # 'CORnet-S_train_gabor_reshape':'Fix gabors+normalize, V1.conv2 -> train',
-    #           # 'CORnet-S_train_second': 'Fix gabors and Correlate, V2 -> train',
-    #           'CORnet-S_train_IT_seed_0':'Random init, IT -> train',
-    #           'CORnet-S_rand_conv1':'Random init V1.Conv1, V1.Conv2-> train',
-    #           'CORnet-S_train_second_corr_only':'Trained Conv1, Correlate Conv2, V2 -> train',
-    #           'CORnet-S_train_gabor_fit':'Fit gabor Conv1, V1.Conv2 -> train',
-    #           'CORnet-S_train_gabor_fit_second_corr':'Fit gabor Conv1, Correlate Conv2, V2 -> train'
-    #
-    #           # 'CORnet-S_train_second_no_batchnorm': 'Fix gabors and Correlate, Correlate, V2 -> train'
-    #           # 'CORnet-S_train_second':''
-    #           }
-    # plot_models_benchmarks(models, 'first_generation')
+    models = {
+        # Base
+        'CORnet-S_full': 'Train all',
+        'CORnet-S_train_IT_seed_0': 'Random init, IT -> train',
+        'CORnet-S_train_V2': 'Random init, V2 -> train',
+        # Beginning
+        # 'CORnet-S_train_IT_norm_dist' : 'Normal distributed init, IT -> train',
+        # 'CORnet-S_train_V2': 'Random init, V1.conv2-> train',
+        # 'CORnet-S_train_gabor': 'Fix gabors, V1.conv2 -> train',
+        # 'CORnet-S_train_gabor_reshape':'Fix gabors+normalize, V1.conv2 -> train',
+        # 'CORnet-S_train_second': 'Fix gabors and Correlate, V2 -> train',
+        # Round 2
+        # 'CORnet-S_train_IT_seed_0':'Random init, IT -> train',
+        # 'CORnet-S_rand_conv1':'Random init V1.Conv1, V1.Conv2-> train',
+        # 'CORnet-S_train_second_corr_only':'Trained Conv1, Correlate Conv2, V2 -> train',
+        # 'CORnet-S_train_gabor_fit':'Fit gabor Conv1, V1.Conv2 -> train',
+        # 'CORnet-S_train_gabor_fit_second_corr':'Fit gabor Conv1, Correlate Conv2, V2 -> train',
+        # Round 3
+        # 'CORnet-S_train_second_corr_no_resize' :'Trained Conv1, Correlate Conv2 no resize, V2 -> train',
+        # 'CORnet-S_train_second_kernel_conv':'Trained Conv1, Kernel-Conv Conv2, V2 -> train',
+        # 'CORnet-S_train_gabor_fit_second_corr_no_resize':'Fit gabor Conv1, Correlate Conv2 no resize, V2 -> train',
+        # 'CORnet-S_train_gabor_fit_second_kernel_conv':'Fit gabor Conv1, Kernel-Conv Conv2, V2 -> train',
+        # Round 4
+        # 'CORnet-S_train_gabor_dist' : 'Indep. filter Conv1, V1.Conv2-> train',
+        # 'CORnet-S_train_gabor_dist_second_corr_no_resize': 'MultDim gaussian Conv1, Correlate Conv2 no resize, V2 -> train',
+        # 'CORnet-S_train_gabor_multi_dist': 'MultDim gaussian Conv1, V1.Conv2 -> train',
+        # 'CORnet-S_train_gabor_dist_second_kernel_conv': 'MultDim gaussian Conv1, Kernel-Conv Conv2, V2 -> train',
+        # 'CORnet-S_train_gabor_scrumble' : 'Scrumble fit gabors Con1, V1.Conv2 -> train'
+        # Round 5
+        'CORnet-S_train_gabor_dist_weight_dist_kernel': "MultDim gaussian gabor V1.Conv1, MG weights kernel V1.conv2, V2 -> train",
+        'CORnet-S_train_gabor_dist_weight_dist_channel': 'MultDim gaussian gabor V1.Conv1, MG weights channel V1.conv2, V2 -> train',
+        # 'CORnet-S_train_IT_norm_dist' : 'Norm dist init, IT -> train'
+        'CORnet-S_train_gabor_dist_kernel_gabor_dist_channel': 'MG gabor V1.Conv1, MG gabor channel V1.conv2',
+        'CORnet-S_train_gabor_dist_both_kernel': 'MG gabor V1.Conv1, MG gabor kernel V1.conv2',
+        'CORnet-S_train_gabor_dist_kernel_weight_dist_channel_second_forth': 'MG gabor V1.Conv1, MG weight channel V1.conv2, V2.input, V2.skip'
+    }
+    plot_models_benchmarks(models, 'first_generation')

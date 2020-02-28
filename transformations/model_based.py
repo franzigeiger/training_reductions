@@ -6,7 +6,8 @@ from scipy.stats import norm
 from torch.nn import init
 
 from transformations.transformation_utils import do_fit_gabor_init, do_correlation_init, do_gabors, do_fit_gabor_dist, \
-    do_correlation_init_no_reshape, do_kernel_convolution_init, do_distribution_gabor_init, do_scrumble_gabor_init
+    do_correlation_init_no_reshape, do_kernel_convolution_init, do_distribution_gabor_init, do_scrumble_gabor_init, \
+    layers
 
 
 def apply_to_one_layer(net, config):
@@ -299,5 +300,20 @@ def apply_gabors_dist_old(model, configuration):
             weights = m.weight.data.cpu().numpy()
             if idx == 0:
                 m.weight.data = torch.Tensor(do_fit_gabor_dist(weights, configuration))
+            idx += 1
+    return model
+
+
+def apply_generic(model, configuration):
+    # second layer correlation plus first layer random gabors
+    idx = 0
+    previous_weights = None
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            weights = m.weight.data.cpu().numpy()
+            if layers[idx] in configuration:
+                previous_weights = configuration[layers[idx]](weights, config=configuration, previous=previous_weights,
+                                                              index=idx)
+                m.weight.data = torch.Tensor(previous_weights)
             idx += 1
     return model

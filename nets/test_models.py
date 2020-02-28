@@ -5,11 +5,11 @@ import os
 
 import numpy as np
 import torch
+from brainscore.submission.utils import UniqueKeyDict
 from candidate_models.base_models.cornet import TemporalPytorchWrapper
 from candidate_models.model_commitments.cornets import CORnetCommitment
 from model_tools.activations import PytorchWrapper
 from model_tools.utils import s3
-from submission.utils import UniqueKeyDict
 from torch.nn import Module
 
 from nets.trainer import output_path
@@ -63,7 +63,7 @@ def get_model(identifier, init_weights=True, config=None):
         model = model.module  # unwrap
     if 'model_func' in config or 'layer_func' in config:
         _logger.info('Apply function')
-        if config['model_func']:
+        if 'model_func' in config:
             print('>>>run with function ', config['model_func'])
             model = config['model_func'](model, config)
         else:

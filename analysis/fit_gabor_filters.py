@@ -8,15 +8,15 @@ from scipy import linalg
 from scipy.optimize import basinhopping
 from skimage.filters import gabor_kernel
 from skimage.transform import resize
-from sklearn import mixture
 from sklearn.metrics import mean_squared_error, explained_variance_score
 from sklearn.model_selection import ParameterGrid
 from torch import nn
 
 from nets import get_model
-from plot.plot_data import plot_subplots_histograms, plot_3d, plot_heatmap, plot_2d
+from plot.plot_data import plot_subplots_histograms, plot_3d, plot_heatmap, plot_2d, plot_histogram, plot_matrixImage
 from utils.correlation import generate_correlation_map, pca, fit_data, multivariate_gaussian
-from utils.gabors import gabor_kernel_3, normalize
+from utils.distributions import mixture_gaussian
+from utils.gabors import gabor_kernel_3, normalize, similarity
 
 
 def score_kernel(X, theta, frequency, sigma, offset, stds):
@@ -31,9 +31,9 @@ def score_kernel(X, theta, frequency, sigma, offset, stds):
     return score
 
 
-def objective_function_2(beta, X):
+def objective_function_2(beta, X, size=3):
     kernel = gabor_kernel_3(beta[0], theta=beta[1], sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5],
-                            y_c=beta[6], scale=beta[7], ks=7)
+                            y_c=beta[6], scale=beta[7], ks=size)
     kernel = normalize(kernel)
     error = mean_squared_error(kernel, X)
     return (error)
@@ -88,56 +88,63 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping'):
     # model = get_resnet50(True)
     counter = 0
     length = 7 if version is 'V1' else 9
-    gabor_params = np.zeros([64, 3, length])
+
     np.random.seed(1)
     for name, m in model.named_modules():
-        if type(m) == nn.Conv2d and counter == 0:
-            weights = m.weight.data.cpu().numpy()
-            for i in range(0, 64):
-                for j in range(0, 3):
-                    kernel = weights[i, j]
-                    kernel = normalize(kernel)
-                    bnds = ((0, 0.5), (-np.pi, 2 * np.pi), (-4, 4), (-4, 4), (-3, 3))
-                    # params = np.random.random(5)
-                    params = [0.5, np.pi / 2, 2, 2, 0]
-
-                    def print_fun(x, f, accepted):
-                        print("at minima %.4f accepted %d" % (f, int(accepted)))
-
-                    if version is 'V1':
-                        print('Use sklearn version')
-                        bnds = ((-0.5, 1.5), (-np.pi, 2 * np.pi), (-4, 4), (-4, 4), (-3, 3), (-5, 5))
+        if type(m) == nn.Conv2d:
+            if counter == 1:
+                weights = m.weight.data.cpu().numpy()
+                gabor_params = np.zeros([weights.shape[0], weights.shape[1], length])
+                for i in range(0, 64):
+                    for j in range(0, weights.shape[1]):
+                        kernel = weights[i, j]
+                        kernel = normalize(kernel)
+                        bnds = ((0, 0.5), (-np.pi, 2 * np.pi), (-4, 4), (-4, 4), (-3, 3))
                         # params = np.random.random(5)
-                        params = [0.5, np.pi / 2, 2, 2, 0, 3]
-                        minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds, 'args': (kernel),
-                                            'options': {'maxiter': 200000, 'gtol': 1e-25}}
-                        result = basinhopping(objective_function, params, niter=15, minimizer_kwargs=minimizer_kwargs,
-                                              callback=print_fun, T=0.00001)
-                    else:
-                        print('Use Tiagos version')
-                        bnds = (
-                            (1 / 14, 0.5), (-2 * np.pi, 2 * np.pi), (2, 14), (2, 14), (-2 * np.pi, 2 * np.pi), (-2, 2),
-                            (-2, 2), (1e-5, 2))
-                        params = [0.2, 0, 4, 4, 0, 0, 0, 1]
-                        minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds, 'args': (kernel),
-                                            'options': {'maxiter': 200000, 'gtol': 1e-25}}
-                        result = basinhopping(objective_function_2, params, niter=15, minimizer_kwargs=minimizer_kwargs,
-                                              callback=print_fun, T=0.00001)
-                    # result = minimize(objective_function, params, args=(kernel),
-                    #                   method='L-BFGS-B', bounds=bnds, options={'maxiter': 20000,'gtol': 1e-25, 'dist':True})
-                    # result = minimize(objective_function, params, args=(kernel),
-                    #                   method='BFGS', options={'maxiter': 200000, 'gtol': 1e-25, 'dist': True})
+                        params = [0.5, np.pi / 2, 2, 2, 0]
 
-                    beta_hat = result.x
-                    gabor_params[i, j] = np.append(beta_hat, result.fun)
-                    print(f'Kernel {i}, filter {j}:')
-                    print(beta_hat)
-            np.save(f'{file}.npy', gabor_params)
-            return
+                        def print_fun(x, f, accepted):
+                            print("at minima %.4f accepted %d" % (f, int(accepted)))
+
+                        if version is 'V1':
+                            print('Use sklearn version')
+                            bnds = ((-0.5, 1.5), (-np.pi, 2 * np.pi), (-4, 4), (-4, 4), (-3, 3), (-5, 5))
+                            # params = np.random.random(5)
+                            params = [0.5, np.pi / 2, 2, 2, 0, 3]
+                            minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds, 'args': (kernel),
+                                                'options': {'maxiter': 200000, 'gtol': 1e-25}}
+                            result = basinhopping(objective_function, params, niter=15,
+                                                  minimizer_kwargs=minimizer_kwargs,
+                                                  callback=print_fun, T=0.00001)
+                        else:
+                            print('Use Tiagos version')
+                            bnds = (
+                                (1 / 14, 0.5), (-2 * np.pi, 2 * np.pi), (2, 14), (2, 14), (-2 * np.pi, 2 * np.pi),
+                                (-2, 2),
+                                (-2, 2), (1e-5, 2))
+                            params = [0.2, 0, 4, 4, 0, 0, 0, 1]
+                            minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds, 'args': (kernel),
+                                                'options': {'maxiter': 200000, 'gtol': 1e-25}}
+                            result = basinhopping(objective_function_2, params, niter=15,
+                                                  minimizer_kwargs=minimizer_kwargs,
+                                                  callback=print_fun, T=0.00001)
+                        # result = minimize(objective_function, params, args=(kernel),
+                        #                   method='L-BFGS-B', bounds=bnds, options={'maxiter': 20000,'gtol': 1e-25, 'dist':True})
+                        # result = minimize(objective_function, params, args=(kernel),
+                        #                   method='BFGS', options={'maxiter': 200000, 'gtol': 1e-25, 'dist': True})
+
+                        beta_hat = result.x
+                        gabor_params[i, j] = np.append(beta_hat, result.fun)
+                        print(f'Kernel {i}, filter {j}:')
+                        print(beta_hat)
+                np.save(f'{file}.npy', gabor_params)
+                return
+            counter += 1
 
 
 def get_fist_layer_weights():
-    model = get_model('CORnet-S_base', True)
+    model = get_model('CORnet-S_train_second_kernel_conv', True)
+    # model = get_model('CORnet-S_base', True)
     # model = get_model('CORnet-S_full_epoch_43', True)
     counter = 0
     plt.figure(figsize=(20, 20))
@@ -246,120 +253,129 @@ def plot_parameter_distribution(name):
     plot_subplots_histograms(data, 'Gabor parameter distributions', bins=10, bounds=bnds)
 
 
+def kernel_similarity():
+    # model = get_model('CORnet-S_random', True)
+    model = get_model('CORnet-S_train_second_kernel_conv_epoch_00', True)
+    counter = 0
+    plt.figure(figsize=(4, 25))
+    gs = gridspec.GridSpec(20, 3, width_ratios=[1] * 3,
+                           wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
+    kernel_avgs = []
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            if counter == 1:
+                weights = m.weight.data.squeeze().numpy().transpose(1, 0, 2, 3)
+                for i in range(0, 64):
+                    avgs = []
+                    for j in range(0, 64):
+                        for k in range(j, 64):
+                            if k != j:
+                                c1 = weights[i, j]
+                                c2 = weights[i, k]
+                                avgs.append(similarity(c2, c1))
+                    kernel_avgs.append(np.mean(avgs))
+                plot_histogram(kernel_avgs, 'Channel similarity within a kernel', bins=20)
+                print('Similarity avg:' + str(np.mean(kernel_avgs)))
+                return
+            counter += 1
+
+
+def gaussian_mixture_channels(name):
+    params = np.load(f'{name}.npy')
+    param = params[:, :, :-1]
+    param = param.reshape(-1, 8)
+    mixture_base(param, [(0, 10)], [4096, 1])
+
+
 def gaussian_mixture(name, name2=None):
     params = np.load(f'{name}.npy')
     names = ['Frequency', 'Theta', 'Sigma X', 'Sigma Y', 'Offset', 'Center X', 'Center Y']
+    shape = [64, 64, 3, 3]
+    size = 3
     param = params[:, :, :-1]
     param = param.reshape(64, -1)
+    tuples = []
+    for i in range(param.shape[1]):
+        tuples.append((i * 10, (i + 1) * 10))
     if name2 is not None:
         params2 = np.load(f'{name}.npy')
         p2 = params[:, :, :-1]
         p2 = p2.reshape(64, -1)
         param = np.concatenate((param, p2), axis=0)
+    mixture_base(param, tuples, shape)
+
+
+def mixture_base(param, tuples, shape, size=3):
     # param = param.reshape(192, -1)
-    new_param = np.zeros((64, 30))
-    for i in range(64):
-        for s, e in ((0, 10), (10, 20), (20, 30)):
+    new_param = np.zeros((shape[0], 10 * shape[1]))
+    for i in range(shape[0]):
+        for s, e in tuples:
             p = param[i, int(s * 8 / 10):int(e * 8 / 10)]
             # param[s:e]= (p[0],np.sin(2*p[1]), p[2], p[3], np.sin(p[4]), p[5], p[6], p[7])
             new_param[i, s:e] = (
-            p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
-    param = new_param
-    bic = []
-    lowest_bic = np.infty
-    for n_components in range(1, param.shape[1]):
-        # Fit a Gaussian mixture with EM
-        gmm = mixture.GaussianMixture(n_components=n_components,
-                                      covariance_type='full', max_iter=20000, tol=1e-15, n_init=20)
-        gmm.fit(param)
-        bic.append(gmm.bic(param))
-        if bic[-1] < lowest_bic:
-            lowest_bic = bic[-1]
-            print(f'Lowest bic with number of components {n_components}: {lowest_bic}')
-            best_gmm = gmm
+                p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
+
     # plot_bic(best_gmm, param)
-    samples = best_gmm.sample(64)[0]
+    best_gmm = mixture_gaussian(new_param)
+    samples = best_gmm.sample(new_param.shape[0])[0]
     idx = 1
 
     plt.figure(figsize=(10, 20))
     gs = gridspec.GridSpec(22, 3, width_ratios=[1] * 3,
                            wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
-    for i in range(22):
-
-        alpha = samples[i, 0:8]
-        beta = samples[i, 8:16]
-        gamma = samples[i, 16:24]
-        # kernel2 = gabor_kernel_3(beta[0], theta=beta[1],
-        #                          sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5], y_c=beta[6],
-        #                          scale=beta[7], ks=7)
-        # kernel1 = gabor_kernel_3(alpha[0], theta=alpha[1],
-        #                          sigma_x=alpha[2], sigma_y=alpha[3], offset=alpha[4], x_c=alpha[5], y_c=alpha[6],
-        #                          scale=alpha[7], ks=7)
-        # kernel3 = gabor_kernel_3(gamma[0], theta=gamma[1],
-        #                          sigma_x=gamma[2], sigma_y=gamma[3], offset=gamma[4], x_c=gamma[5], y_c=gamma[6],
-        #                          scale=gamma[7], ks=7)
-        for s, e in ((0, 10), (10, 20), (20, 30)):
+    for i in range(shape[0]):
+        for s, e in tuples:
             beta = samples[i, s:e]
             kernel2 = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]),
                                      sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                      y_c=beta[8],
-                                     scale=beta[9], ks=7)
+                                     scale=beta[9], ks=size)
             ax = plt.subplot(gs[i, int(s / 10)])
             ax.set_xticks([])
             ax.set_yticks([])
             plt.imshow(kernel2, cmap='gray')
-        # ax = plt.subplot(gs[i, 0])
-        # ax.set_xticks([])
-        # ax.set_yticks([])
-        # ax.set_title(f'Samples parameter K1', pad=10)
-        # idx += 1
-        # plt.imshow(kernel2, cmap='gray')
-        # ax = plt.subplot(gs[i, 1])
-        # ax.set_title(f'Samples parameter K2', pad=10)
-        # idx += 1
-        # plt.imshow(kernel1, cmap='gray')
-        # ax.set_xticks([])
-        # ax.set_yticks([])
-        # ax = plt.subplot(gs[i, 2])
-        # ax.set_title(f'Samples parameter K3', pad=10)
-        # plt.imshow(kernel3, cmap='gray')
-        # ax.set_xticks([])
-        # ax.set_yticks([])
-
         idx += 1
     plt.figure(figsize=(15, 15))
-    gs = gridspec.GridSpec(8, 8, width_ratios=[1] * 8,
-                           wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
-    for i in range(64):
-        kernel = np.zeros((7, 7, 3))
-        for s, e in ((0, 10), (10, 20), (20, 30)):
-            beta = samples[i, s:e]
-            kernel2 = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
+
+    length = 64 * 3
+    matrix = np.empty([length, 0])
+    weights = samples.reshape(64, 64, 10)
+    for i in range(0, 64):
+        row = np.empty([0, 3])
+        for j in range(0, 64):
+            beta = weights[i, j]
+            channel = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]),
                                      sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                      y_c=beta[8],
-                                     scale=beta[9], ks=7)
-            kernel[:, :, int(s / 10)] = kernel2
-        # alpha = samples[i, 0:8]
-        # beta = samples[i, 8:16]
-        # gamma = samples[i, 16:24]
-        # kernel = np.zeros((7,7,3))
-        # kernel[:,:,0] = gabor_kernel_3(beta[0], theta=beta[1],
-        #                          sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5], y_c=beta[6],
-        #                          scale=beta[7], ks=7)
-        # kernel[:,:,1] = gabor_kernel_3(alpha[0], theta=alpha[1],
-        #                          sigma_x=alpha[2], sigma_y=alpha[3], offset=alpha[4], x_c=alpha[5], y_c=alpha[6],
-        #                          scale=alpha[7], ks=7)
-        # kernel[:,:,2] = gabor_kernel_3(gamma[0], theta=gamma[1],
-        #                          sigma_x=gamma[2], sigma_y=gamma[3], offset=gamma[4], x_c=gamma[5], y_c=gamma[6],
-        #                          scale=gamma[7], ks=7)
-        ax = plt.subplot(gs[int(i / 8), i % 8])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        # ax.set_title(f'Samples gabor kernel', pad=10)
-        idx += 1
-        f_min, f_max = np.min(kernel), np.max(kernel)
-        kernel = (kernel - f_min) / (f_max - f_min)
-        plt.imshow(kernel)
+                                     scale=beta[9], ks=size)
+            row = np.concatenate((row, channel), axis=0)
+        f_min, f_max = np.min(row), np.max(row)
+        row = (row - f_min) / (f_max - f_min)
+        matrix = np.concatenate((matrix, row), axis=1)
+        # matrix[0,0] = 1
+    # f_min, f_max = np.min(matrix), np.max(matrix)
+    # matrix = (matrix - f_min) / (f_max - f_min)
+    plot_matrixImage(matrix, 'Gabor_conv2')
+
+    # gs = gridspec.GridSpec(8, 8, width_ratios=[1] * 8,
+    #                        wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
+    # only for three channels
+    # for i in range(64):
+    #     kernel = np.zeros((size, size, 3))
+    #     for s, e in tuples:
+    #         beta = samples[i, s:e]
+    #         kernel2 = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
+    #                                  sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
+    #                                  y_c=beta[8],
+    #                                  scale=beta[9], ks=size)
+    #         kernel[:, :, int(s / 10)] = kernel2
+    #     ax = plt.subplot(gs[int(i / 8), i % 8])
+    #     ax.set_xticks([])
+    #     ax.set_yticks([])
+    #     idx += 1
+    #     f_min, f_max = np.min(kernel), np.max(kernel)
+    #     kernel = (kernel - f_min) / (f_max - f_min)
+    #     plt.imshow(kernel)
     plt.tight_layout()
     plt.show()
 
@@ -480,12 +496,13 @@ if __name__ == '__main__':
     # rank_errors(name, 'gabors_sklearn')
     # show_options()
     # compare_gabors()
-    name = 'gabors_tiago_scaled_cornet_2'
+    name = 'gabors_conv2'
     # name = 'gabors_tiago_scaled'
     np.random.seed(0)
-    # name = 'gabors_resnet__tiago_2'
     # fit_gabors('V2', name)
     # compare_gabors('V2', name)
     # analyze_param_dist(name, True)
-    gaussian_mixture(name)
+    # gaussian_mixture(name)
+    gaussian_mixture_channels(name)
+    # kernel_similarity()
     # get_fist_layer_weights()

@@ -1,6 +1,8 @@
 from nets.test_models import run_model_training, get_model
 from transformations.layer_based import *
 from transformations.model_based import *
+from transformations.transformation_utils import do_distribution_weight_init, do_distribution_gabor_init_channel, \
+    do_kernel_normal_distribution_init, do_layer_normal_distribution_init
 
 trained_models = {
     'CORnet-S_train_gabor_reshape_no_batchnorm': {'model_func': apply_gabors,
@@ -42,6 +44,8 @@ trained_models = {
     # Round 3
     'CORnet-S_train_second_corr_no_resize': {'model_func': apply_second_layer_corr_no_reshape,
                                              'layers': ['V2', 'V4', 'IT', "decoder"]},
+    'CORnet-S_train_second_kernel_conv': {'model_func': apply_kernel_convolution_second_layer,
+                                          'layers': ['V2', 'V4', 'IT', "decoder"]},
     'CORnet-S_train_gabor_fit_second_corr_no_resize': {'model_func': apply_gabor_fit_second_layer_no_reshape,
                                                        'layers': ['V2', 'V4', 'IT', "decoder"],
                                                        'reshape': False,
@@ -50,10 +54,8 @@ trained_models = {
                                                     'layers': ['V2', 'V4', 'IT', "decoder"],
                                                     'reshape': False,
                                                     'file': '/braintree/home/fgeiger/weight_initialization/gabors_tiago_2.npy'},
-    'CORnet-S_train_second_kernel_conv': {'model_func': apply_kernel_convolution_second_layer,
-                                          'layers': ['V2', 'V4', 'IT', "decoder"]},
 
-    # round 4 ditribution init
+    # round 4 distribution init
     'CORnet-S_train_gabor_dist_second_corr_no_resize': {'model_func': apply_gabor_dist_second_layer_no_reshape,
                                                         'layers': ['V2', 'V4', 'IT', "decoder"],
                                                         'reshape': False,
@@ -79,20 +81,93 @@ trained_models = {
     'CORnet-S_train_norm_dist_kernel': {'layer_func': apply_norm_dist_kernel},
     'CORnet-S_train_IT_random': {'layers': ['IT', 'decoder']},
     'CORnet-S_train_IT_seed_0': {'layers': ['IT', 'decoder']},
+    'CORnet-S_train_V4': {'layers': ['V4', 'IT', 'decoder']},
     'CORnet-S_train_IT_norm_dist': {'layers': ['IT', 'decoder'], 'layer_func': apply_norm_dist},
     'CORnet-S_train_IT_jumbler': {'layers': ['IT', 'decoder'], 'layer_func': apply_all_jumbler},
     'CORnet-S_train_IT_kernel_jumbler': {'layers': ['IT', 'decoder'], 'layer_func': apply_in_kernel_jumbler},
     'CORnet-S_train_IT_channel_jumbler': {'layers': ['IT', 'decoder'], 'layer_func': apply_channel_jumbler},
-    'CORnet-S_train_IT_norm_dist_kernel': {'layers': ['IT', 'decoder'], 'layer_func': apply_norm_dist_kernel}
+    'CORnet-S_train_IT_norm_dist_kernel': {'layers': ['IT', 'decoder'], 'layer_func': apply_norm_dist_kernel},
+
+    #     Round 5
+    'CORnet-S_train_V2': {'model_func': apply_generic,
+                          'layers': ['V2', 'V4', 'IT', "decoder"]},
+    'CORnet-S_train_weight_dist_conv1_channel': {'model_func': apply_generic,
+                                                 'layers': ['V1.conv2', 'V1.norm2', 'V2', 'V4', 'IT', "decoder"],
+                                                 'V1.conv1': do_distribution_weight_init,
+                                                 'dim': 1},
+    'CORnet-S_train_weight_dist_conv1_conv2_channel': {'model_func': apply_generic,
+                                                       'layers': ['V2', 'V4', 'IT', "decoder"],
+                                                       'V1.conv1': do_distribution_weight_init,
+                                                       'V1.conv2': do_distribution_weight_init,
+                                                       'dim': 1},
+    'CORnet-S_train_gabor_dist_weight_dist_channel': {'model_func': apply_generic,
+                                                      'layers': ['V2', 'V4', 'IT', "decoder"],
+                                                      'V1.conv1': do_distribution_gabor_init,
+                                                      'V1.conv2': do_distribution_weight_init,
+                                                      'file': '/braintree/home/fgeiger/weight_initialization/gabors_tiago_scaled_cornet_2.npy',
+                                                      'dim': 1},
+    'CORnet-S_train_weight_dist_conv1_conv2_kernel': {'model_func': apply_generic,
+                                                      'layers': ['V2', 'V4', 'IT', "decoder"],
+                                                      'V1.conv1': do_distribution_weight_init,
+                                                      'V1.conv2': do_distribution_weight_init,
+                                                      'dim': 0},
+    'CORnet-S_train_gabor_dist_weight_dist_kernel': {'model_func': apply_generic,
+                                                     'layers': ['V2', 'V4', 'IT', "decoder"],
+                                                     'V1.conv1': do_distribution_gabor_init,
+                                                     'V1.conv2': do_distribution_weight_init,
+                                                     'file': '/braintree/home/fgeiger/weight_initialization/gabors_tiago_scaled_cornet_2.npy',
+                                                     'dim': 0},
+    'CORnet-S_train_gabor_dist_both_kernel': {'model_func': apply_generic,
+                                              'layers': ['V2', 'V4', 'IT', "decoder"],
+                                              'V1.conv1': do_distribution_gabor_init,
+                                              'V1.conv2': do_distribution_gabor_init,
+                                              'file': '/braintree/home/fgeiger/weight_initialization/gabors_tiago_scaled_cornet_2.npy',
+                                              'file_1': '/braintree/home/fgeiger/weight_initialization/gabors_conv2.npy'
+                                              },
+    'CORnet-S_train_gabor_dist_kernel_gabor_dist_channel': {'model_func': apply_generic,
+                                                            'layers': ['V2', 'V4', 'IT', "decoder"],
+                                                            'V1.conv1': do_distribution_gabor_init,
+                                                            'V1.conv2': do_distribution_gabor_init_channel,
+                                                            'file': '/braintree/home/fgeiger/weight_initialization/gabors_tiago_scaled_cornet_2.npy',
+                                                            'file_1': '/braintree/home/fgeiger/weight_initialization/gabors_conv2.npy'
+                                                            },
+    'CORnet-S_train_gabor_dist_kernel_weight_dist_channel_second_forth': {'model_func': apply_generic,
+                                                                          'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                                                     'V4', 'IT', "decoder"],
+                                                                          'V1.conv1': do_distribution_gabor_init,
+                                                                          'V1.conv2': do_distribution_weight_init,
+                                                                          'V2.conv_input': do_distribution_weight_init,
+                                                                          'V2.skip': do_distribution_weight_init,
+                                                                          'file': '/braintree/home/fgeiger/weight_initialization/gabors_tiago_scaled_cornet_2.npy',
+                                                                          'dim_1': 1, 'dim_2': 0, 'dim_3': 0},
+    # actually: gmk1_wmc2_wmk_3_wmk4
+    'CORnet-S_train_gmk1_wmc2_kn3_kn4': {'model_func': apply_generic,
+                                         'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT', "decoder"],
+                                         'V1.conv1': do_distribution_gabor_init,
+                                         'V1.conv2': do_distribution_weight_init,
+                                         'V2.conv_input': do_kernel_normal_distribution_init,
+                                         'V2.skip': do_kernel_normal_distribution_init,
+                                         'file': '/braintree/home/fgeiger/weight_initialization/gabors_tiago_scaled_cornet_2.npy',
+                                         'dim_1': 1},
+    'CORnet-S_train_gmk1_wmc2_ln3_ln4': {'model_func': apply_generic,
+                                         'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT', "decoder"],
+                                         'V1.conv1': do_distribution_gabor_init,
+                                         'V1.conv2': do_distribution_weight_init,
+                                         'V2.conv_input': do_layer_normal_distribution_init,
+                                         'V2.skip': do_layer_normal_distribution_init,
+                                         'file': '/braintree/home/fgeiger/weight_initialization/gabors_tiago_scaled_cornet_2.npy',
+                                         'dim_1': 1, 'dim_2': 0, 'dim_3': 0},
+
 }
 
 
+# g = gabor, n=normal distribution, c=channel, k =kernel, w=weights, m= mixture, l=layer
 def train_model(model, train_func=None):
     assert trained_models[model] is not None
     run_model_training(identifier=model, init_weights=False, config=trained_models[model], train_func=train_func)
 
 
 if __name__ == '__main__':
-    model = 'CORnet-S_train_gabor_scrumble'
+    model = 'CORnet-S_train_gmk1_wmc2_kn3_kn4'
     model = get_model(model, False, trained_models[model])
     assert model is not None

@@ -131,7 +131,8 @@ def kernel_convolution(x, y, stride=2, size=3):
 def mixture_gaussian(param, n_samples):
     bic = []
     lowest_bic = np.infty
-    for n_components in range(1, param.shape[1]):
+    max_components = param.shape[1] if param.shape[1] < 15 else 15
+    for n_components in range(1, max_components):
         # Fit a Gaussian mixture with EM
         gmm = mixture.GaussianMixture(n_components=n_components,
                                       covariance_type='full', max_iter=20000, tol=1e-15, n_init=20)
@@ -143,6 +144,7 @@ def mixture_gaussian(param, n_samples):
             best_gmm = gmm
     # plot_bic(best_gmm, param)
     return best_gmm.sample(n_samples)[0]
+
 
 if __name__ == '__main__':
     a = np.random.randint(51, 100, 49).reshape(7, 7)

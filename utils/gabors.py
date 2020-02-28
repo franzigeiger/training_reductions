@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.special import factorial
 
+from plot.plot_data import plot_matrixImage
+
 
 def normalize(X):
     f_min, f_max = X.min(), X.max()
@@ -42,7 +44,32 @@ def negLogLikelihood(params, data):
     return lnl
 
 
-def tfm_poisson_pdf(x, mu):
-    y, J = transformation_and_jacobian(x)
-    # For numerical stability, compute exp(log(f(x)))
-    return np.exp(y * np.log(mu) - mu - gammaln(y + 1.)) * J
+# def tfm_poisson_pdf(x, mu):
+#     y, J = transformation_and_jacobian(x)
+#     # For numerical stability, compute exp(log(f(x)))
+#     return np.exp(y * np.log(mu) - mu - gammaln(y + 1.)) * J
+
+
+def plot_conv_weights(weights, model_name):
+    length = weights.shape[0] * weights.shape[2]
+    matrix = np.zeros([length, 0])
+    for i in range(0, weights.shape[0]):
+        row = np.empty([0, weights.shape[2]])
+        for j in range(0, weights.shape[1]):
+            row = np.concatenate((row, weights[i, j]), axis=0)
+        f_min, f_max = np.min(row), np.max(row)
+        row = (row - f_min) / (f_max - f_min)
+        # row[0,0] = 0
+        matrix = np.concatenate((matrix, row), axis=1)
+        # matrix[0,0] = 1
+    # f_min, f_max = np.min(matrix), np.max(matrix)
+    # matrix = (matrix - f_min) / (f_max - f_min)
+    plot_matrixImage(matrix, model_name + '_conv2')
+
+
+def similarity(m1, m2):
+    sum = 0
+    for i in range(m1.shape[0]):
+        for j in range(m1.shape[1]):
+            sum += np.abs(m1[i, j] - m2[i, j])
+    return sum / (m1.shape[0] * m1.shape[1])

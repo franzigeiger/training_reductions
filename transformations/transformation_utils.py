@@ -1,6 +1,7 @@
 import math
 import random
 
+import cornet
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
@@ -9,27 +10,23 @@ from skimage.transform import resize
 
 from transformations.layer_based import random_state
 from utils.correlation import auto_correlation, generate_correlation_map, kernel_convolution, mixture_gaussian
-from utils.gabors import gabor_kernel_3
+from utils.gabors import gabor_kernel_3, plot_conv_weights
+
+layers = ['V1.conv1', 'V1.conv2',
+          'V2.conv_input', 'V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+          'V4.conv_input', 'V4.skip', 'V4.conv1', 'V4.conv2', 'V4.conv3',
+          'IT.conv_input', 'IT.skip', 'IT.conv1', 'IT.conv2', 'IT.conv3']
 
 
-def do_fit_gabor_dist(weights, config):
+def do_fit_gabor_dist(weights, config, **kwargs):
+    # fit independent gaussians for each gabor parameter
     params = np.load(config["file"])
     idx = 0
     samples = []
     for i in range(params.shape[2] - 1):
-        # if i is 1 or i is 4:
         param = params[:, :, i]
         mu, std = norm.fit(param)
         samples.append(np.random.normal(mu, std, weights.shape[0]))
-        # else:
-        #     param = params[:,:,i]
-        #     result = minimize(negLogLikelihood,  # function to minimize
-        #                       x0=np.ones(1),     # start value
-        #                       args=(param,),      # additional arguments for function
-        #                       method='Powell',   # minimization method, see docs
-        #                       )
-        #     params.append(np.random.poisson(result.x, weights.shape[0]))
-
     for k in range(weights.shape[0]):
         for f in range(weights.shape[1]):
             kernel = gabor_kernel_3(samples[0][k], theta=samples[1][k],
@@ -42,7 +39,7 @@ def do_fit_gabor_dist(weights, config):
     return weights
 
 
-def do_fit_gabor_init(weights, config):
+def do_fit_gabor_init(weights, config, **kwargs):
     gabor_params = np.load(config["file"])
     idx = 0
     for kernels in gabor_params:
@@ -57,7 +54,20 @@ def do_fit_gabor_init(weights, config):
     return weights
 
 
-def do_scrumble_gabor_init(weights, config):
+def do_kernel_normal_distribution_init(weights):
+    for i in range(weights.shape[0]):
+        flat = weights[i].flatten()
+        mu, std = norm.fit(flat)
+        weights[i] = np.random.normal(mu, std, weights[i].shape)
+
+
+def do_layer_normal_distribution_init(weights):
+    flat = weights.flatten()
+    mu, std = norm.fit(flat)
+    return np.random.normal(mu, std, weights.shape)
+
+
+def do_scrumble_gabor_init(weights, config, **kwargs):
     gabor_params = np.load(config["file"])
     idx = 0
     gabor_params = prepare_gabor_params(gabor_params)
@@ -75,14 +85,14 @@ def do_scrumble_gabor_init(weights, config):
                                     scale=beta[9], ks=7)
             weights[idx, int(s / 10)] = filter
         idx += 1
-    show_kernels(weights, 'scrumble_gabor')
+    show_kernels(weights, config, 'scrumble_gabor')
     return weights
 
 
-def do_gabors(weights, configuration):
+def do_gabors(weights, config, **kwargs):
     num_theta = weights.shape[0] / 4
     num_frequ = num_theta / 4
-
+    configuration = config
     frequency = (0.05, 0.20, 0.30, 0.45)
 
     # sigma = (1.5, 2)
@@ -116,8 +126,6 @@ def do_gabors(weights, configuration):
 
 
 def show_kernels(weights, func_name):
-    f_min, f_max = weights.min(), weights.max()
-    weights = (weights - f_min) / (f_max - f_min)
     number = math.ceil(math.sqrt(weights.shape[0]))
     img = np.transpose(weights, (0, 2, 3, 1))
     idx = 0
@@ -130,14 +138,17 @@ def show_kernels(weights, func_name):
             ax.set_yticks([])
             ax.set_title(f'Kernel {idx}', pad=3)
             # imgs = img[range(j*8, (j*8)+number)]
-            plt.imshow(img[idx])
+            channel = img[idx]
+            f_min, f_max = channel.min(), channel.max()
+            channel = (channel - f_min) / (f_max - f_min)
+            plt.imshow(channel)
             idx += 1
     plt.tight_layout()
     plt.savefig(f'kernels_{func_name}.png')
     plt.show()
 
 
-def do_correlation_init(weights, previous):
+def do_correlation_init(weights, previous, **kwargs):
     size = weights.shape[2]
     for i in range(0, previous.shape[0]):
         # row = np.empty([0, size])
@@ -153,7 +164,7 @@ def do_correlation_init(weights, previous):
     return weights
 
 
-def do_correlation_init_no_reshape(weights, previous):
+def do_correlation_init_no_reshape(weights, previous, **kwargs):
     size = weights.shape[2]
     for i in range(0, previous.shape[0]):
         # row = np.empty([0, size])
@@ -177,7 +188,7 @@ def reshape_with_project(kernel):
     return kernel
 
 
-def do_kernel_convolution_init(weights, previous):
+def do_kernel_convolution_init(weights, previous, **kwargs):
     size = weights.shape[2]
     for i in range(0, previous.shape[0]):
         # row = np.empty([0, size])
@@ -187,30 +198,105 @@ def do_kernel_convolution_init(weights, previous):
     return weights
 
 
-def do_distribution_gabor_init(weights, config):
-    params = np.load(f'{config["file"]}')
-    param = prepare_gabor_params(params)
+def do_distribution_gabor_init(weights, config, index, **kwargs):
+    if index != 0:
+        params = np.load(config[f'file_{index}'])
+    else:
+        params = np.load(f'{config["file"]}')
+    param, tuples = prepare_gabor_params(params)
     np.random.seed(0)
-    samples = mixture_gaussian(param, 64)
+    samples = mixture_gaussian(param, weights.shape[0])
     for i in range(weights.shape[0]):
-        for s, e in ((0, 10), (10, 20), (20, 30)):
+        for s, e in tuples:
             beta = samples[i, s:e]
             filter = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
                                     sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                     y_c=beta[8],
-                                    scale=beta[9], ks=7)
+                                    scale=beta[9], ks=weights.shape[-1])
             weights[i, int(s / 10)] = filter
-    show_kernels(weights, 'distribution_init')
+    if weights.shape[1] == 3:
+        show_kernels(weights, 'distribution_init')
+    else:
+        plot_conv_weights(weights, 'distribution_init_kernel')
     return weights
 
 
-def prepare_gabor_params(params):
+def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
+    if index != 0:
+        params = np.load(config[f'file_{index}'])
+    else:
+        params = np.load(f'{config["file"]}')
+    param, tuples = prepare_gabor_params_channel(params)
+    np.random.seed(0)
+    samples = mixture_gaussian(param, weights.shape[0])
+    for i in range(weights.shape[0]):
+        beta = samples[i]
+        filter = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
+                                sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
+                                y_c=beta[8],
+                                scale=beta[9], ks=weights.shape[-1])
+        weights[int(i / weights.shape[0]), int(i % weights.shape[0])] = filter
+    if weights.shape[1] == 3:
+        show_kernels(weights, 'distribution_init_channel_color')
+    else:
+        plot_conv_weights(weights, 'distribution_init_channel')
+    return weights
+
+
+def do_distribution_weight_init(weights, config, index, **kwargs):
+    # dimension = 0, kernel level, dimension 1 channel level
+    # assume weights are untrained weights
+    trained = cornet.cornet_s(pretrained=True)
+    for sub in ['module'] + layers[index].split('.'):
+        trained = trained._modules.get(sub)
+    weights = trained.weight.data.cpu().numpy()
+    dim = config['dim'] if 'dim' in config else config[f'dim_{index}']
+    if dim == 0:
+        params = weights.reshape(weights.shape[0], weights.shape[1], -1)
+        params = params.reshape(params.shape[0], -1)
+    else:
+        params = weights.reshape(-1, weights.shape[2], weights.shape[3])
+        params = params.reshape(params.shape[0], -1)
+
+    np.random.seed(0)
+    samples = mixture_gaussian(params, params.shape[0])
+    idx = 0
+
+    if dim is 0:
+        new_weights = samples.reshape(weights.shape[0], weights.shape[1], weights.shape[2] * weights.shape[3])
+        new_weights = new_weights.reshape(weights.shape[0], weights.shape[1], weights.shape[2], weights.shape[3])
+        weights = new_weights
+    else:
+        for i in range(weights.shape[0]):
+            for j in range(weights.shape[1]):
+                weights[i, j] = samples[idx].reshape(weights.shape[2], weights.shape[3])
+                idx += 1
+    # show_kernels(weights, 'distribution_init')
+    return weights
+
+
+def prepare_gabor_params(params, **kwargs):
+    tuples = []
+    for i in range(params.shape[1]):
+        tuples.append((i * 10, (i + 1) * 10))
     param = params[:, :, :-1]
-    param = param.reshape(64, -1)
-    new_param = np.zeros((64, 30))
+    param = param.reshape(params.shape[0], -1)
+    new_param = np.zeros((params.shape[0], params.shape[1] * 10))
     for i in range(64):
-        for s, e in ((0, 10), (10, 20), (20, 30)):
+        for s, e in tuples:
             p = param[i, int(s * 8 / 10):int(e * 8 / 10)]
             new_param[i, s:e] = (
                 p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
-    return new_param
+    return new_param, tuples
+
+
+def prepare_gabor_params_channel(params, **kwargs):
+    tuples = [(0, 10)]
+    param = params[:, :, :-1]
+    param = param.reshape(-1, 8)
+    new_param = np.zeros((param.shape[0], 10))
+    for i in range(param.shape[0]):
+        p = param[i]
+        new_param[i] = (
+            p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
+    return new_param, tuples
