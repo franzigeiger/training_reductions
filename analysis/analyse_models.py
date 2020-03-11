@@ -1,15 +1,15 @@
 import math
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import pyplot
 from model_tools.brain_transformation import ModelCommitment
 from scipy.stats import norm
+from torch import nn
 
 from nets.pool import brain_translated_pool, base_model_pool
 from nets.test_models import alexnet, cornet_s_brainmodel
-from plot.plot_data import plot_data_map, plot_data_base, plot_two_scales
+from plot.plot_data import plot_data_map, plot_data_base, plot_two_scales, plot_pie
 
 
 def load_model(model_name, random):
@@ -24,8 +24,29 @@ def load_model(model_name, random):
     return model
 
 
+def weight_init_percent(model_name, index, random=True):
+    model = load_model(model_name, random)
+    sum = 0
+    frac = 0
+    sizes = []
+    labels = []
+    i = 0
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            size = 1
+            for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
+            sizes.append(size)
+            labels.append(name)
+            if i < index:
+                frac += size
+            sum += size
+            i += 1
+    # plot_pie([(frac/sum), (1- (frac/sum))], ['Fixed', 'Train'])
+    print(sizes)
+    print(labels)
+    plot_pie(sizes, labels)
+
 def weight_mean_std(model_name, random=False):
-    import torch.nn as nn
     model = load_model(model_name, random)
     norm_dists = {}
     # norm_dists['layer'] = []
@@ -317,9 +338,11 @@ if __name__ == '__main__':
     # function_name = 'kernel_channel_weight_dist'
     # function_name = 'mean_compared'
     # function_name = 'visualize_kernel_sidewards'
-    function_name = 'analyze_filter_delta'
-    func = getattr(sys.modules[__name__], function_name)
-    func('CORnet-S')
+    # function_name = 'analyze_filter_delta'
+    # func = getattr(sys.modules[__name__], function_name)
+    # func('CORnet-S')
     # func('alexnet')
     # func('densenet169')
     # func('resnet101')
+    for i in range(1, 12):
+        weight_init_percent('CORnet-S', i, True)

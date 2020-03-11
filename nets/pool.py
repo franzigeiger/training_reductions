@@ -1,6 +1,6 @@
+from brainscore.submission.ml_pool import MLBrainPool
+from brainscore.submission.utils import UniqueKeyDict
 from brainscore.utils import LazyLoad
-from submission.ml_pool import MLBrainPool
-from submission.utils import UniqueKeyDict
 
 from nets import test_models as model_file
 from nets.test_models import cornet_s_brainmodel, model_layers

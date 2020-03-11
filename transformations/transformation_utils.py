@@ -1,16 +1,15 @@
-import math
 import random
 
 import cornet
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
 from skimage.filters import gabor_kernel
 from skimage.transform import resize
 
 from transformations.layer_based import random_state
-from utils.correlation import auto_correlation, generate_correlation_map, kernel_convolution, mixture_gaussian
-from utils.gabors import gabor_kernel_3, plot_conv_weights
+from utils.correlation import auto_correlation, generate_correlation_map, kernel_convolution
+from utils.distributions import mixture_gaussian
+from utils.gabors import gabor_kernel_3, plot_conv_weights, show_kernels
 
 layers = ['V1.conv1', 'V1.conv2',
           'V2.conv_input', 'V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
@@ -54,14 +53,15 @@ def do_fit_gabor_init(weights, config, **kwargs):
     return weights
 
 
-def do_kernel_normal_distribution_init(weights):
+def do_kernel_normal_distribution_init(weights, **kwargs):
     for i in range(weights.shape[0]):
         flat = weights[i].flatten()
         mu, std = norm.fit(flat)
         weights[i] = np.random.normal(mu, std, weights[i].shape)
+    return weights
 
 
-def do_layer_normal_distribution_init(weights):
+def do_layer_normal_distribution_init(weights, **kwargs):
     flat = weights.flatten()
     mu, std = norm.fit(flat)
     return np.random.normal(mu, std, weights.shape)
@@ -125,29 +125,6 @@ def do_gabors(weights, config, **kwargs):
     return weights
 
 
-def show_kernels(weights, func_name):
-    number = math.ceil(math.sqrt(weights.shape[0]))
-    img = np.transpose(weights, (0, 2, 3, 1))
-    idx = 0
-    plt.figure(figsize=(10, 10))
-    # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
-    for j in range(number):  # in zip(axes, range(weights.shape[0])):
-        for i in range(number):
-            ax = plt.subplot(number, number, idx + 1)
-            ax.set_xticks([])
-            ax.set_yticks([])
-            ax.set_title(f'Kernel {idx}', pad=3)
-            # imgs = img[range(j*8, (j*8)+number)]
-            channel = img[idx]
-            f_min, f_max = channel.min(), channel.max()
-            channel = (channel - f_min) / (f_max - f_min)
-            plt.imshow(channel)
-            idx += 1
-    plt.tight_layout()
-    plt.savefig(f'kernels_{func_name}.png')
-    plt.show()
-
-
 def do_correlation_init(weights, previous, **kwargs):
     size = weights.shape[2]
     for i in range(0, previous.shape[0]):
@@ -205,7 +182,8 @@ def do_distribution_gabor_init(weights, config, index, **kwargs):
         params = np.load(f'{config["file"]}')
     param, tuples = prepare_gabor_params(params)
     np.random.seed(0)
-    samples = mixture_gaussian(param, weights.shape[0])
+    components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
+    samples = mixture_gaussian(param, weights.shape[0], components)
     for i in range(weights.shape[0]):
         for s, e in tuples:
             beta = samples[i, s:e]
@@ -228,7 +206,8 @@ def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
         params = np.load(f'{config["file"]}')
     param, tuples = prepare_gabor_params_channel(params)
     np.random.seed(0)
-    samples = mixture_gaussian(param, weights.shape[0])
+    components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
+    samples = mixture_gaussian(param, weights.shape[0], components)
     for i in range(weights.shape[0]):
         beta = samples[i]
         filter = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
@@ -251,6 +230,7 @@ def do_distribution_weight_init(weights, config, index, **kwargs):
         trained = trained._modules.get(sub)
     weights = trained.weight.data.cpu().numpy()
     dim = config['dim'] if 'dim' in config else config[f'dim_{index}']
+    components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
     if dim == 0:
         params = weights.reshape(weights.shape[0], weights.shape[1], -1)
         params = params.reshape(params.shape[0], -1)
@@ -259,7 +239,7 @@ def do_distribution_weight_init(weights, config, index, **kwargs):
         params = params.reshape(params.shape[0], -1)
 
     np.random.seed(0)
-    samples = mixture_gaussian(params, params.shape[0])
+    samples = mixture_gaussian(params, params.shape[0], components)
     idx = 0
 
     if dim is 0:

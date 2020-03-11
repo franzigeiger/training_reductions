@@ -110,8 +110,6 @@ def train(identifier,
             start_epoch = ckpt_data['epoch']
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
         model.load_state_dict(ckpt_data['state_dict'])
-        unfreeze_layers(model, stop_layer)
-        optimizer = optim.Adadelta(filter(lambda p: p.requires_grad, model.parameters()), lr=1.0, rho=0.95, eps=1e-08)
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
@@ -139,7 +137,9 @@ def train(identifier,
             if save_val_steps is not None:
 
                 if global_step in save_val_steps:
-                    results[validator.name] = validator()
+                    results = validator()
+                    results[validator.name] = results
+
                     trainer.model.train()
 
             if output_path is not None:
@@ -331,7 +331,7 @@ class ImageNetVal(object):
         with torch.no_grad():
             for (inp, target) in tqdm.tqdm(self.data_loader, desc=self.name):
                 if ngpus > 0:
-                    inp =inp.to(device)
+                    inp = inp.to(device)
                     target = target.to(device)
                 output = self.model(inp)
 

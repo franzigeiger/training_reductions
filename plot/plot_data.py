@@ -295,26 +295,31 @@ def plot_heatmap(data, col_labels, row_labels, title, **kwargs):
 
 def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots'):
     sns.set()
-    sns.set_context("paper")
-    plt.figure(figsize=(30, 30))
+    sns.set_context("talk")
+    sns.set_style("whitegrid")
+    # sns.set_context("paper")
     bars = len(data)
     step_size = int(bars / 5) + 1
     x = np.arange(0, step_size * len(labels), step_size)  # the label locations
     width = step_size / 10  # the width of the bars
     left_edge = ((bars / 2) * width)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(20, 20))
     idx = 0
     axes = []
+    pal = sns.color_palette("coolwarm", len(data))
     for key, value in data.items():
-        axes.append(ax.bar(x - left_edge + (idx * width), value, width, label=key))
+        axes.append(ax.bar(x - left_edge + (idx * width), value, width, label=key, color=pal[idx]))
         idx += 1
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel(y_label)
+    ax.set_ylabel(y_label, fontsize=22)
+    # ax.set_yticklabels(ax.get_yticklabels(),fontsize=22)
+    plt.yticks(fontsize=22)
     # ax.set_title(title)
     ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), prop={'size': 5}, borderaxespad=0, frameon=False, ncol=2)
+    ax.set_xticklabels(labels, fontsize=22)
+    ax.set(ylim=[0.13, 0.6])
+    ax.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), prop={'size': 18}, borderaxespad=0, frameon=False, ncol=2)
 
     for rect in ax.patches:
         height = rect.get_height()
@@ -377,6 +382,8 @@ def plot_2d(x, y, name):
 
 
 def plot_matrixImage(matrix, title, size=3):
+    sns.set()
+    sns.set_context("paper")
     fig, ax = plt.subplots(figsize=(20, 20))
     loc = plticker.MultipleLocator(base=size)
     ax.xaxis.set_major_locator(loc)
@@ -392,4 +399,17 @@ def plot_matrixImage(matrix, title, size=3):
     extent = (0, matrix.shape[1], matrix.shape[0], 0)
     plt.imshow(matrix, cmap='gray', extent=extent)
     plt.savefig(f'{title}.png')
+    plt.show()
+
+
+def plot_pie(sizes, labels, explode=None):
+    sns.set()
+    sns.set_context("paper")
+    # explode = (0, 0.1, 0, 0)  # only "explode" the 2nd slice (i.e. 'Hogs')
+
+    fig1, ax1 = plt.subplots()
+    ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
+            shadow=True, startangle=90)
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
     plt.show()

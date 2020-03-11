@@ -280,6 +280,11 @@ def kernel_similarity():
             counter += 1
 
 
+def mixture_analysis(pi, mu, cov):
+    # k components: pi = (k) , mu = (k), cov = (k,k,k)
+    print(pi.shape, mu.shape, cov.shape)
+
+
 def gaussian_mixture_channels(name):
     params = np.load(f'{name}.npy')
     param = params[:, :, :-1]

@@ -255,7 +255,7 @@ def apply_first_dist_kernel_convolution_second_layer(model, configuration):
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
             if idx == 0:
-                previous_weights = do_distribution_gabor_init(weights, configuration)
+                previous_weights = do_distribution_gabor_init(weights, configuration, idx)
                 m.weight.data = torch.Tensor(previous_weights)
             if idx == 1:
                 previous_weights = do_kernel_convolution_init(weights, previous_weights)
@@ -271,7 +271,7 @@ def apply_gabors_dist(model, configuration):
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
             if idx == 0:
-                m.weight.data = torch.Tensor(do_distribution_gabor_init(weights, configuration))
+                m.weight.data = torch.Tensor(do_distribution_gabor_init(weights, configuration, idx))
             idx += 1
     return model
 
@@ -283,7 +283,7 @@ def apply_gabor_dist_second_layer_no_reshape(model, configuration):
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
             if idx == 0:
-                previous_weights = do_distribution_gabor_init(weights, configuration)
+                previous_weights = do_distribution_gabor_init(weights, configuration, idx)
                 m.weight.data = torch.Tensor(previous_weights)
             if idx == 1:
                 previous_weights = do_correlation_init_no_reshape(weights, previous_weights)

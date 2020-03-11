@@ -1,3 +1,6 @@
+import math
+
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import factorial
 
@@ -65,6 +68,29 @@ def plot_conv_weights(weights, model_name):
     # f_min, f_max = np.min(matrix), np.max(matrix)
     # matrix = (matrix - f_min) / (f_max - f_min)
     plot_matrixImage(matrix, model_name + '_conv2')
+
+
+def show_kernels(weights, func_name):
+    number = math.ceil(math.sqrt(weights.shape[0]))
+    img = np.transpose(weights, (0, 2, 3, 1))
+    idx = 0
+    plt.figure(figsize=(10, 10))
+    # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
+    for j in range(number):  # in zip(axes, range(weights.shape[0])):
+        for i in range(number):
+            ax = plt.subplot(number, number, idx + 1)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_title(f'Kernel {idx}', pad=3)
+            # imgs = img[range(j*8, (j*8)+number)]
+            channel = img[idx]
+            f_min, f_max = channel.min(), channel.max()
+            channel = (channel - f_min) / (f_max - f_min)
+            plt.imshow(channel)
+            idx += 1
+    plt.tight_layout()
+    plt.savefig(f'kernels_{func_name}.png')
+    plt.show()
 
 
 def similarity(m1, m2):

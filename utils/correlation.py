@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.stats import pearsonr
-from sklearn import mixture
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
 
@@ -126,24 +125,6 @@ def kernel_convolution(x, y, stride=2, size=3):
             result = pearsonr(crop_x.flatten(), crop_y.flatten())
             filter[i, j] = result[0]
     return filter
-
-
-def mixture_gaussian(param, n_samples):
-    bic = []
-    lowest_bic = np.infty
-    max_components = param.shape[1] if param.shape[1] < 15 else 15
-    for n_components in range(1, max_components):
-        # Fit a Gaussian mixture with EM
-        gmm = mixture.GaussianMixture(n_components=n_components,
-                                      covariance_type='full', max_iter=20000, tol=1e-15, n_init=20)
-        gmm.fit(param)
-        bic.append(gmm.bic(param))
-        if bic[-1] < lowest_bic:
-            lowest_bic = bic[-1]
-            print(f'Lowest bic with number of components {n_components}: {lowest_bic}')
-            best_gmm = gmm
-    # plot_bic(best_gmm, param)
-    return best_gmm.sample(n_samples)[0]
 
 
 if __name__ == '__main__':
