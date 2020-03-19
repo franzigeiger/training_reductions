@@ -8,8 +8,9 @@ import numpy as np
 import torch
 from numpy.random.mtrand import RandomState
 
-from nets import train_model, trainer
+from nets import train_model, trainer, trainer_convergence
 from nets.full_trainer import train as full_train
+from nets.trainer_convergence import train as conv_train
 from transformations import layer_based
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,8 @@ parser.add_argument('--seed', type=int, default=0,
 parser.add_argument('--epoch', type=int, default=20,
                     help='Number of epochs to train and test for')
 parser.add_argument('--full', type=bool, default=False,
+                    help='Number of epochs to train and test for')
+parser.add_argument('--convergence', type=bool, default=False,
                     help='Number of epochs to train and test for')
 args, remaining_args = parser.parse_known_args()
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level),
@@ -41,6 +44,10 @@ def score_model_console():
     logger.info(f'Run with seed {args.seed}')
     if args.full:
         train_model(model=args.model, train_func=full_train)
+    if args.convergence:
+        if args.epoch != 20:
+            trainer_convergence.epochs = args.epochs
+        train_model(model=args.model, train_func=conv_train)
     else:
         trainer.epochs = args.epoch
         logger.info(f'Train for {args.epoch} epochs')
@@ -49,3 +56,6 @@ def score_model_console():
 
 logger.info(f"Running {' '.join(sys.argv)}")
 fire.Fire(command='score_model_console')
+
+if __name__ == '__main__':
+    train_model('CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wm6')

@@ -1,7 +1,6 @@
 import os
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as plticker
 import numpy as np
 import seaborn as sns
 from matplotlib import gridspec
@@ -81,7 +80,7 @@ def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=No
     sns.set()
     sns.set_context("paper")
     if x_labels is None:
-        x_labels = np.arange(len(data.values[0]))
+        x_labels = np.arange(len(list(data.values())[0]))
     if rotate:
         plt.xticks(rotation='vertical', fontsize=8)
     print(data)
@@ -148,6 +147,29 @@ def plot_two_scales(data, name, x_labels=None, x_name='', y_name='', y_name2='',
     plt.show()
 
 
+def plot_date_map_custom_x(data, name, label_field='layer', x_name='', y_name='', scale_fix=None):
+    sns.set()
+    sns.set_context("talk")
+    sns.set_style("whitegrid")
+    plt.figure(figsize=(10, 10))
+    x = data[label_field]
+    print(data)
+    for key, value in data.items():
+        if key is not label_field:
+            plt.plot(x, data[key], label=key, linestyle='-', marker=".")
+    plt.plot([x[-1]], [0.5], label='Test', marker='o')
+    plt.title(name)
+    plt.xlabel(x_name)
+    plt.ylabel(y_name)
+    plt.legend()
+    if scale_fix:
+        plt.ylim(scale_fix[0], scale_fix[1])
+    plt.tight_layout()
+    file_name = name.replace(' ', '_')
+    plt.savefig(f'{file_name}.png')
+    plt.show()
+
+
 def plot_data_map(data, name, label_field='layer', x_name='', y_name='', scale_fix=None):
     sns.set()
     sns.set_context("paper")
@@ -157,7 +179,7 @@ def plot_data_map(data, name, label_field='layer', x_name='', y_name='', scale_f
     print(data)
     for key, value in data.items():
         if key is not label_field:
-            plt.plot(x, data[key], label=key, linestyle="", marker="o")
+            plt.plot(data[label_field], data[key], label=key, linestyle="", marker="o")
     # plt.plot(x, data['std'], label='std', linestyle="",marker="o")
     plt.title(name)
     plt.xlabel(x_name)
@@ -355,6 +377,17 @@ def plot_images(img, size, labels, theta):
     plt.show(bbox_inches='tight', pad_inches=0)
 
 
+def scatter_plot(x, y, x_label=None, y_label=None):
+    sns.set()
+    sns.set_context("paper")
+    corr = np.corrcoef(x, y)[0, 1]
+    plt.title(f'Correlation: {corr}')
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.scatter(x, y)
+    plt.show()
+    return corr
+
 def plot_3d(x, y, z, name):
     sns.set()
     sns.set_context("paper")
@@ -382,22 +415,22 @@ def plot_2d(x, y, name):
 
 
 def plot_matrixImage(matrix, title, size=3):
-    sns.set()
-    sns.set_context("paper")
+    # sns.set()
+    # sns.set_context("talk")
     fig, ax = plt.subplots(figsize=(20, 20))
-    loc = plticker.MultipleLocator(base=size)
-    ax.xaxis.set_major_locator(loc)
-    ax.yaxis.set_major_locator(loc)
+    # loc = plticker.MultipleLocator(base=size)
+    # ax.xaxis.set_major_locator(loc)
+    # ax.yaxis.set_major_locator(loc)
 
     ax.set_xlabel('Kernels')
     ax.set_ylabel('Filters')
-    ax.xaxis.set_ticks(np.arange(0, matrix.shape[0]), size)
-    ax.yaxis.set_ticks(np.arange(0, matrix.shape[1]), size)
-    ax.grid(which='major', axis='both', linestyle='-')
+    # ax.xaxis.set_ticks(np.arange(0, matrix.shape[0]), size)
+    # ax.yaxis.set_ticks(np.arange(0, matrix.shape[1]), size)
+    # ax.grid(which='major', axis='both', linestyle='-')
     plt.setp(ax.get_xticklabels(), visible=False)
     plt.setp(ax.get_yticklabels(), visible=False)
-    extent = (0, matrix.shape[1], matrix.shape[0], 0)
-    plt.imshow(matrix, cmap='gray', extent=extent)
+    # extent = (0, matrix.shape[1], matrix.shape[0], 0)
+    plt.imshow(matrix, cmap='gray')  # , extent=extent
     plt.savefig(f'{title}.png')
     plt.show()
 

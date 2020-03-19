@@ -83,6 +83,21 @@ def load_from_statement(conn, sql, models, benchmarks):
     return squeezed_scores
 
 
+def store_analysis(conn, model):
+    """
+    Create a new project into the projects table
+    :param conn:
+    :param project:
+    :return: project id
+    """
+    sql = ''' INSERT INTO model_parameter(model_id, train_time, weights_fixed, weights_to_train, additional_params, flops)
+              VALUES(?,?,?,?,?,?) '''
+    cur = conn.cursor()
+    cur.execute(sql, model)
+    conn.commit()
+    return cur.lastrowid
+
+
 def clean_database():
     sql = '''delete from raw_scores where MIN(ROWID) not in 
     (select model, modification, score, MIN(ROWID) as row 

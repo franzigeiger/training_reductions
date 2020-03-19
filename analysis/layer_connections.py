@@ -3,7 +3,7 @@ from scipy.stats import norm
 from torch import nn
 
 from nets.test_models import cornet_s_brainmodel
-from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap, plot_histogram
+from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap, plot_histogram, plot_matrixImage, scatter_plot
 
 
 def get_layer_weigh_list(random=True):
@@ -234,7 +234,85 @@ def mean():
                    y_name='', rotate=True)
 
 
+def conv2_conv3():
+    kernel_weights, layer, sizes, weights = get_layer_weigh_list(False)
+    values = {}
+    values['sum_prev'] = []
+    values['mean_prev'] = []
+    values['std_prev'] = []
+    for j in range(512):
+        i = weights[5][j]
+        values['mean_prev'].append(np.mean(i))
+        values['std_prev'].append(np.std(i))
+        values['sum_prev'].append(np.sum(i))
+    values['sum'] = []
+    values['mean'] = []
+    values['std'] = []
+    layer = weights[6].squeeze().T
+    for j in range(512):
+        i = layer[j]
+        values['mean'].append(np.mean(i))
+        values['std'].append(np.std(i))
+        values['sum'].append(np.sum(i))
+    scatter_plot(values['mean'], values['mean_prev'], x_label='Mean layer 7', y_label="Mean layer 6")
+    scatter_plot(values['std'], values['std_prev'], x_label='Std layer 7', y_label="Std layer 6")
+    scatter_plot(values['sum'], values['sum_prev'], x_label='Sum layer 7', y_label="Sum layer 6")
+    # plot_data_base(values, 'Properties')
+    plot_matrixImage(weights[6].squeeze().T, f'weights_{layer[6]}')
+
+
+def conv2_conv3_2():
+    kernel_weights, layer, sizes, weights = get_layer_weigh_list(False)
+    values = {}
+    values['sum_prev'] = []
+    values['mean_prev'] = []
+    values['std_prev'] = []
+    for j in range(512):
+        i = weights[5][j]
+        values['mean_prev'].append(np.mean(i))
+        values['std_prev'].append(np.std(i))
+        values['sum_prev'].append(np.sum(i))
+    l = weights[6].squeeze()
+    std_corr = []
+    sum_corr = []
+    for j in range(len(l)):
+        i = l[j]
+        # scatter_plot(i,values['mean_prev'], x_label=f'Kernel {j} layer 7', y_label="Mean layer 6")
+        std_corr.append(scatter_plot(i, values['std_prev'], x_label=f'Kernel {j} layer 7', y_label="Std layer 6"))
+        sum_corr.append(scatter_plot(i, values['sum_prev'], x_label=f'Kernel {j} layer 7', y_label="Sum layer 6"))
+    plot_data_base({'Sum/Avg': sum_corr, 'Std': std_corr}, 'Correlations')
+
+
+def conv2():
+    kernel_weights, layer, sizes, weights = get_layer_weigh_list(False)
+    values = {}
+    values['sum_prev'] = []
+    # values['mean_prev'] = []
+    # values['std_prev'] = []
+    for j in range(1):
+        i = weights[5][j]
+        for ch in i:
+            # values['mean_prev'].append(np.mean(ch))
+            # values['std_prev'].append(np.std(ch))
+            values['sum_prev'].append(np.sum(ch))
+    # values['sum'] = []
+    # values['mean'] = []
+    # values['std'] = []
+    # layer = weights[6].squeeze().T
+    # for j in range(512):
+    #     i = layer[j]
+    #     values['mean'].append(np.mean(i))
+    #     values['std'].append(np.std(i))
+    #     values['sum'].append(np.sum(i))
+    # scatter_plot(values['mean'],values['mean_prev'], x_label='Mean layer 7', y_label="Mean layer 6")
+    # scatter_plot(values['std'],values['std_prev'], x_label='Std layer 7', y_label="Std layer 6")
+    # scatter_plot(values['sum'],values['sum_prev'], x_label='Sum layer 7', y_label="Sum layer 6")
+    plot_data_base(values, 'Properties')
+    # plot_matrixImage(weights[6].squeeze().T, f'weights_{layer[6]}' )
+
 if __name__ == '__main__':
+    # conv2_conv3_2()
+    conv2()
     # connections(plot=True)
     # connections_mean(plot=True)
     # impact_mean_std()
@@ -246,7 +324,7 @@ if __name__ == '__main__':
     # impact_histogram(type='Mean impact', func=impact_mean, random=False, upper_bound=1.0)
     # impact_mean_std('Mean impact', impact_mean, True)
     # impact_mean_std('Mean impact', impact_mean, False)
-    impact_heatmap()
+    # impact_heatmap()
     # mean()
     # kernel_weight_size(True)
     # kernel_weight_size(False)

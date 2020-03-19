@@ -78,7 +78,7 @@ def get_model(pretrained=False):
 def train(identifier,
           model,
           restore_path=None,  # useful when you want to restart training
-          save_train_epochs=None,  # how often save output during training
+          save_train_epochs=1,  # how often save output during training
           save_val_epochs=.5,  # how often save output during validation
           save_model_epochs=1,  # how often save model weigths
           save_model_secs=60 * 10,  # how often save model (in sec)
@@ -105,16 +105,20 @@ def train(identifier,
     stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
     if len(stored) > 0:
         restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
-        ckpt_data = torch.load(restore_path)
+        ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
         if ckpt_data['epoch'] < epochs + 1:
             start_epoch = ckpt_data['epoch']
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
         model.load_state_dict(ckpt_data['state_dict'])
-        unfreeze_layers(model, stop_layer)
-        optimizer = optim.Adadelta(filter(lambda p: p.requires_grad, model.parameters()), lr=1.0, rho=0.95, eps=1e-08)
+        try:
+            model.load_state_dict(checkpoint['state_dict'])
+        except:
+            model.module.load_state_dict(checkpoint['state_dict'])
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
+    if os.path.isfile(f'results_{identifier}.pkl') and output_path is not None:
+        records = pickle.load(open(output_path + f'results_{identifier}.pkl', 'rb+'))
     recent_time = time.time()
 
     nsteps = len(trainer.data_loader)
@@ -145,7 +149,6 @@ def train(identifier,
             if output_path is not None:
                 records.append(results)
                 if len(results) > 1:
-                    # print(records[-1])
                     pickle.dump(records, open(output_path + f'results_{identifier}.pkl', 'wb+'))
 
                 ckpt_data = {}
@@ -331,7 +334,7 @@ class ImageNetVal(object):
         with torch.no_grad():
             for (inp, target) in tqdm.tqdm(self.data_loader, desc=self.name):
                 if ngpus > 0:
-                    inp =inp.to(device)
+                    inp = inp.to(device)
                     target = target.to(device)
                 output = self.model(inp)
 

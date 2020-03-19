@@ -2,6 +2,7 @@ import math
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import gridspec
 from scipy.special import factorial
 
 from plot.plot_data import plot_matrixImage
@@ -65,9 +66,29 @@ def plot_conv_weights(weights, model_name):
         # row[0,0] = 0
         matrix = np.concatenate((matrix, row), axis=1)
         # matrix[0,0] = 1
-    # f_min, f_max = np.min(matrix), np.max(matrix)
-    # matrix = (matrix - f_min) / (f_max - f_min)
-    plot_matrixImage(matrix, model_name + '_conv2')
+    f_min, f_max = np.min(matrix), np.max(matrix)
+    matrix = (matrix - f_min) / (f_max - f_min)
+    plot_matrixImage(matrix, 'weights_' + model_name)
+
+
+def plot_weights(weights, model_name):
+    plt.figure(figsize=(20, 20))
+    gs = gridspec.GridSpec(weights.shape[0], weights.shape[1], width_ratios=[1] * weights.shape[1],
+                           wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
+    idx = 0
+    for i in range(0, weights.shape[0]):
+        for j in range(0, weights.shape[1]):
+            kernel1 = weights[i, j]
+            ax = plt.subplot(gs[i, j])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            plt.imshow(kernel1, cmap='gray')
+            ax.set_title(f'Weight component {idx}', pad=2, fontsize=5)
+            idx += 1
+    plt.tight_layout()
+    plt.savefig(f'weights_{model_name}.png')
+    plt.show()
+    return
 
 
 def show_kernels(weights, func_name):

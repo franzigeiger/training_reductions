@@ -9,6 +9,7 @@ from benchmark.run_benchmark import score_models as score_models_full
 from benchmark.run_decoder_train_benchmark import score_models as score_models_train
 from benchmark.run_single_layer_benchmark import score_models as score_models_single
 from nets import test_models
+from nets.performance import measure_performance
 from transformations import layer_based
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ parser.add_argument('--seed', type=int, default=0,
                     help='Random seed to change random weights')
 parser.add_argument('--epoch', type=int, default=0,
                     help='Number of epoch to test for')
+parser.add_argument('--performance', type=bool, default=False,
+                    help='disables all other flags and stored the models performance values in the database')
 args, remaining_args = parser.parse_known_args()
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level),
                     format='%(asctime)-15s %(levelname)s:%(name)s:%(message)s')
@@ -43,6 +46,8 @@ def score_model_console():
     test_models.seed = args.seed
     layer_based.random_state = RandomState(args.seed)
     logger.info(f'Run with seed {args.seed}')
+    if args.performance:
+        measure_performance(args.model)
     if args.pool == 'SINGLE':
         score_models_single(model=args.model, benchmark=args.benchmark, filename=args.file_name)
     elif args.pool == 'NET':
@@ -50,8 +55,6 @@ def score_model_console():
     elif args.pool == 'TRAIN':
         model = args.model + f'_epoch_{args.epoch:02d}'  # if args.epoch != 0 else args.model
         score_models_train(model=model, benchmark=args.benchmark)
-
-
 
 
 logger.info(f"Running {' '.join(sys.argv)}")

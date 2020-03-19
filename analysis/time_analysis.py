@@ -47,8 +47,9 @@ def plot_models_benchmarks(models, file_name):
                               'movshon.FreemanZiemba2013.V2-pls',
                               'dicarlo.Majaj2015.V4-pls',
                               'dicarlo.Majaj2015.IT-pls',
-                              'dicarlo.Rajalingham2018-i2n',
-                              'fei-fei.Deng2009-top1'])
+                              'dicarlo.Rajalingham2018-i2n'
+                                 , 'fei-fei.Deng2009-top1'
+                              ])
     benchmarks = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet']
     data_set = {}
     # We replace the model id, a more human readable version
@@ -168,7 +169,7 @@ models = {
     # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5' : 'Layer norm dist',
     # Layer 6 - brain focus
     # 'CORnet-S_train_V4': 'Random init(whole V2)',
-    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6' : 'MG weight channels 1',
+    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6' : 'Brain focus, MG weight channels 1',
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_ln5_wm6' : 'Brain focus, MG weight channels 2',
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_ln5_ln6':'Brain focus, Layer norm dist',
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_ln5_kn6': 'Brain focus, Kernel norm dist',
@@ -181,24 +182,36 @@ models = {
     # Actual imagenet focus
     # 'CORnet-S_train_V4': 'Random init(whole V2)',
     # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wmc6_v2' : 'MG weight channels 1',
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_v2' : 'MG weight channels 2',
+    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_v2' : 'Imagenet focus',#'MG weight channels 2',
     # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_ln6_v2' : 'Layer norm dist',
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_kn6_v2' : 'Kernel norm dist',
+    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_kn6_v3' : 'Kernel norm dist',
+
     # Layer 7
-    # 'CORnet-S_train_V4': 'Random init(whole V2)',
-    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_kn7':'Brain focus, kernel norm dist',
+    'CORnet-S_train_V4': 'Random init(whole V2)',
+    'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wmc6_kn7_v2': 'Imagenet focus',  # 'Kernel norm dist 2',
+    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_kn7': 'Brain focus, kernel norm dist',
+    'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_ln7': 'Brain benchmark focus',  # 'Brain focus, layer norm dist',
+    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wmc6_kn7' : 'Kernel norm dist 1',
+    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wmc6_ln7' : 'Layer norm dist 1',
     # 'CORnet-S_train_gmk1_wmc2_ln3_ln4_ln5_ln6_ln7_v2': 'Layer norm dist',
     # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_kn6_kn7_v2' : 'Kernel norm dist',
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wmc6_kn7_v2' :'Kernel norm dist + MG channel conv2',
+
+    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wmc6_ln7' : 'Layer norm dist 2',
     # 'CORnet-S_train_gmk1_wmc2_wmk3_wmk4_wmk5_wmc6_wmk7_v2' : 'MG kernel + MG channel conv2',
     # 'CORnet-S_train_gmk1_wmc2_ln3_ln4_ln5_wm6_ln7': 'Layer norm dist + MG channel conv2',
     # GPU analysis:
-    'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6': '2 GPUs',
-    'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_2_gpu': '2 GPUs again',  # different, this is one
-    'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wm6': '1 GPU',  # different, this is one
-    'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_1_gpu': '1 GPU again',  # different, this is one
+    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6': '2 GPUs',
+    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_2_gpu': '2 GPUs again',  # different, this is one
+    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wm6': '1 GPU',  # different, this is one
+    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_1_gpu': 'Brain benchmark focus',  # different, this is one
 
-    # 'CORnet-S_full': 'Train all',
+    'CORnet-S_full': 'Train all',
+    # epoch 43
+    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_full' : 'Imagenet optimized until V2.conv2',
+    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full' : 'Brain benchmark optimized until V2.conv2'
+
+
+
 }
 
 if __name__ == '__main__':

@@ -2,13 +2,15 @@ import random
 
 import cornet
 import numpy as np
+import scipy.stats as st
+import torch
 from scipy.stats import norm
 from skimage.filters import gabor_kernel
 from skimage.transform import resize
 
 from transformations.layer_based import random_state
 from utils.correlation import auto_correlation, generate_correlation_map, kernel_convolution
-from utils.distributions import mixture_gaussian
+from utils.distributions import mixture_gaussian, best_fit_distribution
 from utils.gabors import gabor_kernel_3, plot_conv_weights, show_kernels
 
 layers = ['V1.conv1', 'V1.conv2',
@@ -183,7 +185,7 @@ def do_distribution_gabor_init(weights, config, index, **kwargs):
     param, tuples = prepare_gabor_params(params)
     np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
-    samples = mixture_gaussian(param, weights.shape[0], components)
+    samples = mixture_gaussian(param, weights.shape[0], components, f'gabor_{index}')
     for i in range(weights.shape[0]):
         for s, e in tuples:
             beta = samples[i, s:e]
@@ -225,7 +227,7 @@ def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
 def do_distribution_weight_init(weights, config, index, **kwargs):
     # dimension = 0, kernel level, dimension 1 channel level
     # assume weights are untrained weights
-    trained = cornet.cornet_s(pretrained=True)
+    trained = cornet.cornet_s(pretrained=True, map_location=torch.device('cpu'))
     for sub in ['module'] + layers[index].split('.'):
         trained = trained._modules.get(sub)
     weights = trained.weight.data.cpu().numpy()
@@ -239,7 +241,7 @@ def do_distribution_weight_init(weights, config, index, **kwargs):
         params = params.reshape(params.shape[0], -1)
 
     np.random.seed(0)
-    samples = mixture_gaussian(params, params.shape[0], components)
+    samples = mixture_gaussian(params, params.shape[0], components, f'weight_dim{dim}_{index}')
     idx = 0
 
     if dim is 0:
@@ -280,3 +282,50 @@ def prepare_gabor_params_channel(params, **kwargs):
         new_param[i] = (
             p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
     return new_param, tuples
+
+
+def do_best_dist_init_layer(weights, **kwargs):
+    name, params = best_fit_distribution(weights)
+    print(f'Best fit distribution: {name}, params: {params}')
+    best_dist = getattr(st, name)
+    arg = params[:-2]
+    loc = params[-2]
+    scale = params[-1]
+    return best_dist.rvs(size=weights.shape, *arg, loc=loc, scale=scale)
+
+
+def do_best_dist_init_kernel(weights, **kwargs):
+    dists = {}
+    for i in weights:
+        name, params = best_fit_distribution(i)
+        if not name in dists:
+            dists[name] = 1
+        else:
+            dists[name] += 1
+        print(f'Best fit distribution for kernel: {name}')
+
+    max = 0
+    best = ''
+    for k, v in dists.items():
+        if v > max:
+            best = k
+    best_dist = getattr(st, best)
+    for i in range(weights.shape[0]):
+        p = best_dist.fit(weights[i])
+        print(f'Best fit distribution: {best} with params {p}')
+        arg = p[:-2]
+        loc = p[-2]
+        scale = p[-1]
+        # print(weights[i])
+        weights[i] = best_dist.rvs(size=weights[i].shape, *arg, loc=loc, scale=scale)
+        # print(weights[i])
+
+    return weights
+
+
+def do_in_channel_jumbler(weights, **kwargs):
+    if len(weights.shape) > 2:
+        for i in range(weights.shape[1]):
+            random_order = random_state.permutation(weights.shape[0])
+            weights[:, i] = weights[random_order, i]
+    return weights
