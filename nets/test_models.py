@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 import torch
+import torchvision
 from brainscore.submission.utils import UniqueKeyDict
 from candidate_models.base_models.cornet import TemporalPytorchWrapper
 from candidate_models.model_commitments.cornets import CORnetCommitment
@@ -20,6 +21,7 @@ from transformations.model_based import apply_to_one_layer
 _logger = logging.getLogger(__name__)
 
 seed = 0
+batch_fix = False
 
 
 # def cornet_long(identifier, init_weights=True, type='layer', function=None, config=None):
@@ -28,10 +30,12 @@ seed = 0
 
 def cornet(identifier, init_weights=True, config=None):
     _logger.info('Run normal benchmark')
+    # if batch_fix:
+    #     identifier = f'{identifier}_BF'
     model = get_model(identifier, init_weights, config)
     from model_tools.activations.pytorch import load_preprocess_images
     preprocessing = functools.partial(load_preprocess_images, image_size=224)
-    wrapper = TemporalPytorchWrapper(identifier='%s_%s' % ('CORnet-S', identifier), model=model,
+    wrapper = TemporalPytorchWrapper(identifier=identifier, model=model,
                                      preprocessing=preprocessing,
                                      separate_time=True)
     wrapper.image_size = 224
@@ -41,9 +45,15 @@ def cornet(identifier, init_weights=True, config=None):
 def get_model(identifier, init_weights=True, config=None):
     if config is None:
         config = {}
+    print(f'Configuration: {config}')
     cornet_type = 'S'
     np.random.seed(seed)
     torch.manual_seed(seed)
+    # if 'batchnorm' in config or batch_fix:
+    #     print('We load the alternative batchnorm model!')
+    #     mod = importlib.import_module(f'cornet.cornet_s_compression')
+    #     identifier = f'{identifier}_BF'
+    # else:
     mod = importlib.import_module(f'cornet.cornet_{cornet_type.lower()}')
     model_ctr = getattr(mod, f'CORnet_{cornet_type.upper()}')
     model = model_ctr()
@@ -55,12 +65,20 @@ def get_model(identifier, init_weights=True, config=None):
                 self.module = model
         model = Wrapper(model)  # model was wrapped with DataParallel, so weights require `module.` prefix
         weights_path = get_weights(identifier)
-        checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)  # map onto cpu
+        # if batch_fix:
+        #     checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
+        #     set_running_averages(checkpoint)
+        #     # set_half_running_averages(checkpoint, config)
+        #     # delete_running_averages(checkpoint)
+        # else:
+        checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
         try:
             model.load_state_dict(checkpoint['state_dict'])
         except:
             model.module.load_state_dict(checkpoint['state_dict'])
         model = model.module  # unwrap
+    if batch_fix:
+        config['batchnorm'] = True
     if 'model_func' in config or 'layer_func' in config:
         _logger.info('Apply function')
         if 'model_func' in config:
@@ -74,6 +92,7 @@ def get_model(identifier, init_weights=True, config=None):
 
 def get_resnet50(init_weights=True):
     module = importlib.import_module(f'torchvision.models')
+    torchvision.models.resnet50()
     model_ctr = getattr(module, 'resnet50')
     return model_ctr(pretrained=init_weights)
 
@@ -95,8 +114,9 @@ def get_weights(identifier):
     return weights_path
 
 
-def run_model_training(identifier, init_weights=True, config=None, train_func=None):
-    model = get_model(identifier, init_weights, config)
+def run_model_training(model, identifier, config=None, train_func=None):
+    if batch_fix:
+        identifier = f'{identifier}_BF'
     if config is None:
         config = {'layers': ['decoder']}
     for name, m in model.named_parameters():
@@ -133,7 +153,7 @@ def cornet_s_brainmodel_short(identifier='', init_weigths=True, config=None):
         'IT': (100, 100, 2),
     }
     model = cornet(identifier=identifier, init_weights=init_weigths, config=config)
-    return CORnetCommitment(identifier=identifier,
+    return CORnetCommitment(identifier=model.identifier,
                             activations_model=model,
                             layers=['V1.output-t0'] +
                                    [f'{area}.output-t{timestep}'

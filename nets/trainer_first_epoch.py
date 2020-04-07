@@ -84,9 +84,9 @@ def train(identifier,
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
-    if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
-        logger.info('Model already trained')
-        return
+    # if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
+    #     logger.info('Model already trained')
+    #     return
     restore_path = output_path
     logger.info('We start training the model')
     if ngpus > 1 and torch.cuda.device_count() > 1:
@@ -102,17 +102,11 @@ def train(identifier,
     validator = ImageNetVal(model)
 
     start_epoch = 0
-    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
+    epochs = 1
+    stored = [w for w in os.listdir(output_path) if f'{identifier}_epoch_00.pth.tar' in w]
     if len(stored) > 0:
-        restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
+        restore_path = output_path + f'{identifier}_epoch_00.pth.tar'
         ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
-        if ckpt_data['epoch'] < epochs + 1:
-            start_epoch = ckpt_data['epoch']
-            if start_epoch > epochs:
-                start_epoch = epochs - 1
-                restore_path = output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'
-                ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
-
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
 
         class Wrapper(Module):
@@ -129,8 +123,8 @@ def train(identifier,
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
-    if output_path is not None and os.path.isfile(output_path + f'results_{identifier}.pkl'):
-        records = pickle.load(open(output_path + f'results_{identifier}.pkl', 'rb+'))
+    if output_path is not None and os.path.isfile(output_path + f'results_{identifier}_first.pkl'):
+        records = pickle.load(open(output_path + f'results_{identifier}_first.pkl', 'rb+'))
     recent_time = time.time()
 
     nsteps = len(trainer.data_loader)
@@ -163,7 +157,7 @@ def train(identifier,
             if output_path is not None:
                 records.append(results)
                 if len(results) > 1:
-                    pickle.dump(records, open(output_path + f'results_{identifier}.pkl', 'wb+'))
+                    pickle.dump(records, open(output_path + f'results_{identifier}_first.pkl', 'wb+'))
 
                 ckpt_data = {}
                 # ckpt_data['flags'] = __dict__.copy()

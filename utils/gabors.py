@@ -61,8 +61,8 @@ def plot_conv_weights(weights, model_name):
         row = np.empty([0, weights.shape[2]])
         for j in range(0, weights.shape[1]):
             row = np.concatenate((row, weights[i, j]), axis=0)
-        f_min, f_max = np.min(row), np.max(row)
-        row = (row - f_min) / (f_max - f_min)
+        # f_min, f_max = np.min(row), np.max(row)
+        # row = (row - f_min) / (f_max - f_min)
         # row[0,0] = 0
         matrix = np.concatenate((matrix, row), axis=1)
         # matrix[0,0] = 1

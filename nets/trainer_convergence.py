@@ -111,11 +111,14 @@ def train(identifier,
         if ckpt_data['epoch'] < epochs + 1:
             start_epoch = ckpt_data['epoch']
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
-        model.load_state_dict(ckpt_data['state_dict'])
+        try:
+            model.load_state_dict(ckpt_data['state_dict'])
+        except Exception:
+            model.module.load_state_dict(ckpt_data['state_dict'])
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
-    if os.path.isfile(f'results_{identifier}.pkl') and output_path is not None:
+    if output_path is not None and os.path.isfile(output_path + f'results_{identifier}.pkl'):
         records = pickle.load(open(output_path + f'results_{identifier}.pkl', 'rb+'))
     recent_time = time.time()
 
@@ -147,7 +150,7 @@ def train(identifier,
                     results[validator.name] = result
                     trainer.model.train()
 
-            if output_path is not None and global_step in save_val_epochs:
+            if output_path is not None and global_step in save_val_steps:
                 records.append(results)
                 if len(results) > 1:
                     # print(records[-1])
@@ -188,9 +191,9 @@ def train(identifier,
 
             data_load_start = time.time()
         trainer.lr.step(val_loss, epoch=epoch)
-        print(f'Learning rate epoch {epoch}: {trainer.lr._last_lr}')
-        if trainer.lr._last_lr < 0.001:
-            print('Learning rate to low')
+        print(f'Learning rate epoch {epoch}: {trainer.optimizer.param_groups[0]["lr"]}')
+        if trainer.optimizer.param_groups[0]["lr"] < 0.001:
+            print('Learning rate too low')
             break
     if ngpus > 1 and torch.cuda.device_count() > 1:
         return model.module
@@ -298,7 +301,7 @@ class ImageNetTrain(object):
             record['top1'], record['top5'] = accuracy(output, target, topk=(1, 5))
             record['top1'] /= len(output)
             record['top5'] /= len(output)
-            record['learning_rate'] = self.lr.get_lr()[0]
+            record['learning_rate'] = self.optimizer.param_groups[0]['lr']
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()

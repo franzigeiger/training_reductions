@@ -98,6 +98,7 @@ def apply_fit_std_function(model, function, config):
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
             weights = np.random.normal(0, p(counter), weights.shape)
+            counter += 1
             m.weight.data = torch.Tensor(weights)
     return model
 
@@ -304,16 +305,76 @@ def apply_gabors_dist_old(model, configuration):
     return model
 
 
+conv_to_norm = {
+    'V1.norm1': 'V1.conv1',
+    'V1.norm2': 'V1.conv2',
+    'V2.norm_skip': 'V2.skip',
+    'V2.norm1_0': 'V2.conv1',
+    'V2.norm2_0': 'V2.conv2',
+    'V2.norm3_0': 'V2.conv3',
+    'V2.norm1_1': 'V2.conv1',
+    'V2.norm2_1': 'V2.conv2',
+    'V2.norm3_1': 'V2.conv3',
+    'V4.norm_skip': 'V4.skip',
+    'V4.norm1_0': 'V4.conv1',
+    'V4.norm2_0': 'V4.conv2',
+    'V4.norm3_0': 'V4.conv3',
+    'V4.norm1_1': 'V4.conv1',
+    'V4.norm2_1': 'V4.conv2',
+    'V4.norm3_1': 'V4.conv3',
+    'V4.norm1_2': 'V4.conv1',
+    'V4.norm2_2': 'V4.conv2',
+    'V4.norm3_2': 'V4.conv3',
+    'V4.norm1_3': 'V4.conv1',
+    'V4.norm2_3': 'V4.conv2',
+    'V4.norm3_3': 'V4.conv3',
+    'IT.norm_skip': 'IT.skip',
+    'IT.norm1_0': 'IT.conv1',
+    'IT.norm2_0': 'IT.conv2',
+    'IT.norm3_0': 'IT.conv3',
+    'IT.norm1_1': 'IT.conv1',
+    'IT.norm2_1': 'IT.conv2',
+    'IT.norm3_1': 'IT.conv3',
+
+}
+
+
 def apply_generic(model, configuration):
     # second layer correlation plus first layer random gabors
+    trained = cornet.cornet_s(pretrained=True, map_location=torch.device('cpu')).module
     idx = 0
     previous_weights = None
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d:
-            weights = m.weight.data.cpu().numpy()
+            # weights = m.weight.data.cpu().numpy()
             if layers[idx] in configuration:
-                previous_weights = configuration[layers[idx]](weights, config=configuration, previous=previous_weights,
+                trained_weigts = trained
+                for part in name.split('.'):
+                    trained_weigts = getattr(trained_weigts, part)
+                trained_weigts = trained_weigts.weight.data.cpu().numpy()
+                previous_weights = configuration[layers[idx]](trained_weigts, config=configuration,
+                                                              previous=previous_weights,
                                                               index=idx)
                 m.weight.data = torch.Tensor(previous_weights)
             idx += 1
+        if type(m) == nn.BatchNorm2d and not (
+                any(value in name for value in configuration['layers']) or conv_to_norm[name] in configuration[
+            'layers']):
+            trained_weigts = trained
+            for part in name.split('.'):
+                trained_weigts = getattr(trained_weigts, part)
+            if 'bn_init' in configuration:
+                bias = trained_weigts.bias.data.cpu().numpy()
+                bn_weight = trained_weigts.weight.data.cpu().numpy()
+                bn_weight = configuration['bn_init'](bn_weight, config=configuration, previous=previous_weights,
+                                                     index=idx)
+                bias = configuration['bn_init'](bias, config=configuration, previous=previous_weights,
+                                                index=idx)
+                m.weight.data = torch.Tensor(bn_weight)
+                m.bias.data = torch.Tensor(bias)
+            if 'batchnorm' in configuration:
+                m.track_running_stats = False
+                m.running_var = trained_weigts.running_var
+                m.running_mean = trained_weigts.running_mean
+
     return model

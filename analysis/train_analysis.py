@@ -64,7 +64,7 @@ def compare(name2, name1='CORnet-S_full', name3=None):
             if 'val' in i:
                 if i['meta']['epoch'] in epochs and len(val_top1_3) < len(val_top1_2):
                     val_top1_3.append(i['val']['top1'])
-        val_top1_3.append(val_top1_3[-1])
+        # val_top1_3.append(val_top1_3[-1])
         plot_date_map_custom_x({'Full train': val_top1_1, 'Imagenet optimized until V2.conv2': val_top1_2,
                                 'Brain benchmark optimized until V2.conv2': val_top1_3, 'epoch': epochs},
                                f'Training behavior', label_field='epoch', y_name='Validation accuracy', x_name='Epoch')

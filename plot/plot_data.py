@@ -78,11 +78,13 @@ def plot_data(benchmarks, data, labels, name, scale_fix=None):
 def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=None, rotate=False, alpha=1.0,
                    x_ticks=None, log=False):
     sns.set()
-    sns.set_context("paper")
+    sns.set_context("talk")
+    sns.set_style("whitegrid")
+    plt.figure(figsize=(10, 10))
     if x_labels is None:
         x_labels = np.arange(len(list(data.values())[0]))
     if rotate:
-        plt.xticks(rotation='vertical', fontsize=8)
+        plt.xticks(rotation='vertical', fontsize=12)
     print(data)
     # if base_line is not 0:
     #     plt.hlines(base_line, xmin=0, xmax=1, colors='b')
@@ -91,7 +93,8 @@ def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=No
             plt.plot(x_labels, data[key], label=key, linestyle="solid", marker="", alpha=alpha)
         else:
             plt.plot(x_labels, data[key], label=key, scalex=True, linestyle="-", marker=".", alpha=alpha)
-    plt.title(name)
+    # plt.axvline(x=11, color='r', linewidth=4)
+    plt.title(name, fontsize=13)
     plt.xlabel(x_name)
     plt.ylabel(y_name)
     if log:
@@ -99,7 +102,7 @@ def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=No
         ax = plt.gca()
         ax.xaxis.set_major_formatter(ScalarFormatter())
     if x_ticks:
-        plt.xticks(x_ticks)
+        plt.xticks(x_ticks, fontsize=12)
     plt.legend()
     if scale_fix:
         plt.ylim(scale_fix[0], scale_fix[1])
@@ -156,7 +159,8 @@ def plot_date_map_custom_x(data, name, label_field='layer', x_name='', y_name=''
     print(data)
     for key, value in data.items():
         if key is not label_field:
-            plt.plot(x, data[key], label=key, linestyle='-', marker=".")
+            length = len(data[key])
+            plt.plot(x[0:length], data[key], label=key, linestyle='-', marker=".")
     plt.plot([x[-1]], [0.5], label='Test', marker='o')
     plt.title(name)
     plt.xlabel(x_name)
@@ -323,25 +327,35 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
     bars = len(data)
     step_size = int(bars / 5) + 1
     x = np.arange(0, step_size * len(labels), step_size)  # the label locations
-    width = step_size / 10  # the width of the bars
+    if bars < 5:
+        width = step_size / 6  # the width of the bars
+        font_size = 26
+    else:
+        width = step_size / 10
+        font_size = 20
     left_edge = ((bars / 2) * width)
 
-    fig, ax = plt.subplots(figsize=(20, 20))
+    if bars > 8:
+        fig, ax = plt.subplots(figsize=(25, 20))
+    else:
+        fig, ax = plt.subplots(figsize=(20, 20))
     idx = 0
     axes = []
-    pal = sns.color_palette("coolwarm", len(data))
+    pal = ['#ABB2B9'] + sns.color_palette("muted", len(data) - 2) + ['#424949']
+    # pal = ['#ABB2B9'] + sns.color_palette("coolwarm", len(data)-2) + ['#ABB2B9']
     for key, value in data.items():
         axes.append(ax.bar(x - left_edge + (idx * width), value, width, label=key, color=pal[idx]))
         idx += 1
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel(y_label, fontsize=22)
+    ax.set_ylabel(y_label, fontsize=24)
     # ax.set_yticklabels(ax.get_yticklabels(),fontsize=22)
-    plt.yticks(fontsize=22)
+    plt.yticks(fontsize=24)
     # ax.set_title(title)
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=22)
+    ax.set_xticklabels(labels, fontsize=24)
     ax.set(ylim=[0.13, 0.6])
-    ax.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), prop={'size': 18}, borderaxespad=0, frameon=False, ncol=2)
+    ax.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), prop={'size': font_size}, borderaxespad=0, frameon=False,
+              ncol=2)
 
     for rect in ax.patches:
         height = rect.get_height()
@@ -377,14 +391,37 @@ def plot_images(img, size, labels, theta):
     plt.show(bbox_inches='tight', pad_inches=0)
 
 
-def scatter_plot(x, y, x_label=None, y_label=None):
+def scatter_plot(x, y, x_label=None, y_label=None, labels=None, title=None, trendline=False, scale_fix=None):
     sns.set()
-    sns.set_context("paper")
+    sns.set_context("talk")
+    sns.set_style("whitegrid")
+    plt.figure(figsize=(10, 10))
     corr = np.corrcoef(x, y)[0, 1]
-    plt.title(f'Correlation: {corr}')
+    if title:
+        plt.title(title)
+        file_name = title.replace(' ', '_')
+    else:
+        plt.title(f'Correlation: {corr}')
+        file_name = f'Correlation_{corr}'
     plt.xlabel(x_label)
     plt.ylabel(y_label)
-    plt.scatter(x, y)
+    # colors = ['#ABB2B9'] + (len(x)-3) * ["royalblue"] + 2* ['#ABB2B9']
+    colors = ['#ABB2B9'] + (len(x) - 5) * ["royalblue"] + 4 * ['#ABB2B9']
+    plt.scatter(x, y, color=colors)
+    # plt.xscale('log')
+    # plt.xticks(x)
+    # plt.gca().invert_xaxis()
+    if trendline:
+        z = np.polyfit(x, y, 1)
+        p = np.poly1d(z)
+        plt.plot(x, p(x), "r--")
+    if scale_fix:
+        plt.ylim(scale_fix[0], scale_fix[1])
+
+    if labels:
+        for i, txt in enumerate(labels):
+            plt.annotate(txt, (x[i], y[i]))
+    plt.savefig(f'{file_name}.png')
     plt.show()
     return corr
 

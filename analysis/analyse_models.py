@@ -32,7 +32,7 @@ def weight_init_percent(model_name, index, random=True):
     labels = []
     i = 0
     for name, m in model.named_modules():
-        if type(m) == nn.Conv2d:
+        if type(m) == nn.Conv2d or type(m) == nn.Linear:
             size = 1
             for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
             sizes.append(size)
@@ -344,5 +344,5 @@ if __name__ == '__main__':
     # func('alexnet')
     # func('densenet169')
     # func('resnet101')
-    for i in range(1, 12):
-        weight_init_percent('CORnet-S', i, True)
+
+    weight_init_percent('CORnet-S', 5, True)

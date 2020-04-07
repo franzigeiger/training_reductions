@@ -10,8 +10,8 @@ from skimage.transform import resize
 
 from transformations.layer_based import random_state
 from utils.correlation import auto_correlation, generate_correlation_map, kernel_convolution
-from utils.distributions import mixture_gaussian, best_fit_distribution
-from utils.gabors import gabor_kernel_3, plot_conv_weights, show_kernels
+from utils.distributions import mixture_gaussian, best_fit_distribution, poisson_sample
+from utils.gabors import gabor_kernel_3, show_kernels
 
 layers = ['V1.conv1', 'V1.conv2',
           'V2.conv_input', 'V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
@@ -194,10 +194,10 @@ def do_distribution_gabor_init(weights, config, index, **kwargs):
                                     y_c=beta[8],
                                     scale=beta[9], ks=weights.shape[-1])
             weights[i, int(s / 10)] = filter
-    if weights.shape[1] == 3:
-        show_kernels(weights, 'distribution_init')
-    else:
-        plot_conv_weights(weights, 'distribution_init_kernel')
+    # if weights.shape[1] == 3:
+    #     show_kernels(weights, 'distribution_init')
+    # else:
+    #     plot_conv_weights(weights, 'distribution_init_kernel')
     return weights
 
 
@@ -217,10 +217,10 @@ def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
                                 y_c=beta[8],
                                 scale=beta[9], ks=weights.shape[-1])
         weights[int(i / weights.shape[0]), int(i % weights.shape[0])] = filter
-    if weights.shape[1] == 3:
-        show_kernels(weights, 'distribution_init_channel_color')
-    else:
-        plot_conv_weights(weights, 'distribution_init_channel')
+    # if weights.shape[1] == 3:
+    #     show_kernels(weights, 'distribution_init_channel_color')
+    # else:
+    #     plot_conv_weights(weights, 'distribution_init_channel')
     return weights
 
 
@@ -253,7 +253,10 @@ def do_distribution_weight_init(weights, config, index, **kwargs):
             for j in range(weights.shape[1]):
                 weights[i, j] = samples[idx].reshape(weights.shape[2], weights.shape[3])
                 idx += 1
-    # show_kernels(weights, 'distribution_init')
+    # if weights.shape[1] == 3:
+    #     show_kernels(weights, 'distribution_init_channel_color')
+    # else:
+    #     plot_conv_weights(weights, 'distribution_init_channel')
     return weights
 
 
@@ -328,4 +331,74 @@ def do_in_channel_jumbler(weights, **kwargs):
         for i in range(weights.shape[1]):
             random_order = random_state.permutation(weights.shape[0])
             weights[:, i] = weights[random_order, i]
+    return weights
+
+
+def do_in_kernel_jumbler(weights, **kwargs):
+    if len(weights.shape) > 2:
+        for i in range(weights.shape[0]):
+            random_order = random_state.permutation(weights.shape[1])
+            weights[i] = weights[i, random_order]
+    return weights
+
+
+def do_dist_in_layer(weights, config, **kwargs):
+    name = config['distribution']
+    distribution = getattr(st, name)
+    params = distribution.fit(weights)
+    print(f'Use distribution: {name}, params: {params}')
+    arg = params[:-2]
+    loc = params[-2]
+    scale = params[-1]
+    return distribution.rvs(size=weights.shape, *arg, loc=loc, scale=scale)
+
+
+def do_dist_in_kernel(weights, config, **kwargs):
+    name = config['distribution']
+    best_dist = getattr(st, name)
+    print(f'Use distribution: {name}')
+    for i in range(weights.shape[0]):
+        p = best_dist.fit(weights[i])
+        arg = p[:-2]
+        loc = p[-2]
+        scale = p[-1]
+        weights[i] = best_dist.rvs(size=weights[i].shape, *arg, loc=loc, scale=scale)
+    return weights
+
+
+def do_poisson_layer(weights, **kwargs):
+    return poisson_sample(weights)
+
+
+def do_poisson_kernel(weights, **kwargs):
+    for i in range(weights.shape[0]):
+        weights[i] = poisson_sample(weights[i])
+    return weights
+
+
+def prev_std_init(weights, previous, config, index):
+    params = config[f'params_{index}']
+    p = np.poly1d(params)
+    for i in range(previous.shape[0]):
+        prev = np.std(previous[i])
+        res = p(prev)
+        rand = np.random.normal(0, res, weights.shape[0])
+        rand.resize([weights.shape[0], 1, 1])
+        weights[:, i] = rand
+    return weights
+
+
+def do_sign_init_layer(weights, previous, config, index):
+    distr = config[f'params_{index}']
+    std = np.std(previous.squeeze())
+    return np.random.choice([-std, std, 0], weights.shape, p=distr)
+
+
+def do_sign_init_kernel(weights, previous, config, index):
+    distr = config[f'params_{index}']
+    for i in range(previous.shape[0]):
+        std = np.std(previous[i].squeeze())
+        rand = np.random.choice([-std, std, 0], weights.shape[0], p=distr)
+        rand.resize([weights.shape[0], 1, 1])
+        weights[:, i] = rand
     return weights

@@ -6,7 +6,7 @@ import sys
 from brainscore import score_model
 
 from benchmark.database import create_connection, store_score
-from nets.decoder_train_pool import brain_translated_pool
+from nets.test_models import cornet_s_brainmodel
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName('DEBUG'),
@@ -17,9 +17,10 @@ for disable_logger in ['s3transfer', 'botocore', 'boto3', 'urllib3', 'peewee', '
 
 def run_benchmark(benchmark_identifier, model_name):
     print(f'>>>>>Start running model {model_name} on benchmark {benchmark_identifier}')
-    model = brain_translated_pool[model_name]
-    score = score_model(model_identifier=model_name, model=model, benchmark_identifier=benchmark_identifier)
-    return score
+    # model = brain_translated_pool[model_name]
+    model = cornet_s_brainmodel(model_name, True)
+    score = score_model(model_identifier=model.identifier, model=model, benchmark_identifier=benchmark_identifier)
+    return score, model.identifier
 
 
 def score_models(model, benchmark):
@@ -31,7 +32,7 @@ def score_models(model, benchmark):
     base_model = model.split('_')[0]
     try:
         d = datetime.datetime.now()
-        raw_score = run_benchmark(benchmark, model)
+        raw_score, model = run_benchmark(benchmark, model)
         print(raw_score)
         result = raw_score.sel(aggregation='center')
         result = result.values

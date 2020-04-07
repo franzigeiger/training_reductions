@@ -20,6 +20,8 @@ import tqdm
 from PIL import Image
 from torch.nn import Module
 
+from nets.datasubset import DataSubSet
+
 Image.warnings.simplefilter('ignore')
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ momentum = .9
 step_size = 20
 lr = .1
 workers = 20
+image_load = 0.5
 if ngpus > 0:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -108,24 +111,12 @@ def train(identifier,
         ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
         if ckpt_data['epoch'] < epochs + 1:
             start_epoch = ckpt_data['epoch']
-            if start_epoch > epochs:
-                start_epoch = epochs - 1
-                restore_path = output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'
-                ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
-
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
-
-        class Wrapper(Module):
-            def __init__(self, model):
-                super(Wrapper, self).__init__()
-                self.module = model
-
-        model = Wrapper(model)
+        model.load_state_dict(ckpt_data['state_dict'])
         try:
             model.load_state_dict(ckpt_data['state_dict'])
-        except:
+        except Exception:
             model.module.load_state_dict(ckpt_data['state_dict'])
-        model = model.module
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
@@ -139,11 +130,9 @@ def train(identifier,
                                   save_train_epochs) * nsteps).astype(int) if save_train_epochs else None
     save_val_steps = (np.arange(0, epochs + 1,
                                 save_val_epochs) * nsteps).astype(int) if save_val_epochs else None
-    save_model_steps = (np.arange(1, epochs + 1,
+    save_model_steps = (np.arange(0, epochs + 1,
                                   save_model_epochs) * nsteps).astype(int) if save_model_epochs else None
-    save_model_steps = np.concatenate(([0, int(nsteps * 0.1), int(nsteps * 0.2), int(nsteps * 0.3), int(nsteps * 0.4),
-                                        int(nsteps * 0.5), int(nsteps * 0.6), int(nsteps * 0.7), int(nsteps * 0.8),
-                                        int(nsteps * 0.9)], save_model_steps))
+
     results = {'meta': {'step_in_epoch': 0,
                         'epoch': start_epoch,
                         'wall_time': time.time()}
@@ -157,7 +146,7 @@ def train(identifier,
             if save_val_steps is not None:
 
                 if global_step in save_val_steps:
-                    results[validator.name] = validator()
+                    # results[validator.name] = validator()
                     trainer.model.train()
 
             if output_path is not None:
@@ -179,13 +168,9 @@ def train(identifier,
 
                 if save_model_steps is not None:
                     if global_step in save_model_steps:
-                        e = global_step / len(trainer.data_loader)
-                        if e % 1 == 0:
-                            torch.save(ckpt_data, output_path +
-                                       f'{identifier}_epoch_{int(e):02d}.pth.tar')
-                        else:
-                            torch.save(ckpt_data, output_path +
-                                       f'{identifier}_epoch_{e:.1f}.pth.tar')
+                        torch.save(ckpt_data, output_path +
+                                   f'{identifier}_epoch_{epoch:02d}.pth.tar')
+
             else:
                 if len(results) > 1:
                     pprint.pprint(results)
@@ -279,7 +264,7 @@ class ImageNetTrain(object):
             self.loss = self.loss.cuda()
 
     def data(self):
-        dataset = torchvision.datasets.ImageFolder(
+        images = torchvision.datasets.ImageFolder(
             os.path.join(data_path, 'train'),
             torchvision.transforms.Compose([
                 torchvision.transforms.RandomResizedCrop(224),
@@ -287,6 +272,12 @@ class ImageNetTrain(object):
                 torchvision.transforms.ToTensor(),
                 normalize,
             ]))
+        dataset = DataSubSet(images, image_load, torchvision.transforms.Compose([
+            torchvision.transforms.RandomResizedCrop(224),
+            torchvision.transforms.RandomHorizontalFlip(),
+            torchvision.transforms.ToTensor(),
+            normalize,
+        ]))
         data_loader = torch.utils.data.DataLoader(dataset,
                                                   batch_size=batch_size,
                                                   shuffle=True,

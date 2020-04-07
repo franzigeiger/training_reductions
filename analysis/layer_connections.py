@@ -3,7 +3,7 @@ from scipy.stats import norm
 from torch import nn
 
 from nets.test_models import cornet_s_brainmodel
-from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap, plot_histogram, plot_matrixImage, scatter_plot
+from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap, plot_histogram, scatter_plot
 
 
 def get_layer_weigh_list(random=True):
@@ -254,11 +254,16 @@ def conv2_conv3():
         values['mean'].append(np.mean(i))
         values['std'].append(np.std(i))
         values['sum'].append(np.sum(i))
-    scatter_plot(values['mean'], values['mean_prev'], x_label='Mean layer 7', y_label="Mean layer 6")
-    scatter_plot(values['std'], values['std_prev'], x_label='Std layer 7', y_label="Std layer 6")
-    scatter_plot(values['sum'], values['sum_prev'], x_label='Sum layer 7', y_label="Sum layer 6")
+    # scatter_plot(values['mean'], values['mean_prev'], x_label='Mean layer 7', y_label="Mean layer 6")
+    scatter_plot(values['std_prev'], values['std'], x_label='Std layer 6', y_label="Std layer 7", scale_fix=[0, 0.07])
+    # scatter_plot(values['sum'], values['sum_prev'], x_label='Sum layer 7', y_label="Sum layer 6")
+    z = np.polyfit(values['std_prev'], values['std'], 1)
+    p = np.poly1d(z)
+    res = p(values['std_prev'])
+    scatter_plot(values['std_prev'], res, x_label='Std layer 6', y_label="Std layer 7", scale_fix=[0, 0.07])
+    print(z)
     # plot_data_base(values, 'Properties')
-    plot_matrixImage(weights[6].squeeze().T, f'weights_{layer[6]}')
+    # plot_matrixImage(weights[6].squeeze().T, f'weights_{layer[6]}')
 
 
 def conv2_conv3_2():
@@ -311,8 +316,8 @@ def conv2():
     # plot_matrixImage(weights[6].squeeze().T, f'weights_{layer[6]}' )
 
 if __name__ == '__main__':
-    # conv2_conv3_2()
-    conv2()
+    conv2_conv3()
+    # conv2()
     # connections(plot=True)
     # connections_mean(plot=True)
     # impact_mean_std()

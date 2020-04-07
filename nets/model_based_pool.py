@@ -34,7 +34,7 @@ def load_single_layer_models():
                                                                       type='model'))
 
 
-load_single_layer_models()
+# load_single_layer_models()
 
 brain_translated_pool = UniqueKeyDict()
 
