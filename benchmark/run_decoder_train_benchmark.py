@@ -26,9 +26,12 @@ def run_benchmark(benchmark_identifier, model_name):
 def score_models(model, benchmark):
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
-    # os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,brainscore.score_model"
-    path = f'{dir_path}/../scores.sqlite'
+    if 'public' in benchmarks:
+        path = f'{dir_path}/../scores.sqlite'
+    else:
+        path = f'{dir_path}/../scores.sqlite'
     db = create_connection(path)
+    os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,brainscore.score_model"
     base_model = model.split('_')[0]
     try:
         d = datetime.datetime.now()

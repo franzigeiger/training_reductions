@@ -55,18 +55,20 @@ def do_fit_gabor_init(weights, config, **kwargs):
     return weights
 
 
-def do_kernel_normal_distribution_init(weights, **kwargs):
-    for i in range(weights.shape[0]):
-        flat = weights[i].flatten()
+def do_kernel_normal_distribution_init(weights, shape, **kwargs):
+    old_shape = weights.shape[0]
+    new_weights = np.zeros(shape)
+    for i in range(shape[0]):
+        flat = weights[i % old_shape].flatten()
         mu, std = norm.fit(flat)
-        weights[i] = np.random.normal(mu, std, weights[i].shape)
+        new_weights[i] = np.random.normal(mu, std, shape[1:])
     return weights
 
 
-def do_layer_normal_distribution_init(weights, **kwargs):
+def do_layer_normal_distribution_init(weights, shape, **kwargs):
     flat = weights.flatten()
     mu, std = norm.fit(flat)
-    return np.random.normal(mu, std, weights.shape)
+    return np.random.normal(mu, std, shape)
 
 
 def do_scrumble_gabor_init(weights, config, **kwargs):
@@ -177,7 +179,7 @@ def do_kernel_convolution_init(weights, previous, **kwargs):
     return weights
 
 
-def do_distribution_gabor_init(weights, config, index, **kwargs):
+def do_distribution_gabor_init(weights, config, index, shape, **kwargs):
     if index != 0:
         params = np.load(config[f'file_{index}'])
     else:
@@ -185,14 +187,14 @@ def do_distribution_gabor_init(weights, config, index, **kwargs):
     param, tuples = prepare_gabor_params(params)
     np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
-    samples = mixture_gaussian(param, weights.shape[0], components, f'gabor_{index}')
-    for i in range(weights.shape[0]):
+    samples = mixture_gaussian(param, shape[0], components, f'gabor_{index}')
+    for i in range(shape[0]):
         for s, e in tuples:
             beta = samples[i, s:e]
             filter = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
                                     sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                     y_c=beta[8],
-                                    scale=beta[9], ks=weights.shape[-1])
+                                    scale=beta[9], ks=shape[-1])
             weights[i, int(s / 10)] = filter
     # if weights.shape[1] == 3:
     #     show_kernels(weights, 'distribution_init')
@@ -201,7 +203,7 @@ def do_distribution_gabor_init(weights, config, index, **kwargs):
     return weights
 
 
-def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
+def do_distribution_gabor_init_channel(weights, config, index, shape, **kwargs):
     if index != 0:
         params = np.load(config[f'file_{index}'])
     else:
@@ -209,14 +211,14 @@ def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
     param, tuples = prepare_gabor_params_channel(params)
     np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
-    samples = mixture_gaussian(param, weights.shape[0], components)
-    for i in range(weights.shape[0]):
+    samples = mixture_gaussian(param, shape[0], components)
+    for i in range(shape[0]):
         beta = samples[i]
         filter = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
                                 sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                 y_c=beta[8],
-                                scale=beta[9], ks=weights.shape[-1])
-        weights[int(i / weights.shape[0]), int(i % weights.shape[0])] = filter
+                                scale=beta[9], ks=shape[-1])
+        weights[int(i / shape[0]), int(i % shape[0])] = filter
     # if weights.shape[1] == 3:
     #     show_kernels(weights, 'distribution_init_channel_color')
     # else:
@@ -224,7 +226,7 @@ def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
     return weights
 
 
-def do_distribution_weight_init(weights, config, index, **kwargs):
+def do_distribution_weight_init(weights, config, index, shape, **kwargs):
     # dimension = 0, kernel level, dimension 1 channel level
     # assume weights are untrained weights
     trained = cornet.cornet_s(pretrained=True, map_location=torch.device('cpu'))
@@ -297,7 +299,7 @@ def do_best_dist_init_layer(weights, **kwargs):
     return best_dist.rvs(size=weights.shape, *arg, loc=loc, scale=scale)
 
 
-def do_best_dist_init_kernel(weights, **kwargs):
+def do_best_dist_init_kernel(weights, shape, **kwargs):
     dists = {}
     for i in weights:
         name, params = best_fit_distribution(i)
@@ -313,17 +315,19 @@ def do_best_dist_init_kernel(weights, **kwargs):
         if v > max:
             best = k
     best_dist = getattr(st, best)
-    for i in range(weights.shape[0]):
-        p = best_dist.fit(weights[i])
+    old_shape = weights.shape[0]
+    new_weights = np.zeros(shape)
+    for i in range(shape[0]):
+        p = best_dist.fit(weights[i % old_shape])
         print(f'Best fit distribution: {best} with params {p}')
         arg = p[:-2]
         loc = p[-2]
         scale = p[-1]
         # print(weights[i])
-        weights[i] = best_dist.rvs(size=weights[i].shape, *arg, loc=loc, scale=scale)
+        new_weights[i] = best_dist.rvs(size=shape[1:], *arg, loc=loc, scale=scale)
         # print(weights[i])
 
-    return weights
+    return new_weights
 
 
 def do_in_channel_jumbler(weights, **kwargs):
@@ -342,7 +346,7 @@ def do_in_kernel_jumbler(weights, **kwargs):
     return weights
 
 
-def do_dist_in_layer(weights, config, **kwargs):
+def do_dist_in_layer(weights, config, shape, **kwargs):
     name = config['distribution']
     distribution = getattr(st, name)
     params = distribution.fit(weights)
@@ -350,30 +354,34 @@ def do_dist_in_layer(weights, config, **kwargs):
     arg = params[:-2]
     loc = params[-2]
     scale = params[-1]
-    return distribution.rvs(size=weights.shape, *arg, loc=loc, scale=scale)
+    return distribution.rvs(size=shape, *arg, loc=loc, scale=scale)
 
 
-def do_dist_in_kernel(weights, config, **kwargs):
+def do_dist_in_kernel(weights, config, shape, **kwargs):
     name = config['distribution']
     best_dist = getattr(st, name)
     print(f'Use distribution: {name}')
-    for i in range(weights.shape[0]):
-        p = best_dist.fit(weights[i])
+    old_shape = weights.shape[0]
+    new_weights = np.zeros(shape)
+    for i in range(shape[0]):
+        p = best_dist.fit(weights[i % old_shape])
         arg = p[:-2]
         loc = p[-2]
         scale = p[-1]
-        weights[i] = best_dist.rvs(size=weights[i].shape, *arg, loc=loc, scale=scale)
-    return weights
+        new_weights[i] = best_dist.rvs(size=shape[1:], *arg, loc=loc, scale=scale)
+    return new_weights
 
 
-def do_poisson_layer(weights, **kwargs):
-    return poisson_sample(weights)
+def do_poisson_layer(weights, shape, **kwargs):
+    return poisson_sample(weights, shape)
 
 
-def do_poisson_kernel(weights, **kwargs):
-    for i in range(weights.shape[0]):
-        weights[i] = poisson_sample(weights[i])
-    return weights
+def do_poisson_kernel(weights, shape, **kwargs):
+    old_shape = weights.shape[0]
+    new_weights = np.zeros(shape)
+    for i in range(shape[0]):
+        new_weights[i] = poisson_sample(weights[i % old_shape], shape[1:])
+    return new_weights
 
 
 def prev_std_init(weights, previous, config, index):

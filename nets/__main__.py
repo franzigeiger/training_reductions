@@ -10,6 +10,7 @@ from numpy.random.mtrand import RandomState
 
 from nets import train_model, trainer, trainer_convergence, test_models
 from nets.full_trainer import train as full_train
+from nets.resnet_init import train_resnet
 from nets.trainer_convergence import train as conv_train
 from nets.trainer_first_epoch import train as train_first
 from transformations import layer_based
@@ -34,6 +35,8 @@ parser.add_argument('--first', type=bool, default=False,
 parser.add_argument('--step', type=int, default=0, help='Step size for learning rate scheduler')
 parser.add_argument('--batch_fix', type=bool, default=False,
                     help='disables all other flags and stored the models performance values in the database')
+parser.add_argument('--resnet', type=bool, default=False,
+                    help='Run resnet model with the given id')
 
 args, remaining_args = parser.parse_known_args()
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level),
@@ -53,9 +56,9 @@ def score_model_console():
     test_models.batch_fix = args.batch_fix
     if args.first:
         train_model(model=args.model, train_func=train_first)
-    if args.full:
+    elif args.full:
         train_model(model=args.model, train_func=full_train)
-    if args.convergence:
+    elif args.convergence:
         if args.lr != 0:
             trainer_convergence.lr = args.lr
         if args.step != 0:
@@ -63,6 +66,8 @@ def score_model_console():
         if args.epoch != 20:
             trainer_convergence.epochs = args.epoch
         train_model(model=args.model, train_func=conv_train)
+    elif args.resnet:
+        train_resnet(args.model)
     else:
         if args.step != 0:
             trainer.step_size = args.step

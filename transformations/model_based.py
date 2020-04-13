@@ -8,6 +8,7 @@ from torch.nn import init
 from transformations.transformation_utils import do_fit_gabor_init, do_correlation_init, do_gabors, do_fit_gabor_dist, \
     do_correlation_init_no_reshape, do_kernel_convolution_init, do_distribution_gabor_init, do_scrumble_gabor_init, \
     layers
+from utils.models import mapping
 
 
 def apply_to_one_layer(net, config):
@@ -353,7 +354,7 @@ def apply_generic(model, configuration):
                     trained_weigts = getattr(trained_weigts, part)
                 trained_weigts = trained_weigts.weight.data.cpu().numpy()
                 previous_weights = configuration[layers[idx]](trained_weigts, config=configuration,
-                                                              previous=previous_weights,
+                                                              previous=previous_weights, shape=trained_weigts.shape,
                                                               index=idx)
                 m.weight.data = torch.Tensor(previous_weights)
             idx += 1
@@ -367,9 +368,53 @@ def apply_generic(model, configuration):
                 bias = trained_weigts.bias.data.cpu().numpy()
                 bn_weight = trained_weigts.weight.data.cpu().numpy()
                 bn_weight = configuration['bn_init'](bn_weight, config=configuration, previous=previous_weights,
-                                                     index=idx)
+                                                     index=idx, shape=bn_weight.shape)
                 bias = configuration['bn_init'](bias, config=configuration, previous=previous_weights,
-                                                index=idx)
+                                                index=idx, shape=bn_weight.shape)
+                m.weight.data = torch.Tensor(bn_weight)
+                m.bias.data = torch.Tensor(bias)
+                if 'momentum' in configuration:
+                    m.momentum = 0
+
+            if 'batchnorm' in configuration:
+                m.track_running_stats = False
+                m.running_var = trained_weigts.running_var
+                m.running_mean = trained_weigts.running_mean
+
+    return model
+
+
+def apply_generic_resnet(model, configuration):
+    # second layer correlation plus first layer random gabors
+    trained = cornet.cornet_s(pretrained=True, map_location=torch.device('cpu')).module
+    idx = 0
+    previous_weights = None
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            # weights = m.weight.data.cpu().numpy()
+            if name in configuration:
+                trained_weigts = trained
+                for part in name.split('.'):
+                    trained_weigts = getattr(trained_weigts, part)
+                trained_weigts = trained_weigts.weight.data.cpu().numpy()
+                previous_weights = configuration[layers[idx]](trained_weigts, config=configuration, shape=m.shape,
+                                                              previous=previous_weights,
+                                                              index=layers.index(mapping[name]))
+                m.weight.data = torch.Tensor(previous_weights)
+            idx += 1
+        if type(m) == nn.BatchNorm2d and not (
+                any(value in name for value in configuration['layers']) or name in configuration[
+            'layers']):
+            trained_weigts = trained
+            for part in mapping[name].split('.'):
+                trained_weigts = getattr(trained_weigts, part)
+            if 'bn_init' in configuration:
+                bias = trained_weigts.bias.data.cpu().numpy()
+                bn_weight = trained_weigts.weight.data.cpu().numpy()
+                bn_weight = configuration['bn_init'](bn_weight, config=configuration, previous=previous_weights,
+                                                     index=idx, shape=m.weight.data.cpu().shape)
+                bias = configuration['bn_init'](bias, config=configuration, previous=previous_weights,
+                                                index=idx, shape=m.bias.data.cpu().shape)
                 m.weight.data = torch.Tensor(bn_weight)
                 m.bias.data = torch.Tensor(bias)
             if 'batchnorm' in configuration:
@@ -378,3 +423,4 @@ def apply_generic(model, configuration):
                 m.running_mean = trained_weigts.running_mean
 
     return model
+

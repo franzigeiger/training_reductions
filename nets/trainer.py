@@ -84,6 +84,7 @@ def train(identifier,
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
+    # print(model.V1.norm1.running_mean.data.cpu().numpy())
     if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
         logger.info('Model already trained')
         return
@@ -105,7 +106,7 @@ def train(identifier,
     stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
     if len(stored) > 0:
         restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
-        ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
+        ckpt_data = torch.load(restore_path)
         if ckpt_data['epoch'] < epochs + 1:
             start_epoch = ckpt_data['epoch']
             if start_epoch > epochs:
@@ -179,6 +180,8 @@ def train(identifier,
 
                 if save_model_steps is not None:
                     if global_step in save_model_steps:
+                        # print('Save weights')
+                        # print(model.module.V1.norm1.running_mean.data.cpu().numpy())
                         e = global_step / len(trainer.data_loader)
                         if e % 1 == 0:
                             torch.save(ckpt_data, output_path +
@@ -192,6 +195,8 @@ def train(identifier,
 
             if epoch < epochs:
                 frac_epoch = (global_step + 1) / len(trainer.data_loader)
+                # print('Start training')
+                # print(model.module.V1.norm1.running_mean.data.cpu().numpy())
                 record = trainer(frac_epoch, *data)
                 record['data_load_dur'] = data_load_time
                 results = {'meta': {'step_in_epoch': step + 1,
@@ -347,6 +352,9 @@ class ImageNetVal(object):
 
     def __call__(self):
         self.model.eval()
+        # print('Start evaulation')
+        # print(self.model.module.V1.norm1.running_mean.data.cpu().numpy())
+        # print(self.model.module.V1.norm1.momentum)
         start = time.time()
         record = {'loss': 0, 'top1': 0, 'top5': 0}
         with torch.no_grad():
@@ -360,7 +368,9 @@ class ImageNetVal(object):
                 p1, p5 = accuracy(output, target, topk=(1, 5))
                 record['top1'] += p1
                 record['top5'] += p5
-
+        # print('Evaluation done')
+        # print(self.model.module.V1.norm1.running_mean.data.cpu().numpy())
+        # print(self.model.module.V1.norm1.momentum)
         for key in record:
             record[key] /= len(self.data_loader.dataset.samples)
         record['dur'] = (time.time() - start) / len(self.data_loader)

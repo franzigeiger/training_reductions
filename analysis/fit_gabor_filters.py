@@ -8,6 +8,7 @@ from scipy import linalg
 from scipy.optimize import basinhopping
 from skimage.filters import gabor_kernel
 from skimage.transform import resize
+from sklearn import feature_selection
 from sklearn.metrics import mean_squared_error, explained_variance_score
 from sklearn.model_selection import ParameterGrid
 from torch import nn
@@ -92,10 +93,10 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping'):
     np.random.seed(1)
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d:
-            if counter == 1:
+            if name == 'V2.conv2':
                 weights = m.weight.data.cpu().numpy()
                 gabor_params = np.zeros([weights.shape[0], weights.shape[1], length])
-                for i in range(0, 64):
+                for i in range(0, weights.shape[0]):
                     for j in range(0, weights.shape[1]):
                         kernel = weights[i, j]
                         kernel = normalize(kernel)
@@ -251,6 +252,43 @@ def plot_parameter_distribution(name):
         variables[i] = param.flatten()
     bnds = ((1 / 14, 0.5), (-2 * np.pi, 2 * np.pi), (2, 14), (2, 14), (-2 * np.pi, 2 * np.pi), (-2, 2), (-2, 2))
     plot_subplots_histograms(data, 'Gabor parameter distributions', bins=10, bounds=bnds)
+
+
+def mutual_information():
+    model = get_model('CORnet-S_base', True)
+    # model = get_model('CORnet-S_random', False)
+    # model = get_model('CORnet-S_train_second_kernel_conv_epoch_00', True)
+    counter = 0
+    plt.figure(figsize=(4, 25))
+    gs = gridspec.GridSpec(20, 3, width_ratios=[1] * 3,
+                           wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
+    kernel_avgs = []
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            weights = m.weight.data.squeeze().numpy()
+            scores = np.zeros([weights.shape[0], weights.shape[0]])
+            kernels = weights.shape[0]
+            for i in range(kernels):
+                for j in range(kernels):
+                    # print(f'Score kernel {i} and {j}')
+                    scores[i, j] = feature_selection.mutual_info_regression(weights[i].flatten().reshape(-1, 1),
+                                                                            weights[j].flatten())
+            print(f'Kernel mean mutual information {np.mean(scores)}')
+            plot_heatmap(scores, title=f'Kernel mutual information {name}', col_labels='Kernels', row_labels='Kernels')
+            if weights.shape[-1] > 1:
+                channels = weights.shape[1]
+                scores = np.zeros([kernels, channels, channels])
+                for i in range(kernels):
+                    for j in range(channels):
+                        for k in range(channels):
+                            # print(f'Score channel {k} and {j} in kernel {i}')
+                            scores[i, j, k] = feature_selection.mutual_info_regression(
+                                weights[i, j].flatten().reshape(-1, 1), weights[i, k].flatten())
+                scores = np.mean(scores, axis=0)
+                print(f'Channel mean mutual information {np.mean(scores)}')
+                plot_heatmap(scores, title=f'Channel mean mutual information {name}', col_labels='Channel',
+                             row_labels='Channel')
+
 
 
 def kernel_similarity():
@@ -501,13 +539,14 @@ if __name__ == '__main__':
     # rank_errors(name, 'gabors_sklearn')
     # show_options()
     # compare_gabors()
-    name = 'gabors_conv2'
-    # name = 'gabors_tiago_scaled'
-    np.random.seed(0)
+    # name = 'gabors_V2.conv2'
+    # # name = 'gabors_tiago_scaled'
+    # np.random.seed(0)
     # fit_gabors('V2', name)
     # compare_gabors('V2', name)
     # analyze_param_dist(name, True)
     # gaussian_mixture(name)
-    gaussian_mixture_channels(name)
+    # gaussian_mixture_channels(name)
     # kernel_similarity()
     # get_fist_layer_weights()
+    mutual_information()

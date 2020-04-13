@@ -188,7 +188,7 @@ def make_pdf(dist, params, size=10000):
     return pdf
 
 
-def poisson_sample(data):
+def poisson_sample(data, shape):
     import numpy as np
     from scipy.optimize import minimize
     from scipy import stats
@@ -216,7 +216,7 @@ def poisson_sample(data):
                       )
     mu = result.x
     print(f'Fit poisson with mean {mu}')
-    return stats.poisson.rvs(size=data.shape, mu=mu)
+    return stats.poisson.rvs(size=shape, mu=mu)
 
 
 def set_running_averages(checkpoint):

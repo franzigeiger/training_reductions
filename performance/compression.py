@@ -3,19 +3,19 @@ import sys
 
 import cornet
 import numpy as np
-# from ptflops import get_model_complexity_info
 import scipy as st
 import torch
 from torch import nn
 
-from benchmark.database import create_connection, store_analysis
+from analysis.time_analysis import best_models_brain_2
 from nets import get_model, run_model_training, layers, get_config
 from nets.trainer_performance import train
+from performance.flops_counter import get_model_complexity_info
 from plot.plot_data import plot_data_base
 from utils.distributions import mixture_gaussian, best_fit_distribution
 
 
-def measure_performance(identifier, title, do_epoch=False):
+def measure_performance(identifier, title, do_epoch=False, do_analysis=False):
     config = get_config(identifier)
     model = get_model(identifier, False, config)
     values = 0
@@ -26,38 +26,42 @@ def measure_performance(identifier, title, do_epoch=False):
     all_w = []
     layer = []
     idx = 0
-    for name, m in model.named_modules():
-        if type(m) == torch.nn.Conv2d:
-            size = 1
-            for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
-            if any(value in name for value in config['layers']):
-                values += size
-            else:
-                this_mod = sys.modules[__name__]
-                str(config[name])
-                func = getattr(this_mod, config[name].__name__)
-                params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
-                values += params
-                hyper_params += params
-            all += size
-            idx += 1
-            layer.append(name)
-            all_w.append(all)
-            hyp.append(hyper_params)
-            hyp_w.append(values)
+    if do_analysis:
+        for name, m in model.named_modules():
+            if type(m) == torch.nn.Conv2d:
+                size = 1
+                for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
+                if any(value in name for value in config['layers']):
+                    values += size
+                else:
+                    this_mod = sys.modules[__name__]
+                    str(config[name])
+                    func = getattr(this_mod, config[name].__name__)
+                    params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
+                    values += params
+                    hyper_params += params
+                all += size
+                idx += 1
+                layer.append(name)
+                all_w.append(all)
+                hyp.append(hyper_params)
+                hyp_w.append(values)
 
-    plot_data_base({'Total weights': all_w, 'Unfrozen values': hyp_w, 'Distribution Parameters': hyp},
-                   f'Weight compression for {title}',
-                   layer[0:(len(layer))], rotate=True, y_name='Num. of parameters')
+        plot_data_base({'Total weights': all_w, 'Unfrozen values': hyp_w, 'Distribution Parameters': hyp},
+                       f'Weight compression for {title}',
+                       layer[0:(len(layer))], rotate=True, y_name='Num. of parameters')
     if do_epoch:
-        time = run_model_training(identifier, False, config, train)
-        # flops, params = get_model_complexity_info(model, (3, 224, 224), as_strings=True, print_per_layer_stat=True)
+        # time = run_model_training(identifier, False, config, train)
+        flops, params = get_model_complexity_info(model, (3, 224, 224), as_strings=False, print_per_layer_stat=True)
+        train_flops = flops * 2 * 3 * (1.2 * 1000000) * 1
+        print(
+            f' Flops model {identifier}: {flops/1000000:.2f}, training flops {train_flops/1000000:.2f} params {params/1000000:.2f}')
         path = os.path.abspath(__file__)
         dir_path = os.path.dirname(path)
         path = f'{dir_path}/../scores.sqlite'
-        db = create_connection(path)
+        # db = create_connection(path)
         # model_id, train_time, weights_fixed, weights_to_train, additional_params, flops
-        store_analysis(db, (identifier, time['time'], hyp_w[-1] - hyp[-1], hyp_w[-1], hyp[-1], 0))
+        # store_analysis(db, (identifier, time['time'], hyp_w[-1] - hyp[-1], hyp_w[-1], hyp[-1], 0))
 
 
 def benchmark_epoch(identifier):
@@ -469,6 +473,7 @@ if __name__ == '__main__':
     # Best V2 model Brain benchmarks:
     # measure_performance('CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full','6 layers(V1 & V2 - V2.conv3), Brain focus')
     # # Best V4 model Imagenet:
-    measure_performance('CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12', '10 layers(V1,V2 & V4 - V2.conv3 & V4.conv3)')
+    for k, v in best_models_brain_2.items():
+        measure_performance(k, v, do_epoch=True)
     # # Best V4 model Brain benchmarks:
     # measure_performance('CORnet-S_train_kn8_kn9_kn10_wmk11_kn12', '12 layers(V1,V2 & V4 - V2.conv3 & V4.conv3), Brain focus')

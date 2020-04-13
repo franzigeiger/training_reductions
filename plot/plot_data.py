@@ -65,7 +65,10 @@ def plot_data(benchmarks, data, labels, name, scale_fix=None):
     # plt.setlabel(xlabel='Models', ylabel='Benchmarks')
     print(data)
     for key, value in data.items():
-        plt.plot(x, value, label=key, linestyle="", marker="o")
+        if key is 'Full':
+            plt.plot(x, value, label=key, linestyle="", marker="o", color='r')
+        else:
+            plt.plot(x, value, label=key, linestyle="", marker="o")
     plt.legend()
     plt.tight_layout()
     if scale_fix:
@@ -89,10 +92,15 @@ def plot_data_base(data, name, x_labels=None, x_name='', y_name='', scale_fix=No
     # if base_line is not 0:
     #     plt.hlines(base_line, xmin=0, xmax=1, colors='b')
     for key, value in data.items():
-        if key in ['base', 'base_untrained', 'base_trained']:
+        if 'Not corrected' in key:
+            plt.plot(x_labels[-1], data[key][-1], label=key, linestyle="", marker="o", alpha=alpha)
+        elif key in ['base', 'base_untrained', 'base_trained']:
             plt.plot(x_labels, data[key], label=key, linestyle="solid", marker="", alpha=alpha)
+        elif key is 'Full':
+            plt.plot(x_labels, data[key], label=key, scalex=True, linestyle="dashed", marker=".", alpha=alpha,
+                     color='r')
         else:
-            plt.plot(x_labels, data[key], label=key, scalex=True, linestyle="-", marker=".", alpha=alpha)
+            plt.plot(x_labels, data[key], label=key, scalex=True, linestyle="dashed", marker=".", alpha=alpha)
     # plt.axvline(x=11, color='r', linewidth=4)
     plt.title(name, fontsize=13)
     plt.xlabel(x_name)
@@ -306,7 +314,7 @@ def plot_heatmap(data, col_labels, row_labels, title, **kwargs):
     sns.set()
     sns.set_context("paper")
 
-    ax = sns.heatmap(data, linewidths=.5, annot=True, cmap="YlGnBu", center=0, square=True, **kwargs)
+    ax = sns.heatmap(data, cmap="YlGnBu", center=0, **kwargs)
 
     ax.set_xticklabels(col_labels)
     ax.set_yticklabels(row_labels)

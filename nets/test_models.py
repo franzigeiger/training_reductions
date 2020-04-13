@@ -33,6 +33,9 @@ def cornet(identifier, init_weights=True, config=None):
     # if batch_fix:
     #     identifier = f'{identifier}_BF'
     model = get_model(identifier, init_weights, config)
+    # for name, m in model.named_modules():
+    #     if type(m) == nn.BatchNorm2d and m.num_batches_tracked.data.cpu() == 0:
+    #         m.momentum = 0
     from model_tools.activations.pytorch import load_preprocess_images
     preprocessing = functools.partial(load_preprocess_images, image_size=224)
     wrapper = TemporalPytorchWrapper(identifier=identifier, model=model,
@@ -59,18 +62,19 @@ def get_model(identifier, init_weights=True, config=None):
     model = model_ctr()
     if init_weights:
         _logger.info('Initialize weights')
-        class Wrapper(Module):
-            def __init__(self, model):
-                super(Wrapper, self).__init__()
-                self.module = model
-        model = Wrapper(model)  # model was wrapped with DataParallel, so weights require `module.` prefix
-        weights_path = get_weights(identifier)
         # if batch_fix:
         #     checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
         #     set_running_averages(checkpoint)
         #     # set_half_running_averages(checkpoint, config)
         #     # delete_running_averages(checkpoint)
         # else:
+        class Wrapper(Module):
+            def __init__(self, model):
+                super(Wrapper, self).__init__()
+                self.module = model
+
+        model = Wrapper(model)  # model was wrapped with DataParallel, so weights require `module.` prefix
+        weights_path = get_weights(identifier)
         checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
         try:
             model.load_state_dict(checkpoint['state_dict'])
@@ -119,12 +123,13 @@ def run_model_training(model, identifier, config=None, train_func=None):
         identifier = f'{identifier}_BF'
     if config is None:
         config = {'layers': ['decoder']}
-    for name, m in model.named_parameters():
-        # if type(m) == torch.nn.Conv2d or type(m) == torch.nn.Linear or type(m) == torch.nn.BatchNorm2d:
-        if any(value in name for value in config['layers']):
-            m.requires_grad = True
-        else:
-            m.requires_grad = False
+    if 'full' not in config:
+        for name, m in model.named_parameters():
+            # if type(m) == torch.nn.Conv2d or type(m) == torch.nn.Linear or type(m) == torch.nn.BatchNorm2d:
+            if any(value in name for value in config['layers']):
+                m.requires_grad = True
+            else:
+                m.requires_grad = False
     # model.decoder.requires_grad = True
     if train_func:
         model = train_func(identifier, model)
