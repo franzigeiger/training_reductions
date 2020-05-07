@@ -1,5 +1,8 @@
+import os
+
 import numpy as np
 import torch
+import torchvision
 from PIL import Image
 from torch.utils import data
 
@@ -17,8 +20,11 @@ class DataSubSet(data.Dataset):
         self.transform = transform
         imgs = imagenetDataset.imgs
         items = len(imgs)
-        new_items = int(items * fraction)
         new_imgs = []
+        if fraction > 1:
+            new_items = fraction
+        else:
+            new_items = int(items * fraction)
         mask = np.concatenate([np.ones(new_items), np.zeros(items - new_items)])
         np.random.shuffle(mask)
         for i in range(items):
@@ -43,3 +49,31 @@ class DataSubSet(data.Dataset):
         # y = self.classes[lab]
         y = torch.Tensor(lab)
         return X, lab
+
+
+normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                             std=[0.229, 0.224, 0.225])
+data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
+
+
+def get_dataloader(image_load=100, batch_size=256, workers=20):
+    images = torchvision.datasets.ImageFolder(
+        os.path.join(data_path, 'train'),
+        torchvision.transforms.Compose([
+            torchvision.transforms.RandomResizedCrop(224),
+            torchvision.transforms.RandomHorizontalFlip(),
+            torchvision.transforms.ToTensor(),
+            normalize,
+        ]))
+    dataset = DataSubSet(images, image_load, torchvision.transforms.Compose([
+        torchvision.transforms.RandomResizedCrop(224),
+        torchvision.transforms.RandomHorizontalFlip(),
+        torchvision.transforms.ToTensor(),
+        normalize,
+    ]))
+    data_loader = torch.utils.data.DataLoader(dataset,
+                                              batch_size=batch_size,
+                                              shuffle=True,
+                                              num_workers=workers,
+                                              pin_memory=True)
+    return data_loader

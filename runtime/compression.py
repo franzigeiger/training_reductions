@@ -7,15 +7,32 @@ import scipy as st
 import torch
 from torch import nn
 
-from analysis.time_analysis import best_models_brain_2
-from nets import get_model, run_model_training, layers, get_config
+from benchmark.database import create_connection, store_analysis
+from nets import get_model, run_model_training, layers, get_config, conv_to_norm
 from nets.trainer_performance import train
-from performance.flops_counter import get_model_complexity_info
-from plot.plot_data import plot_data_base
 from utils.distributions import mixture_gaussian, best_fit_distribution
 
 
 def measure_performance(identifier, title, do_epoch=False, do_analysis=False):
+    config = get_config(identifier)
+    model = get_model(identifier, False, config)
+    if do_epoch:
+        time = run_model_training(model, identifier, config, train)
+        # time = 0
+        # flops, params = get_model_complexity_info(model, (3, 224, 224), as_strings=False, print_per_layer_stat=True)
+        # train_flops = flops * 2 * 3 * (1.2 * 1000000) * 1
+        # print(
+        #     f' Flops model {identifier}: {flops/1000000:.2f}, training flops {train_flops/1000000:.2f} params {params/1000000:.2f}')
+        path = os.path.abspath(__file__)
+        dir_path = os.path.dirname(path)
+        path = f'{dir_path}/../scores.sqlite'
+        db = create_connection(path)
+        # model_id, train_time, weights_fixed, weights_to_train, additional_params, flops
+        store_analysis(db, (title, time['time'], 0, 0, 0, 0))
+        # store_analysis(db, (identifier, time['time'], hyp_w[-1] - hyp[-1], hyp_w[-1], hyp[-1], 0))
+
+
+def get_params(identifier):
     config = get_config(identifier)
     model = get_model(identifier, False, config)
     values = 0
@@ -26,48 +43,50 @@ def measure_performance(identifier, title, do_epoch=False, do_analysis=False):
     all_w = []
     layer = []
     idx = 0
-    if do_analysis:
-        for name, m in model.named_modules():
-            if type(m) == torch.nn.Conv2d:
-                size = 1
-                for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
-                if any(value in name for value in config['layers']):
-                    values += size
-                else:
-                    this_mod = sys.modules[__name__]
-                    str(config[name])
-                    func = getattr(this_mod, config[name].__name__)
-                    params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
-                    values += params
-                    hyper_params += params
-                all += size
-                idx += 1
-                layer.append(name)
-                all_w.append(all)
-                hyp.append(hyper_params)
-                hyp_w.append(values)
+    for name, m in model.named_modules():
+        if type(m) == torch.nn.Conv2d:
+            size = 1
+            for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
+            if any(value in name for value in config['layers']):
+                values += size
+            elif name in config:
+                this_mod = sys.modules[__name__]
+                str(config[name])
+                func = getattr(this_mod, config[name].__name__)
+                # print(config[name].__name__)
+                params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
+                values += params
+                hyper_params += params
+            all += size
+            idx += 1
+            layer.append(name)
+            all_w.append(all)
+            hyp.append(hyper_params)
+            hyp_w.append(values)
+        if type(m) == nn.BatchNorm2d and 'batchnorm' in config:
+            size = 1
+            for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
+            if any(value in conv_to_norm[name] for value in config['layers']):
+                this_mod = sys.modules[__name__]
+                values += size
+            elif conv_to_norm[name] in config:
+                this_mod = sys.modules[__name__]
+                str(config['bn_init'])
+                func = getattr(this_mod, config['bn_init'].__name__)
+                params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
+                values += params
+                hyper_params += params
+    return values
 
-        plot_data_base({'Total weights': all_w, 'Unfrozen values': hyp_w, 'Distribution Parameters': hyp},
-                       f'Weight compression for {title}',
-                       layer[0:(len(layer))], rotate=True, y_name='Num. of parameters')
-    if do_epoch:
-        # time = run_model_training(identifier, False, config, train)
-        flops, params = get_model_complexity_info(model, (3, 224, 224), as_strings=False, print_per_layer_stat=True)
-        train_flops = flops * 2 * 3 * (1.2 * 1000000) * 1
-        print(
-            f' Flops model {identifier}: {flops/1000000:.2f}, training flops {train_flops/1000000:.2f} params {params/1000000:.2f}')
-        path = os.path.abspath(__file__)
-        dir_path = os.path.dirname(path)
-        path = f'{dir_path}/../scores.sqlite'
-        # db = create_connection(path)
-        # model_id, train_time, weights_fixed, weights_to_train, additional_params, flops
-        # store_analysis(db, (identifier, time['time'], hyp_w[-1] - hyp[-1], hyp_w[-1], hyp[-1], 0))
+    # plot_data_base({'Total weights': all_w, 'Unfrozen values': hyp_w, 'Distribution Parameters': hyp},
+    #                f'Weight compression for {title}',
+    #                layer[0:(len(layer))], rotate=True, y_name='Num. of parameters')
 
 
 def benchmark_epoch(identifier):
     config = get_config(identifier)
     model = get_model(identifier, False, config)
-    time = run_model_training(identifier, False, config, train)
+    time = run_model_training(model, identifier, False, config, train)
     # flops, params = get_model_complexity_info(model, (3, 224, 224), as_strings=True, print_per_layer_stat=True)
 
 
@@ -117,12 +136,12 @@ def do_distribution_gabor_init(weights, config, index, **kwargs):
     else:
         params = np.load(f'{config["file"]}')
     param, tuples = prepare_gabor_params(params)
-    np.random.seed(0)
+    # np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
     if components != 0:
-        return components + components * param.shape[1], components * param.shape[1] * param.shape[1]
+        return components + components * param.shape[1] + components * param.shape[1] * param.shape[1]
     best_gmm = mixture_gaussian(param, weights.shape[0], components, f'gabor_{index}', analyze=True)
-    return len(best_gmm.weights_.flatten()) + len(best_gmm.means_.flatten()) + len(best_gmm.covariances_.flatten())
+    return (best_gmm.weights_.size + best_gmm.means_.size + best_gmm.covariances_.size)
 
 
 def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
@@ -131,7 +150,7 @@ def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
     else:
         params = np.load(f'{config["file"]}')
     param, tuples = prepare_gabor_params_channel(params)
-    np.random.seed(0)
+    # np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
     if components != 0:
         return components + components * param.shape[1], components * param.shape[1] * param.shape[1]
@@ -199,20 +218,20 @@ def do_best_dist_init_layer(weights, config, index, **kwargs):
     return len(params)
 
 
-def do_best_dist_init_kernel(weights, config, index, **kwargs):
-    dists = {}
-    if f'best_kernel_dist_{index}' in config:
-        name = config[f'best_kernel_dist_{index}']
-        best_dist = getattr(st, name)
-        p = best_dist.fit(weights)
-        return len(p) * weights.shape[0]
+# def do_best_dist_init_kernel(weights, config, index, **kwargs):
+#     dists = {}
+#     if f'best_kernel_dist_{index}' in config:
+#         name = config[f'best_kernel_dist_{index}']
+#         best_dist = getattr(st, name)
+#         p = best_dist.fit(weights)
+#         return len(p) * weights.shape[0]
 
 
 def do_in_channel_jumbler(weights, **kwargs):
     return len(weights.flatten())
 
 
-def apply_to_net(net, config):
+def apply_to_net(net, config, **kwargs):
     count = 0
     for name, m in net.named_parameters():
         if type(m) == nn.Conv2d:
@@ -220,30 +239,38 @@ def apply_to_net(net, config):
     return count
 
 
-def apply_kaiming(m, configs):
+def apply_kaiming(m, configs, **kwargs):
     return 0
 
 
-def apply_norm_dist(m, configs=None):
+def apply_norm_dist(m, configs=None, **kwargs):
     return 2
 
 
-def apply_norm_dist_kernel(m, configs=None):
+def apply_norm_dist_kernel(m, configs=None, **kwargs):
     weights = m.weight.data.cpu().numpy()
     return weights.shape[0] * 2
 
 
-def apply_all_jumbler(m, configs=None):
+def apply_all_jumbler(m, configs=None, **kwargs):
     weights = m.weight.data.cpu().numpy()
     return len(weights.flatten())
 
 
-def apply_fixed_value(m, configs=None):
+def apply_fixed_value(m, configs=None, **kwargs):
     return 0
 
 
-def apply_fixed_value_small(m, configs=None):
+def apply_fixed_value_small(m, configs=None, **kwargs):
     return 0
+
+
+def do_mutual_information(m, configs=None, **kwargs):
+    return 0
+
+
+def do_best_dist_init_kernel(m, **kwargs):
+    return 1 + (3 * m.shape[0])
 
 
 def apply_channel_jumbler(m, configs=None):
@@ -463,17 +490,3 @@ def apply_generic(model, configuration):
                 m.weight.data = torch.Tensor(previous_weights)
             idx += 1
     return model
-
-
-if __name__ == '__main__':
-    if len(sys.argv) > 1 is not None:
-        measure_performance(sys.argv[1], '6 layers(V1 & V2 - V2.conv3), Imagenet focus', True)
-    # Best V2 model Imagenet:
-    # measure_performance('CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_full', '6 layers(V1 & V2 - V2.conv3)')
-    # Best V2 model Brain benchmarks:
-    # measure_performance('CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full','6 layers(V1 & V2 - V2.conv3), Brain focus')
-    # # Best V4 model Imagenet:
-    for k, v in best_models_brain_2.items():
-        measure_performance(k, v, do_epoch=True)
-    # # Best V4 model Brain benchmarks:
-    # measure_performance('CORnet-S_train_kn8_kn9_kn10_wmk11_kn12', '12 layers(V1,V2 & V4 - V2.conv3 & V4.conv3), Brain focus')

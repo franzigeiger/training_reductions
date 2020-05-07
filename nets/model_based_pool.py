@@ -1,5 +1,5 @@
+from brainscore.submission.utils import UniqueKeyDict
 from brainscore.utils import LazyLoad
-from submission.utils import UniqueKeyDict
 from torch import nn
 
 from nets.test_models import cornet_s_brainmodel

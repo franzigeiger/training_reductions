@@ -9,7 +9,7 @@ from benchmark.run_benchmark import score_models as score_models_full
 from benchmark.run_decoder_train_benchmark import score_models as score_models_train
 from benchmark.run_single_layer_benchmark import score_models as score_models_single
 from nets import test_models
-from performance.compression import measure_performance
+from runtime.compression import measure_performance
 from transformations import layer_based
 
 logger = logging.getLogger(__name__)

@@ -1,191 +1,66 @@
-from nets import get_config
-from nets.test_models import get_resnet50
+from torch import nn
 
-mapping = {'resnet.sth': 'V1.sth',
-           'conv1.weight': 'V1.conv1',
-           'bn1.weight': 'V1.norm1.weight',
-           'bn1.bias': 'V1.norm1.bias',
-           'layer1.0.conv1.weight': 'V1.conv1',
-           'layer1.0.bn1.weight': 'V1.norm1_0.weight',
-           'layer1.0.bn1.bias': 'V1.norm1_0.bias',
-           'layer1.0.conv2.weight': 'V1.conv2',
-           'layer1.0.bn2.weight': 'V1.norm2_0.weight',
-           'layer1.0.bn2.bias': 'V1.norm2_0.bias',
-           'layer1.0.conv3.weight': 'V1.conv3',
-           'layer1.0.bn3.weight': 'V1.norm3_0.weight',
-           'layer1.0.bn3.bias': 'V1.norm3_0.bias',
-           'layer1.0.downsample.0.weight': 'V1.skip',
-           'layer1.0.downsample.1.weight': 'V1.norm_skip.weight',
-           'layer1.0.downsample.1.bias': 'V1.norm_skip.bias',
-           'layer1.1.conv1.weight': 'V1.conv1',
-           'layer1.1.bn1.weight': 'V1.norm1_1.weight',
-           'layer1.1.bn1.bias': 'V1.norm1_1.bias',
-           'layer1.1.conv2.weight': 'V1.conv2',
-           'layer1.1.bn2.weight': 'V1.norm2_1.weight',
-           'layer1.1.bn2.bias': 'V1.norm2_1.bias',
-           'layer1.1.conv3.weight': 'V1.conv3',
-           'layer1.1.bn3.weight': 'V1.norm3_1.weight',
-           'layer1.1.bn3.bias': 'V1.norm3_1.bias',
-           'layer1.2.conv1.weight': 'V1.conv1',
-           'layer1.2.bn1.weight': 'V1.norm1_0.weight',
-           'layer1.2.bn1.bias': 'V1.norm1_0.bias',
-           'layer1.2.conv2.weight': 'V1.conv2',
-           'layer1.2.bn2.weight': 'V1.norm2_0.weight',
-           'layer1.2.bn2.bias': 'V1.norm2_0.bias',
-           'layer1.2.conv3.weight': 'V1.conv3',
-           'layer1.2.bn3.weight': 'V1.norm3_0.weight',
-           'layer1.2.bn3.bias': 'V1.norm3_0.bias',
-           'layer2.0.conv1.weight': '',
-           'layer2.0.bn1.weight': '',
-           'layer2.0.bn1.bias': '',
-           'layer2.0.conv2.weight': '',
-           'layer2.0.bn2.weight': '',
-           'layer2.0.bn2.bias': '',
-           'layer2.0.conv3.weight': '',
-           'layer2.0.bn3.weight': '',
-           'layer2.0.bn3.bias': '',
-           'layer2.0.downsample.0.weight': '',
-           'layer2.0.downsample.1.weight': '',
-           'layer2.0.downsample.1.bias': '',
-           'layer2.1.conv1.weight': '',
-           'layer2.1.bn1.weight': '',
-           'layer2.1.bn1.bias': '',
-           'layer2.1.conv2.weight': '',
-           'layer2.1.bn2.weight': '',
-           'layer2.1.bn2.bias': '',
-           'layer2.1.conv3.weight': '',
-           'layer2.1.bn3.weight': '',
-           'layer2.1.bn3.bias': '',
-           'layer2.2.conv1.weight': '',
-           'layer2.2.bn1.weight': '',
-           'layer2.2.bn1.bias': '',
-           'layer2.2.conv2.weight': '',
-           'layer2.2.bn2.weight': '',
-           'layer2.2.bn2.bias': '',
-           'layer2.2.conv3.weight': '',
-           'layer2.2.bn3.weight': '',
-           'layer2.2.bn3.bias': '',
-           'layer2.3.conv1.weight': '',
-           'layer2.3.bn1.weight': '',
-           'layer2.3.bn1.bias': '',
-           'layer2.3.conv2.weight': '',
-           'layer2.3.bn2.weight': '',
-           'layer2.3.bn2.bias': '',
-           'layer2.3.conv3.weight': '',
-           'layer2.3.bn3.weight': '',
-           'layer2.3.bn3.bias': '',
-           'layer3.0.conv1.weight': '',
-           'layer3.0.bn1.weight': '',
-           'layer3.0.bn1.bias': '',
-           'layer3.0.conv2.weight': '',
-           'layer3.0.bn2.weight': '',
-           'layer3.0.bn2.bias': '',
-           'layer3.0.conv3.weight': '',
-           'layer3.0.bn3.weight': '',
-           'layer3.0.bn3.bias': '',
-           'layer3.0.downsample.0.weight': '',
-           'layer3.0.downsample.1.weight': '',
-           'layer3.0.downsample.1.bias': '',
-           'layer3.1.conv1.weight': '',
-           'layer3.1.bn1.weight': '',
-           'layer3.1.bn1.bias': '',
-           'layer3.1.conv2.weight': '',
-           'layer3.1.bn2.weight': '',
-           'layer3.1.bn2.bias': '',
-           'layer3.1.conv3.weight': '',
-           'layer3.1.bn3.weight': '',
-           'layer3.1.bn3.bias': '',
-           'layer3.2.conv1.weight': '',
-           'layer3.2.bn1.weight': '',
-           'layer3.2.bn1.bias': '',
-           'layer3.2.conv2.weight': '',
-           'layer3.2.bn2.weight': '',
-           'layer3.2.bn2.bias': '', }
+from nets import get_config, apply_generic_other, conv_to_norm, global_data
+from nets.test_models import get_resnet50, run_model_training, get_alexnet
+from utils.models import mapping_1, mapping_2, alexnet_mapping
+
+to_train = []
 
 
-# 'layer3.2.conv3.weight'
-# 'layer3.2.bn3.weight'
-# 'layer3.2.bn3.bias'
-# 'layer3.3.conv1.weight'
-# 'layer3.3.bn1.weight'
-# 'layer3.3.bn1.bias'
-# 'layer3.3.conv2.weight'
-# 'layer3.3.bn2.weight'
-# 'layer3.3.bn2.bias'
-# 'layer3.3.conv3.weight'
-# 'layer3.3.bn3.weight'
-# 'layer3.3.bn3.bias'
-# 'layer3.4.conv1.weight'
-# 'layer3.4.bn1.weight'
-# 'layer3.4.bn1.bias'
-# 'layer3.4.conv2.weight'
-# 'layer3.4.bn2.weight'
-# 'layer3.4.bn2.bias'
-# 'layer3.4.conv3.weight'
-# 'layer3.4.bn3.weight'
-# 'layer3.4.bn3.bias'
-# 'layer3.5.conv1.weight'
-# 'layer3.5.bn1.weight'
-# 'layer3.5.bn1.bias'
-# 'layer3.5.conv2.weight'
-# 'layer3.5.bn2.weight'
-# 'layer3.5.bn2.bias'
-# 'layer3.5.conv3.weight'
-# 'layer3.5.bn3.weight'
-# 'layer3.5.bn3.bias'
-# 'layer4.0.conv1.weight'
-# 'layer4.0.bn1.weight'
-# 'layer4.0.bn1.bias'
-# 'layer4.0.conv2.weight'
-# 'layer4.0.bn2.weight'
-# 'layer4.0.bn2.bias'
-# 'layer4.0.conv3.weight'
-# 'layer4.0.bn3.weight'
-# 'layer4.0.bn3.bias'
-# 'layer4.0.downsample.0.weight'
-# 'layer4.0.downsample.1.weight'
-# 'layer4.0.downsample.1.bias'
-# 'layer4.1.conv1.weight'
-# 'layer4.1.bn1.weight'
-# 'layer4.1.bn1.bias'
-# 'layer4.1.conv2.weight'
-# 'layer4.1.bn2.weight'
-# 'layer4.1.bn2.bias'
-# 'layer4.1.conv3.weight'
-# 'layer4.1.bn3.weight'
-# 'layer4.1.bn3.bias'
-# 'layer4.2.conv1.weight'
-# 'layer4.2.bn1.weight'
-# 'layer4.2.bn1.bias'
-# 'layer4.2.conv2.weight'
-# 'layer4.2.bn2.weight'
-# 'layer4.2.bn2.bias'
-# 'layer4.2.conv3.weight'
-# 'layer4.2.bn3.weight'
-# 'layer4.2.bn3.bias'
-# [3,4,6,3] [2,4,2]
-# ['conv1'] +
-# [''layer1.0.conv3', ''layer1.1.conv3', ''layer1.2.conv3'] +
-# [''layer2.0.downsample.0', ''layer2.1.conv3', ''layer2.2.conv3', ''layer2.3.conv3'] +
-# [''layer3.0.downsample.0', ''layer3.1.conv3', ''layer3.2.conv3', ''layer3.3.conv3',
-#  ''layer3.4.conv3', ''layer3.5.conv3'] +
-# [''layer4.0.downsample.0', ''layer4.1.conv3', ''layer4.2.conv3'] +
-# ['avgpool']
+def train_other(template='CORnet-S_brain2_t7_t12_knall_IT_bi', net='resnet', version='v1', train_func=None):
+    config = get_config(template)
+    if net == 'resnet':
+        model = get_resnet50(False)
+        if version == 'v1':
+            mapping = mapping_1
+        elif version == 'v2':
+            mapping = mapping_2
+        else:
+            mapping = mapping_1
+            del config['bn_init']
+            del config['batchnorm']
+    if net == 'vgg':
+        # model = get_resnet50(False)
+        mapping = None  # to be done
+    if net == 'alexnet':
+        model = get_alexnet(False)
 
-def train_resnet(identifier='resnet50', train_func=None):
-    config = get_config('CORnet-S_train_gmk1_gmk2_ln3_ln4_ln5_wm6_ra')
-    model = get_resnet50(False)
-    resnet_config = {}
+        mapping = alexnet_mapping
 
-    # for name, m in model.named_parameters():
-    #     print(name)
+    other_config = create_config(mapping, config, model)
+    identifier = f'{net}_{version}_{template}'
+    if global_data.seed != 0:
+        identifier = f'{identifier}_seed{global_data.seed}'
+    model = apply_generic_other(model, other_config)
+    run_model_training(model=model, identifier=identifier, config=other_config, train_func=train_func)
 
-    for layer, cornet in mapping.items():
-        if not any(module in layer for module in config['layers']):
-            if cornet in config:
-                resnet_config[layer] = config[cornet]
-            if 'bn' in layer:
-                resnet_config[layer] = cornet
 
-    # call initer, train
-    # run_model_training(model=model,config=config, train_func=train_func)
+def create_config(mapping, config, model):
+    resnet_config = config
+    to_train = []
+    for layer, m in model.named_modules():
+        # if not any(module in layer for module in config['layers']):
+        if type(m) == nn.BatchNorm2d or type(m) == nn.Conv2d or type(m) == nn.Linear:
+            if layer not in mapping:
+                # print(f'Couldn\'t find specification for layer {layer}')
+                print(layer)
+                to_train.append(layer)
+            else:
+                cornet = mapping[layer]
+                if cornet in config:
+                    resnet_config[layer] = cornet
+                    # resnet_config[f'{layer}_func'] = config[cornet]
+                if any(layer in cornet for layer in config['layers']):
+                    to_train.append(layer)
+                elif type(m) == nn.BatchNorm2d:
+                    base = conv_to_norm[cornet]
+                    if base in config:
+                        resnet_config[layer] = cornet
+                    if any(layer in base for layer in config['layers']):
+                        to_train.append(layer)
+                else:
+                    print(layer)
+        else:
+            print(layer)
+    resnet_config['layers'] = to_train
+    return resnet_config

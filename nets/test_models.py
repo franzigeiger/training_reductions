@@ -10,6 +10,7 @@ from brainscore.submission.utils import UniqueKeyDict
 from candidate_models.base_models.cornet import TemporalPytorchWrapper
 from candidate_models.model_commitments.cornets import CORnetCommitment
 from model_tools.activations import PytorchWrapper
+from model_tools.brain_transformation import ModelCommitment
 from model_tools.utils import s3
 from torch.nn import Module
 
@@ -61,26 +62,7 @@ def get_model(identifier, init_weights=True, config=None):
     model_ctr = getattr(mod, f'CORnet_{cornet_type.upper()}')
     model = model_ctr()
     if init_weights:
-        _logger.info('Initialize weights')
-        # if batch_fix:
-        #     checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
-        #     set_running_averages(checkpoint)
-        #     # set_half_running_averages(checkpoint, config)
-        #     # delete_running_averages(checkpoint)
-        # else:
-        class Wrapper(Module):
-            def __init__(self, model):
-                super(Wrapper, self).__init__()
-                self.module = model
-
-        model = Wrapper(model)  # model was wrapped with DataParallel, so weights require `module.` prefix
-        weights_path = get_weights(identifier)
-        checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
-        try:
-            model.load_state_dict(checkpoint['state_dict'])
-        except:
-            model.module.load_state_dict(checkpoint['state_dict'])
-        model = model.module  # unwrap
+        model = load_weights(identifier, model)
     if batch_fix:
         config['batchnorm'] = True
     if 'model_func' in config or 'layer_func' in config:
@@ -94,11 +76,36 @@ def get_model(identifier, init_weights=True, config=None):
     return model
 
 
+def load_weights(identifier, model):
+    class Wrapper(Module):
+        def __init__(self, model):
+            super(Wrapper, self).__init__()
+            self.module = model
+
+    model = Wrapper(model)  # model was wrapped with DataParallel, so weights require `module.` prefix
+    weights_path = get_weights(identifier)
+    _logger.info(f'Initialize weights from path {weights_path}')
+    checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
+    try:
+        model.load_state_dict(checkpoint['state_dict'])
+    except:
+        model.module.load_state_dict(checkpoint['state_dict'])
+    model = model.module  # unwrap
+    return model
+
+
 def get_resnet50(init_weights=True):
     module = importlib.import_module(f'torchvision.models')
     torchvision.models.resnet50()
     model_ctr = getattr(module, 'resnet50')
     return model_ctr(pretrained=init_weights)
+
+
+def get_alexnet(init_weights=False):
+    module = importlib.import_module(f'torchvision.models')
+    model_ctr = getattr(module, 'alexnet')
+    return model_ctr(pretrained=init_weights)
+
 
 def get_weights(identifier):
     if identifier == 'CORnet-S_base':
@@ -121,7 +128,7 @@ def get_weights(identifier):
 def run_model_training(model, identifier, config=None, train_func=None):
     if batch_fix:
         identifier = f'{identifier}_BF'
-    if config is None:
+    if config is None or 'layers' not in config or len(config['layers']) == 0:
         config = {'layers': ['decoder']}
     if 'full' not in config:
         for name, m in model.named_parameters():
@@ -130,6 +137,7 @@ def run_model_training(model, identifier, config=None, train_func=None):
                 m.requires_grad = True
             else:
                 m.requires_grad = False
+                print(f'don\'t train {name}')
     # model.decoder.requires_grad = True
     if train_func:
         model = train_func(identifier, model)
@@ -147,8 +155,8 @@ def _build_time_mappings(time_mappings):
 
 
 def cornet_s_brainmodel_short(identifier='', init_weigths=True, config=None):
-    if not identifier.startswith('CORnet-S'):
-        identifier = '%s_%s' % ('CORnet-S', identifier)
+    # if not identifier.startswith('CORnet-S'):
+    #     identifier = '%s_%s' % ('CORnet-S', identifier)
     # map region -> (time_start, time_step_size, timesteps)
     time_mappings = {
         'V1': (50, 100, 1),
@@ -179,7 +187,7 @@ def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=
 
 
 def alexnet(identifier, init_weights=True, function=None):
-    return pytorch_model('alexnet', '%s_%s' % ('alexnet', identifier), 224, init_weights, function)
+    return pytorch_model('alexnet', identifier, 224, init_weights, function)
 
 
 def densenet169(identifier, init_weights=True, function=None):
@@ -191,7 +199,21 @@ def resnet101(identifier, init_weights=True, function=None):
 
 
 def resnet50(identifier, init_weights=True, function=None):
-    return pytorch_model('resnet50', '%s_%s' % ('resnet', identifier), 224, init_weights, function)
+    return pytorch_model('resnet50', identifier, 224, init_weights, function)
+
+
+def resnet_brainmodel(identifier, init_weights=True, function=None):
+    model = resnet50(identifier, init_weights)
+    brain_model = ModelCommitment(identifier=identifier, activations_model=model,
+                                  layers=layers['resnet-50'])
+    return brain_model
+
+
+def alexnet_brainmodel(identifier, init_weights=True, function=None):
+    model = alexnet(identifier, init_weights)
+    brain_model = ModelCommitment(identifier=identifier, activations_model=model,
+                                  layers=layers['alexnet'])
+    return brain_model
 
 
 def resnet_michael(identifier, init_weights=True, function=None):
@@ -216,7 +238,11 @@ def resnet_michael_layers():
 def pytorch_model(function, identifier, image_size, init_weights=True, transformation=None):
     module = importlib.import_module(f'torchvision.models')
     model_ctr = getattr(module, function)
-    model = model_ctr(pretrained=init_weights)
+    if init_weights:
+        model = model_ctr(pretrained=False)
+        model = load_weights(identifier, model)
+    else:
+        model = model_ctr(pretrained=init_weights)
     if transformation:
         model = apply_to_net(model, transformation)
     from model_tools.activations.pytorch import load_preprocess_images
@@ -250,7 +276,15 @@ layers = {
         [f'features.denseblock3.denselayer{i + 1}.conv2' for i in range(24)] + ['features.transition3'] +
         [f'features.denseblock3.denselayer{i + 1}.conv2' for i in range(16)] +
         [f'features.denseblock3.denselayer{i + 1}.conv2' for i in range(16)] + ['features.norm5'],
-    'resnet101': resnext101_layers()
+    'resnet101': resnext101_layers(),
+    'resnet-50':
+        ['bn1'] +
+        ['layer1.0.bn3', 'layer1.1.bn3', 'layer1.2.bn3'] +
+        ['layer2.0.downsample.1', 'layer2.0.bn3', 'layer2.1.bn3', 'layer2.2.bn3', 'layer2.3.bn3'] +
+        ['layer3.0.downsample.1', 'layer3.0.bn3', 'layer3.1.bn3', 'layer3.2.bn3', 'layer3.3.bn3',
+         'layer3.4.bn3', 'layer3.5.bn3'] +
+        ['layer4.0.downsample.1', 'layer4.0.bn3', 'layer4.1.bn3', 'layer4.2.bn3'] +
+        ['avgpool'],
 }
 
 

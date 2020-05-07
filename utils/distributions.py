@@ -8,19 +8,34 @@ import scipy.stats as st
 import torch
 from sklearn import mixture
 
+from nets import global_data
 from utils.gabors import gabor_kernel_3, show_kernels, plot_weights
 
 dir = '/braintree/home/fgeiger/weight_initialization/'
 
 
+# dir = '/home/franzi/Projects/weight_initialization/'
+
+
 def mixture_gaussian(param, n_samples, components=0, name=None, analyze=False):
     if path.exists(f'{dir}/gm_{name}_samples.pkl'):
-        if not analyze:
+        best_gmm = load_mixture_gaussian(name)
+        if not analyze and global_data.seed == 0:
             print(f'Load samples from file {name}')
             pickle_in = open(f'{dir}/gm_{name}_samples.pkl', "rb")
             dict = pickle.load(pickle_in)
-            return dict['samples']
+            samples = dict['samples']
+            if samples.shape[0] == n_samples:
+                return samples
+            else:
+                name = f'{name}_{n_samples}'
+                if path.exists(f'{dir}/gm_{name}_samples.pkl'):
+                    print(f'Load samples from file {name}')
+                    pickle_in = open(f'{dir}/gm_{name}_samples.pkl', "rb")
+                    dict = pickle.load(pickle_in)
+                    return dict['samples']
         else:
+            print('Load distribution')
             best_gmm = load_mixture_gaussian(name)
     else:
         bic = []
@@ -45,7 +60,7 @@ def mixture_gaussian(param, n_samples, components=0, name=None, analyze=False):
                     print(f'Lowest bic with number of components {n_components}: {lowest_bic}')
                     best_gmm = gmm
     samples = best_gmm.sample(n_samples)[0]
-    if name is not None and not analyze:
+    if name is not None and not analyze and global_data.seed == 0:
         print(f'Save samples and mixture gaussian in file {name}')
         dict = {'samples': samples}
         pickle_out = open(f'{dir}/gm_{name}_samples.pkl', "wb")
@@ -55,8 +70,15 @@ def mixture_gaussian(param, n_samples, components=0, name=None, analyze=False):
         pickle_out = open(f'{dir}/gm_{name}_dist.pkl', "wb")
         pickle.dump(dict, pickle_out)
     if analyze:
+        centers = best_gmm.means_
+        if centers.shape[-1] == 9:
+            centers = centers.reshape(centers.shape[0], 3, 3)
+            centers = centers.reshape(1, centers.shape[0], 3, 3)
+            print(best_gmm.weights_)
+            plot_weights(centers, name)
         # mixture_analysis(best_gmm.weights_, best_gmm.means_, best_gmm.covariances_, name)
         return best_gmm
+        # return samples
     return samples
 
 
@@ -93,34 +115,35 @@ def load_mixture_gaussian(name):
     gmm.weights_ = GM['weights']
     gmm.covariances_ = GM['cov']
     gmm.precisions_cholesky_ = GM['precision']
+    print(f'Layer {name} has {len(gmm.weights_)} components')
     return gmm
 
 
 def best_fit_distribution(data, bins=200, ax=None):
     """Model data by finding best fit distribution to data"""
     # Get histogram of original data
-    print('Find best fitting distribution')
+    # print('Find best fitting distribution')
     y, x = np.histogram(data, bins=bins, density=True)
     x = (x + np.roll(x, -1))[:-1] / 2.0
 
     # Distributions to check
     DISTRIBUTIONS = [
         st.alpha
-        , st.anglit, st.arcsine, st.beta, st.betaprime, st.bradford, st.burr, st.cauchy, st.chi, st.chi2, st.cosine,
-        st.dgamma, st.dweibull, st.erlang, st.expon, st.exponnorm, st.exponweib, st.exponpow, st.f, st.fatiguelife,
-        st.fisk,
-        st.foldcauchy, st.foldnorm, st.frechet_r, st.frechet_l, st.genlogistic, st.genpareto, st.gennorm, st.genexpon,
-        st.genextreme, st.gausshyper, st.gamma, st.gengamma, st.genhalflogistic, st.gilbrat, st.gompertz, st.gumbel_r,
-        st.gumbel_l, st.halfcauchy, st.halflogistic, st.halfnorm, st.halfgennorm, st.hypsecant, st.invgamma,
-        st.invgauss,
-        st.invweibull, st.johnsonsb, st.johnsonsu, st.ksone, st.kstwobign, st.laplace, st.levy, st.levy_l,
-        # st.levy_stable,
-        st.logistic, st.loggamma, st.loglaplace, st.lognorm, st.lomax, st.maxwell, st.mielke, st.nakagami, st.ncx2,
-        st.ncf,
-        st.nct, st.norm, st.pareto, st.pearson3, st.powerlaw, st.powerlognorm, st.powernorm, st.rdist, st.reciprocal,
-        st.rayleigh, st.rice, st.recipinvgauss, st.semicircular, st.t, st.triang, st.truncexpon, st.truncnorm,
-        st.tukeylambda,
-        st.uniform, st.vonmises, st.vonmises_line, st.wald, st.weibull_min, st.weibull_max, st.wrapcauchy
+        , st.anglit, st.arcsine, st.beta, st.betaprime, st.bradford,  # st.burr,
+        st.cosine, st.dgamma, st.chi, st.chi2, st.cauchy,  # st.dweibull, st.erlang, st.frechet_r, st.frechet_l,
+        st.expon, st.exponnorm, st.exponpow,  # st.f, st.fatiguelife,
+        st.foldcauchy, st.foldnorm,  # st.genlogistic, st.genpareto, st.gennorm, st.genexpon,
+        st.genextreme, st.gamma,  # st.gengamma, st.genhalflogistic, st.gilbrat, st.gompertz, st.gumbel_r,
+        st.gumbel_l, st.recipinvgauss, st.hypsecant,
+        # st.invgamma, st.invgauss,  st.invweibull, st.johnsonsb, st.johnsonsu, st.ksone, st.kstwobign,
+        st.laplace,  # st.levy, st.levy_l, st.gausshyper,st.fisk, st.powerlognorm, st.exponweib,
+        # st.levy_stable, st.halfcauchy, st.halflogistic, st.halfnorm, st.halfgennorm,
+        st.logistic, st.loggamma, st.loglaplace, st.lognorm,  # st.lomax, st.maxwell, st.mielke, st.nakagami, st.ncx2,
+        # st.ncf,
+        st.nct, st.norm, st.pareto, st.pearson3, st.powerlaw, st.powernorm, st.rdist, st.reciprocal,
+        st.rayleigh, st.rice, st.t, st.triang,  # st.truncexpon, st.truncnorm,
+        # st.tukeylambda,st.semicircular,
+        st.uniform,  # st.vonmises, st.vonmises_line, st.wald, st.weibull_min, st.weibull_max, st.wrapcauchy
     ]
     #    # Best holders
     best_distribution = st.norm
@@ -129,7 +152,7 @@ def best_fit_distribution(data, bins=200, ax=None):
 
     # Estimate distribution parameters from data
     for distribution in DISTRIBUTIONS:
-
+        # print(f'Fit to distribution {distribution}')
         # Try to fit the distribution
         try:
             # Ignore warnings from data that can't be fit
@@ -155,7 +178,7 @@ def best_fit_distribution(data, bins=200, ax=None):
                 except Exception:
                     pass
 
-                print(f'Distribution {distribution} params {params}, sse: {sse}')
+                # print(f'Distribution {distribution} params {params}, sse: {sse}')
                 # identify if this distribution is better
                 if best_sse > sse > 0:
                     best_distribution = distribution
@@ -248,72 +271,9 @@ def delete_running_averages(checkpoint):
     for k in remove: del state_dict[k]
 
 
-conv_to_norm = {
-    'module.V1.norm1.running_mean': 'V1.conv1',
-    'module.V1.norm1.running_var': 'V1.conv1',
-    'module.V1.norm2.running_mean': 'V1.conv2',
-    'module.V1.norm2.running_var': 'V1.conv2',
-    'module.V2.norm_skip.running_mean': 'V2.skip',
-    'module.V2.norm_skip.running_var': 'V2.skip',
-    'module.V2.norm1_0.running_mean': 'V2.conv1',
-    'module.V2.norm1_0.running_var': 'V2.conv1',
-    'module.V2.norm2_0.running_mean': 'V2.conv2',
-    'module.V2.norm2_0.running_var': 'V2.conv2',
-    'module.V2.norm3_0.running_mean': 'V2.conv3',
-    'module.V2.norm3_0.running_var': 'V2.conv3',
-    'module.V2.norm1_1.running_mean': 'V2.conv1',
-    'module.V2.norm1_1.running_var': 'V2.conv1',
-    'module.V2.norm2_1.running_mean': 'V2.conv2',
-    'module.V2.norm2_1.running_var': 'V2.conv2',
-    'module.V2.norm3_1.running_mean': 'V2.conv3',
-    'module.V2.norm3_1.running_var': 'V2.conv3',
-    'module.V4.norm_skip.running_mean': 'V4.skip',
-    'module.V4.norm_skip.running_var': 'V4.skip',
-    'module.V4.norm1_0.running_mean': 'V4.conv1',
-    'module.V4.norm1_0.running_var': 'V4.conv1',
-    'module.V4.norm2_0.running_mean': 'V4.conv2',
-    'module.V4.norm2_0.running_var': 'V4.conv2',
-    'module.V4.norm3_0.running_mean': 'V4.conv3',
-    'module.V4.norm3_0.running_var': 'V4.conv3',
-    'module.V4.norm1_1.running_mean': 'V4.conv1',
-    'module.V4.norm1_1.running_var': 'V4.conv1',
-    'module.V4.norm2_1.running_mean': 'V4.conv2',
-    'module.V4.norm2_1.running_var': 'V4.conv2',
-    'module.V4.norm3_1.running_mean': 'V4.conv3',
-    'module.V4.norm3_1.running_var': 'V4.conv3',
-    'module.V4.norm1_2.running_mean': 'V4.conv1',
-    'module.V4.norm1_2.running_var': 'V4.conv1',
-    'module.V4.norm2_2.running_mean': 'V4.conv2',
-    'module.V4.norm2_2.running_var': 'V4.conv2',
-    'module.V4.norm3_2.running_mean': 'V4.conv3',
-    'module.V4.norm3_2.running_var': 'V4.conv3',
-    'module.V4.norm1_3.running_mean': 'V4.conv1',
-    'module.V4.norm1_3.running_var': 'V4.conv1',
-    'module.V4.norm2_3.running_mean': 'V4.conv2',
-    'module.V4.norm2_3.running_var': 'V4.conv2',
-    'module.V4.norm3_3.running_mean': 'V4.conv3',
-    'module.V4.norm3_3.running_var': 'V4.conv3',
-    'module.IT.norm_skip.running_mean': 'IT.skip',
-    'module.IT.norm_skip.running_var': 'IT.skip',
-    'module.IT.norm1_0.running_mean': 'IT.conv1',
-    'module.IT.norm1_0.running_var': 'IT.conv1',
-    'module.IT.norm2_0.running_mean': 'IT.conv2',
-    'module.IT.norm2_0.running_var': 'IT.conv2',
-    'module.IT.norm3_0.running_mean': 'IT.conv3',
-    'module.IT.norm3_0.running_var': 'IT.conv3',
-    'module.IT.norm1_1.running_mean': 'IT.conv1',
-    'module.IT.norm1_1.running_var': 'IT.conv1',
-    'module.IT.norm2_1.running_mean': 'IT.conv2',
-    'module.IT.norm2_1.running_var': 'IT.conv2',
-    'module.IT.norm3_1.running_mean': 'IT.conv3',
-    'module.IT.norm3_1.running_var': 'IT.conv3',
-
-}
-
-
 def set_half_running_averages(checkpoint, config):
     state_dict = checkpoint['state_dict']
-    for k, v in state_dict.items() and conv_layer[k] in config:
+    for k, v in state_dict.items():
         if 'running' in k:
             if path.exists(f'{dir}resources/{k}_weights.pkl'):
                 print(f'Load {k} from file {k}')

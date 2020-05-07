@@ -107,14 +107,22 @@ def train(identifier,
     stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
     if len(stored) > 0:
         restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
-        ckpt_data = torch.load(restore_path)
+        ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
         if ckpt_data['epoch'] < epochs + 1:
             start_epoch = ckpt_data['epoch']
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
+
+        class Wrapper(Module):
+            def __init__(self, model):
+                super(Wrapper, self).__init__()
+                self.module = model
+
+        model = Wrapper(model)
         try:
             model.load_state_dict(ckpt_data['state_dict'])
         except Exception:
             model.module.load_state_dict(ckpt_data['state_dict'])
+        model = model.module
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
@@ -180,6 +188,7 @@ def train(identifier,
             if epoch < epochs:
                 frac_epoch = (global_step + 1) / len(trainer.data_loader)
                 record = trainer(frac_epoch, *data)
+                train_loss = record['loss']
                 record['data_load_dur'] = data_load_time
                 results = {'meta': {'step_in_epoch': step + 1,
                                     'epoch': frac_epoch,
@@ -190,9 +199,9 @@ def train(identifier,
                         results[trainer.name] = record
 
             data_load_start = time.time()
-        trainer.lr.step(val_loss, epoch=epoch)
+        trainer.lr.step(train_loss, epoch=epoch)
         print(f'Learning rate epoch {epoch}: {trainer.optimizer.param_groups[0]["lr"]}')
-        if trainer.optimizer.param_groups[0]["lr"] < 0.001:
+        if trainer.optimizer.param_groups[0]["lr"] < 0.0001:
             print('Learning rate too low')
             break
     if ngpus > 1 and torch.cuda.device_count() > 1:
@@ -261,7 +270,8 @@ class ImageNetTrain(object):
         self.name = 'train'
         self.model = model
         self.data_loader = self.data()
-        self.optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+        params = list(filter(lambda p: p.requires_grad, model.parameters()))
+        self.optimizer = torch.optim.SGD(params,
                                          lr,
                                          momentum=momentum,
                                          weight_decay=weight_decay)

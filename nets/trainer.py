@@ -84,7 +84,9 @@ def train(identifier,
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
-    # print(model.V1.norm1.running_mean.data.cpu().numpy())
+    if lr != .1:
+        identifier = f'{identifier}_lr{lr}'
+    print(f'Start training model {identifier}')
     if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
         logger.info('Model already trained')
         return

@@ -8,9 +8,10 @@ import numpy as np
 import torch
 from numpy.random.mtrand import RandomState
 
-from nets import train_model, trainer, trainer_convergence, test_models
+import nets.trainer_images as image_train
+from nets import train_model, trainer, trainer_convergence, test_models, global_data
 from nets.full_trainer import train as full_train
-from nets.resnet_init import train_resnet
+from nets.resnet_init import train_other
 from nets.trainer_convergence import train as conv_train
 from nets.trainer_first_epoch import train as train_first
 from transformations import layer_based
@@ -29,14 +30,18 @@ parser.add_argument('--full', type=bool, default=False,
                     help='Number of epochs to train and test for')
 parser.add_argument('--convergence', type=bool, default=False,
                     help='Number of epochs to train and test for')
+parser.add_argument('--images', type=int, default=0,
+                    help='Number of epochs to train and test for')
 parser.add_argument('--lr', type=float, default=0.0, help='Learning rate to start/continue learning with')
 parser.add_argument('--first', type=bool, default=False,
                     help='Set true to only train the first epoch and evaluate fractions')
 parser.add_argument('--step', type=int, default=0, help='Step size for learning rate scheduler')
 parser.add_argument('--batch_fix', type=bool, default=False,
                     help='disables all other flags and stored the models performance values in the database')
-parser.add_argument('--resnet', type=bool, default=False,
-                    help='Run resnet model with the given id')
+parser.add_argument('--other', type=str, default='',
+                    help='Run another model with the given id')
+parser.add_argument('--version', type=str, default='version',
+                    help='Run another model with a mapping of of the specified version')
 
 args, remaining_args = parser.parse_known_args()
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level),
@@ -51,9 +56,11 @@ def score_model_console():
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     layer_based.random_state = RandomState(args.seed)
-    random.seed(0)
+    random.seed(args.seed)
     logger.info(f'Run with seed {args.seed}')
     test_models.batch_fix = args.batch_fix
+    if args.seed != 0:
+        global_data.seed = args.seed
     if args.first:
         train_model(model=args.model, train_func=train_first)
     elif args.full:
@@ -66,16 +73,25 @@ def score_model_console():
         if args.epoch != 20:
             trainer_convergence.epochs = args.epoch
         train_model(model=args.model, train_func=conv_train)
-    elif args.resnet:
-        train_resnet(args.model)
+    elif args.other != '':
+        if args.lr != 0:
+            trainer_convergence.lr = args.lr
+        if args.step != 0:
+            trainer_convergence.step_size = args.step
+        if args.epoch != 20:
+            trainer_convergence.epochs = args.epoch
+        trainer.epochs = args.epoch
+        train_other(net=args.other, template=args.model, version=args.version, train_func=conv_train)
     else:
         if args.step != 0:
             trainer.step_size = args.step
         if args.lr != 0:
             trainer.lr = args.lr
+            image_train.lr = args.lr
         trainer.epochs = args.epoch
+        image_train.epochs = args.epoch
         logger.info(f'Train for {args.epoch} epochs')
-        train_model(model=args.model)
+        train_model(model=args.model, images=args.images)
 
 
 logger.info(f"Running {' '.join(sys.argv)}")

@@ -83,9 +83,9 @@ def train(identifier,
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
-    if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
-        logger.info('Model already trained')
-        return
+    # if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
+    #     logger.info('Model already trained')
+    #     return
     restore_path = output_path
     logger.info('We start training the model')
     if ngpus > 1 and torch.cuda.device_count() > 1:
@@ -102,7 +102,7 @@ def train(identifier,
 
     start_epoch = 0
     recent_time = time.time()
-    for epoch in tqdm.trange(start_epoch, epochs + 1, initial=start_epoch, desc='epoch'):
+    for epoch in tqdm.trange(start_epoch, epochs, initial=start_epoch, desc='epoch'):
         data_load_start = np.nan
         for step, data in enumerate(tqdm.tqdm(trainer.data_loader, desc=trainer.name)):
             data_load_time = time.time() - data_load_start

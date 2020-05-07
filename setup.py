@@ -15,7 +15,10 @@ requirements = [
     "networkx",
     "tqdm",
     "gitpython",
-    "zip",
+    # "zip",
+    "scikit-image",
+    "seaborn",
+    "matplotlib",
 
     "cornet @ git+https://github.com/dicarlolab/CORnet",
     "bagnets @ git+https://github.com/mschrimpf/bag-of-local-features-models.git",

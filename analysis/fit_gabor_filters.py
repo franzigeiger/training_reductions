@@ -264,7 +264,7 @@ def mutual_information():
                            wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
     kernel_avgs = []
     for name, m in model.named_modules():
-        if type(m) == nn.Conv2d:
+        if type(m) == nn.Conv2d and 'V1' not in name:
             weights = m.weight.data.squeeze().numpy()
             scores = np.zeros([weights.shape[0], weights.shape[0]])
             kernels = weights.shape[0]
@@ -275,7 +275,7 @@ def mutual_information():
                                                                             weights[j].flatten())
             print(f'Kernel mean mutual information {np.mean(scores)}')
             plot_heatmap(scores, title=f'Kernel mutual information {name}', col_labels='Kernels', row_labels='Kernels')
-            if weights.shape[-1] > 1:
+            if len(weights.shape) > 2:
                 channels = weights.shape[1]
                 scores = np.zeros([kernels, channels, channels])
                 for i in range(kernels):
@@ -285,7 +285,7 @@ def mutual_information():
                             scores[i, j, k] = feature_selection.mutual_info_regression(
                                 weights[i, j].flatten().reshape(-1, 1), weights[i, k].flatten())
                 scores = np.mean(scores, axis=0)
-                print(f'Channel mean mutual information {np.mean(scores)}')
+                # print(f'Channel mean mutual information {np.mean(scores)}')
                 plot_heatmap(scores, title=f'Channel mean mutual information {name}', col_labels='Channel',
                              row_labels='Channel')
 

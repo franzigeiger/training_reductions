@@ -19,8 +19,9 @@ import torchvision
 import tqdm
 from PIL import Image
 from torch.nn import Module
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from nets.datasubset import DataSubSet
+from nets.datasubset import get_dataloader
 
 Image.warnings.simplefilter('ignore')
 logger = logging.getLogger(__name__)
@@ -30,15 +31,16 @@ normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
 ngpus = 2
 epochs = 20
-output_path = '/braintree/home/fgeiger/weight_initialization/nets/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
 data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
+output_path = '/braintree/home/fgeiger/weight_initialization/nets/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9
 step_size = 20
 lr = .1
 workers = 20
-image_load = 0.5
+image_load = 1000
+
 if ngpus > 0:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -87,11 +89,15 @@ def train(identifier,
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
+    if lr != .1:
+        identifier = f'{identifier}_lr{lr}'
+    print(f'Start training model {identifier} for {epochs} epochs')
     if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
         logger.info('Model already trained')
         return
     restore_path = output_path
     logger.info('We start training the model')
+    logger.info(f'We run on device {device} with count {torch.cuda.device_count()}')
     if ngpus > 1 and torch.cuda.device_count() > 1:
         logger.info('We have multiple GPUs detected')
         model = nn.DataParallel(model)
@@ -108,7 +114,7 @@ def train(identifier,
     stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
     if len(stored) > 0:
         restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
-        ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
+        ckpt_data = torch.load(restore_path)  # , map_location=torch.device('cpu')
         if ckpt_data['epoch'] < epochs + 1:
             start_epoch = ckpt_data['epoch']
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
@@ -137,6 +143,7 @@ def train(identifier,
                         'epoch': start_epoch,
                         'wall_time': time.time()}
                }
+
     for epoch in tqdm.trange(start_epoch, epochs + 1, initial=start_epoch, desc='epoch'):
         data_load_start = np.nan
         for step, data in enumerate(tqdm.tqdm(trainer.data_loader, desc=trainer.name)):
@@ -146,7 +153,7 @@ def train(identifier,
             if save_val_steps is not None:
 
                 if global_step in save_val_steps:
-                    # results[validator.name] = validator()
+                    results[validator.name] = validator()
                     trainer.model.train()
 
             if output_path is not None:
@@ -178,6 +185,7 @@ def train(identifier,
             if epoch < epochs:
                 frac_epoch = (global_step + 1) / len(trainer.data_loader)
                 record = trainer(frac_epoch, *data)
+                train_loss = record['loss']
                 record['data_load_dur'] = data_load_time
                 results = {'meta': {'step_in_epoch': step + 1,
                                     'epoch': frac_epoch,
@@ -188,6 +196,11 @@ def train(identifier,
                         results[trainer.name] = record
 
             data_load_start = time.time()
+        trainer.lr.step(train_loss, epoch=epoch)
+        print(f'Learning rate epoch {epoch}: {trainer.optimizer.param_groups[0]["lr"]}, train loss {train_loss}')
+        if trainer.optimizer.param_groups[0]["lr"] < 0.0001:
+            print('Learning rate too low')
+            break
     if ngpus > 1 and torch.cuda.device_count() > 1:
         return model.module
     return model
@@ -258,37 +271,18 @@ class ImageNetTrain(object):
                                          lr,
                                          momentum=momentum,
                                          weight_decay=weight_decay)
-        self.lr = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size)
+        # self.lr = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size)
+        self.lr = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=3)
         self.loss = nn.CrossEntropyLoss()
         if ngpus > 0:
             self.loss = self.loss.cuda()
 
     def data(self):
-        images = torchvision.datasets.ImageFolder(
-            os.path.join(data_path, 'train'),
-            torchvision.transforms.Compose([
-                torchvision.transforms.RandomResizedCrop(224),
-                torchvision.transforms.RandomHorizontalFlip(),
-                torchvision.transforms.ToTensor(),
-                normalize,
-            ]))
-        dataset = DataSubSet(images, image_load, torchvision.transforms.Compose([
-            torchvision.transforms.RandomResizedCrop(224),
-            torchvision.transforms.RandomHorizontalFlip(),
-            torchvision.transforms.ToTensor(),
-            normalize,
-        ]))
-        data_loader = torch.utils.data.DataLoader(dataset,
-                                                  batch_size=batch_size,
-                                                  shuffle=True,
-                                                  num_workers=workers,
-                                                  pin_memory=True)
-        return data_loader
+        return get_dataloader(image_load=image_load)
 
     def __call__(self, frac_epoch, inp, target):
         start = time.time()
 
-        self.lr.step(epoch=frac_epoch)
         with torch.autograd.detect_anomaly():
             if ngpus > 0:
                 inp = inp.to(device)
@@ -300,7 +294,7 @@ class ImageNetTrain(object):
             record['top1'], record['top5'] = accuracy(output, target, topk=(1, 5))
             record['top1'] /= len(output)
             record['top5'] /= len(output)
-            record['learning_rate'] = self.lr.get_lr()[0]
+            record['learning_rate'] = self.optimizer.param_groups[0]['lr']
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()

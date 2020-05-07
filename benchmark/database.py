@@ -1,4 +1,5 @@
 import logging
+import os
 import sqlite3
 import statistics
 
@@ -20,6 +21,32 @@ def create_connection(db_file):
     return conn
 
 
+def get_connection(name='scores'):
+    path = os.path.abspath(__file__)
+    dir_path = os.path.dirname(path)
+    path = f'{dir_path}/../{name}.sqlite'
+    return create_connection(path)
+
+
+def load_model_parameter(conn):
+    sql = '''select * from model_parameter'''
+    cursor = conn.cursor()
+    cursor.execute(sql)
+    records = cursor.fetchall()
+    results = {}
+    for row in records:
+        if row[0] in results:
+            results[row[0]].append(row[1])
+        else:
+            results[row[0]] = []
+            results[row[0]].append(row[1])
+
+    squeezed = {}
+    for key, value in results.items():
+        squeezed[key] = np.mean(value)
+    return squeezed
+
+
 def store_score(conn, score):
     """
     Create a new project into the projects table
@@ -34,15 +61,34 @@ def store_score(conn, score):
     conn.commit()
     return cur.lastrowid
 
+
 def load_like(conn, model_name, benchmarks):
     sql = "select model, benchmark, time, score, modification, batchnorm from raw_scores where modification like ?".format(
         model_name)
     # load_from_statement(conn, sql, models, benchmarks)
 
+
 def load_scores(conn, models, benchmarks):
-    sql = "select model, benchmark, time, score, modification, batchnorm from raw_scores where modification in ({seq}) and benchmark in ({seq2})".format(
-        seq=','.join(['?'] * len(models)), seq2=','.join(['?']* len(benchmarks)))
-    return load_from_statement(conn, sql, models, benchmarks)
+    private = []
+    public = []
+    for bench in benchmarks:
+        if 'public' in bench:
+            public.append(bench)
+        else:
+            private.append(bench)
+    sql_private = "select model, benchmark, time, score, modification, batchnorm from raw_scores where modification in ({seq}) and benchmark in ({seq2})".format(
+        seq=','.join(['?'] * len(models)), seq2=','.join(['?'] * len(private)))
+    sql_public = "select model, benchmark, time, score, modification, batchnorm from raw_scores where modification in ({seq}) and benchmark in ({seq2})".format(
+        seq=','.join(['?'] * len(models)), seq2=','.join(['?'] * len(public)))
+    private_res = load_from_statement(conn, sql_private, models, private)
+    if len(public) > 0:
+        conn_pub = get_connection(name='scores_public')
+        public_res = load_from_statement(conn_pub, sql_public, models, public)
+        for model, list in public_res.items():
+            public_res[model] = np.concatenate((list, private_res[model]), axis=0)
+        return public_res
+    return private_res
+
 
 def load_from_statement(conn, sql, models, benchmarks):
     """
@@ -53,7 +99,7 @@ def load_from_statement(conn, sql, models, benchmarks):
     """
     results = {}
     cursor = conn.cursor()
-    cursor.execute(sql, models+ benchmarks)
+    cursor.execute(sql, models + benchmarks)
     records = cursor.fetchall()
     # Structure:
     # score = { 'Model_name': [[1.3,20.1],[13.3, 1.2]]}
