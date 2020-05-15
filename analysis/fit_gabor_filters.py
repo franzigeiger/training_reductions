@@ -9,11 +9,12 @@ from scipy.optimize import basinhopping
 from skimage.filters import gabor_kernel
 from skimage.transform import resize
 from sklearn import feature_selection
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, explained_variance_score
 from sklearn.model_selection import ParameterGrid
 from torch import nn
 
-from nets import get_model
+from base_models import get_model
 from plot.plot_data import plot_subplots_histograms, plot_3d, plot_heatmap, plot_2d, plot_histogram, plot_matrixImage
 from utils.correlation import generate_correlation_map, pca, fit_data, multivariate_gaussian
 from utils.distributions import mixture_gaussian
@@ -49,6 +50,41 @@ def objective_function(beta, X):
     kernel = np.nan_to_num(kernel, posinf=1, neginf=-1, nan=0)
     error = mean_squared_error(kernel, X)
     return (error)
+
+
+def linear_regression(x, y, lin: LinearRegression):
+    # return 1 - lin.score(x.reshape([1,-1]),y.reshape([1,-1]))
+    y_hat = lin.predict(x)
+    return 1 - explained_variance_score(y, y_hat)
+
+
+def fit_linear_regression():
+    input = np.random.random([1, 8])
+    output = np.random.random([1, 9])
+    lin = LinearRegression()
+    lin.fit(input, output)
+    model = get_model('CORnet-S_base', True)
+    counter = 0
+    np.random.seed(1)
+
+    def print_fun(x, f, accepted):
+        print("at minima %.4f accepted %d" % (f, int(accepted)))
+
+    fun = lambda x, y: linear_regression(x, y, lin)
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d and counter == 0:
+            weights = m.weight.data.cpu().numpy()
+            lin_params = np.zeros([weights.shape[0], weights.shape[1], 8])
+            for i in range(0, weights.shape[0]):
+                for j in range(0, weights.shape[1]):
+                    kernel = weights[i, j].flatten()
+                    minimizer_kwargs = {"method": "L-BFGS-B", 'args': (kernel),
+                                        'options': {'maxiter': 200000, 'gtol': 1e-25}}
+                    result = basinhopping(fun, [0, 0, 0, 0, 0, 0, 0, 0], niter=15,
+                                          minimizer_kwargs=minimizer_kwargs,
+                                          callback=print_fun, T=0.00001)
+                    y_hat = result.x
+                    lin_params[i, j] = y_hat
 
 
 def hyperparam_gabor():
@@ -292,7 +328,6 @@ def mutual_information():
 
 
 def kernel_similarity():
-    # model = get_model('CORnet-S_random', True)
     model = get_model('CORnet-S_train_second_kernel_conv_epoch_00', True)
     counter = 0
     plt.figure(figsize=(4, 25))
@@ -334,7 +369,6 @@ def gaussian_mixture(name, name2=None):
     params = np.load(f'{name}.npy')
     names = ['Frequency', 'Theta', 'Sigma X', 'Sigma Y', 'Offset', 'Center X', 'Center Y']
     shape = [64, 64, 3, 3]
-    size = 3
     param = params[:, :, :-1]
     param = param.reshape(64, -1)
     tuples = []
@@ -349,12 +383,10 @@ def gaussian_mixture(name, name2=None):
 
 
 def mixture_base(param, tuples, shape, size=3):
-    # param = param.reshape(192, -1)
     new_param = np.zeros((shape[0], 10 * shape[1]))
     for i in range(shape[0]):
         for s, e in tuples:
             p = param[i, int(s * 8 / 10):int(e * 8 / 10)]
-            # param[s:e]= (p[0],np.sin(2*p[1]), p[2], p[3], np.sin(p[4]), p[5], p[6], p[7])
             new_param[i, s:e] = (
                 p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
 
@@ -395,30 +427,7 @@ def mixture_base(param, tuples, shape, size=3):
         f_min, f_max = np.min(row), np.max(row)
         row = (row - f_min) / (f_max - f_min)
         matrix = np.concatenate((matrix, row), axis=1)
-        # matrix[0,0] = 1
-    # f_min, f_max = np.min(matrix), np.max(matrix)
-    # matrix = (matrix - f_min) / (f_max - f_min)
     plot_matrixImage(matrix, 'Gabor_conv2')
-
-    # gs = gridspec.GridSpec(8, 8, width_ratios=[1] * 8,
-    #                        wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
-    # only for three channels
-    # for i in range(64):
-    #     kernel = np.zeros((size, size, 3))
-    #     for s, e in tuples:
-    #         beta = samples[i, s:e]
-    #         kernel2 = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
-    #                                  sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
-    #                                  y_c=beta[8],
-    #                                  scale=beta[9], ks=size)
-    #         kernel[:, :, int(s / 10)] = kernel2
-    #     ax = plt.subplot(gs[int(i / 8), i % 8])
-    #     ax.set_xticks([])
-    #     ax.set_yticks([])
-    #     idx += 1
-    #     f_min, f_max = np.min(kernel), np.max(kernel)
-    #     kernel = (kernel - f_min) / (f_max - f_min)
-    #     plt.imshow(kernel)
     plt.tight_layout()
     plt.show()
 
@@ -549,4 +558,5 @@ if __name__ == '__main__':
     # gaussian_mixture_channels(name)
     # kernel_similarity()
     # get_fist_layer_weights()
-    mutual_information()
+    # mutual_information()
+    fit_linear_regression()

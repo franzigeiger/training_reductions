@@ -71,47 +71,70 @@ def plot_conv_weights(weights, model_name):
     plot_matrixImage(matrix, 'weights_' + model_name)
 
 
-def plot_weights(weights, model_name):
-    plt.figure(figsize=(20, 20))
-    gs = gridspec.GridSpec(weights.shape[0], weights.shape[1], width_ratios=[1] * weights.shape[1],
-                           wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
+def plot_weights(weights, model_name, gs=None, name=None):
+    show = False
+    if gs is None:
+        plt.figure(figsize=(10, 2), frameon=False)
+        inner = gridspec.GridSpec(weights.shape[0], weights.shape[1], wspace=0.2, hspace=0.2)
+        show = True
+    else:
+        inner = gridspec.GridSpecFromSubplotSpec(weights.shape[0], 8,
+                                                 subplot_spec=gs, wspace=0.1, hspace=0.1)
+    # gs = gridspec.GridSpec(, width_ratios=[1] * weights.shape[1],
+    #                        wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
     idx = 0
     for i in range(0, weights.shape[0]):
         for j in range(0, weights.shape[1]):
             kernel1 = weights[i, j]
-            ax = plt.subplot(gs[i, j])
-            ax.set_xticks([])
-            ax.set_yticks([])
-            plt.imshow(kernel1, cmap='gray')
-            ax.set_title(f'Weight component {idx}', pad=2, fontsize=5)
+            ax_ = plt.subplot(inner[i, j])
+            ax_.set_xticks([])
+            ax_.set_yticks([])
+            ax_.set_axis_off()
+            ax_.imshow(kernel1, cmap='gray')
+            #
             idx += 1
-    plt.tight_layout()
-    plt.savefig(f'weights_{model_name}.png')
-    plt.show()
-    return
+            if j == 0:
+                ax_.set_title(name, pad=10, weight='semibold', size=16)
+    if show:
+        plt.tight_layout()
+        plt.savefig(f'weights_{model_name}.png')
+        plt.show()
 
 
-def show_kernels(weights, func_name):
+def show_kernels(weights, func_name, gs=None):
     number = math.ceil(math.sqrt(weights.shape[0]))
     img = np.transpose(weights, (0, 2, 3, 1))
     idx = 0
-    plt.figure(figsize=(10, 10))
+    show = False
+    if gs is None:
+        plt.figure(figsize=(10, 10))
+        inner = gridspec.GridSpec(1, weights.shape[0], wspace=0.2, hspace=0.2)
+        show = True
+    else:
+        inner = gridspec.GridSpecFromSubplotSpec(1, 8,
+                                                 subplot_spec=gs, wspace=0.1, hspace=0.1)
+
     # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
-    for j in range(number):  # in zip(axes, range(weights.shape[0])):
-        for i in range(number):
-            ax = plt.subplot(number, number, idx + 1)
-            ax.set_xticks([])
-            ax.set_yticks([])
-            ax.set_title(f'Kernel {idx}', pad=3)
-            # imgs = img[range(j*8, (j*8)+number)]
-            channel = img[idx]
-            f_min, f_max = channel.min(), channel.max()
-            channel = (channel - f_min) / (f_max - f_min)
-            plt.imshow(channel)
-            idx += 1
-    plt.tight_layout()
-    plt.savefig(f'kernels_{func_name}.png')
-    plt.show()
+    for j in range(weights.shape[0]):  # in zip(axes, range(weights.shape[0])):
+        # for i in range(number):
+        ax_ = plt.subplot(inner[idx])
+        ax_.set_xticks([])
+        ax_.set_yticks([])
+        ax_.set_axis_off()
+        # ax.set_title(f'Kernel {idx}', pad=3)
+        # imgs = img[range(j*8, (j*8)+number)]
+        channel = img[idx]
+        f_min, f_max = channel.min(), channel.max()
+        channel = (channel - f_min) / (f_max - f_min)
+        ax_.imshow(channel)
+        if j == 0:
+            ax_.set_title(func_name, pad=10, weight='bold', size=18)
+        idx += 1
+
+    if show:
+        plt.tight_layout()
+        plt.savefig(f'kernels_{func_name}.png')
+        plt.show()
 
 
 def similarity(m1, m2):

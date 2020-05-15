@@ -9,8 +9,8 @@ from skimage.filters import gabor_kernel
 from skimage.transform import resize
 from torch import nn
 
-from nets import trained_models
-from nets.test_models import cornet_s_brainmodel, get_model
+from base_models import trained_models
+from base_models.test_models import cornet_s_brainmodel, get_model
 from plot.plot_data import plot_images, plot_matrixImage
 from utils.correlation import generate_correlation_map, auto_correlation
 

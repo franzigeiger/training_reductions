@@ -28,7 +28,7 @@ normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
 ngpus = 2
 epochs = 20
-output_path = '/braintree/home/fgeiger/weight_initialization/nets/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
+output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
 data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4
@@ -84,12 +84,9 @@ def train(identifier,
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
-    if lr != .1:
-        identifier = f'{identifier}_lr{lr}'
-    print(f'Start training model {identifier}')
-    if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
-        logger.info('Model already trained')
-        return
+    # if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
+    #     logger.info('Model already trained')
+    #     return
     restore_path = output_path
     logger.info('We start training the model')
     if ngpus > 1 and torch.cuda.device_count() > 1:
@@ -105,17 +102,11 @@ def train(identifier,
     validator = ImageNetVal(model)
 
     start_epoch = 0
-    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
+    epochs = 1
+    stored = [w for w in os.listdir(output_path) if f'{identifier}_epoch_00.pth.tar' in w]
     if len(stored) > 0:
-        restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
-        ckpt_data = torch.load(restore_path)
-        if ckpt_data['epoch'] < epochs + 1:
-            start_epoch = ckpt_data['epoch']
-            if start_epoch > epochs:
-                start_epoch = epochs - 1
-                restore_path = output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'
-                ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
-
+        restore_path = output_path + f'{identifier}_epoch_00.pth.tar'
+        ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
 
         class Wrapper(Module):
@@ -132,8 +123,8 @@ def train(identifier,
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
-    if output_path is not None and os.path.isfile(output_path + f'results_{identifier}.pkl'):
-        records = pickle.load(open(output_path + f'results_{identifier}.pkl', 'rb+'))
+    if output_path is not None and os.path.isfile(output_path + f'results_{identifier}_first.pkl'):
+        records = pickle.load(open(output_path + f'results_{identifier}_first.pkl', 'rb+'))
     recent_time = time.time()
 
     nsteps = len(trainer.data_loader)
@@ -166,7 +157,7 @@ def train(identifier,
             if output_path is not None:
                 records.append(results)
                 if len(results) > 1:
-                    pickle.dump(records, open(output_path + f'results_{identifier}.pkl', 'wb+'))
+                    pickle.dump(records, open(output_path + f'results_{identifier}_first.pkl', 'wb+'))
 
                 ckpt_data = {}
                 # ckpt_data['flags'] = __dict__.copy()
@@ -182,8 +173,6 @@ def train(identifier,
 
                 if save_model_steps is not None:
                     if global_step in save_model_steps:
-                        # print('Save weights')
-                        # print(model.module.V1.norm1.running_mean.data.cpu().numpy())
                         e = global_step / len(trainer.data_loader)
                         if e % 1 == 0:
                             torch.save(ckpt_data, output_path +
@@ -197,8 +186,6 @@ def train(identifier,
 
             if epoch < epochs:
                 frac_epoch = (global_step + 1) / len(trainer.data_loader)
-                # print('Start training')
-                # print(model.module.V1.norm1.running_mean.data.cpu().numpy())
                 record = trainer(frac_epoch, *data)
                 record['data_load_dur'] = data_load_time
                 results = {'meta': {'step_in_epoch': step + 1,
@@ -354,9 +341,6 @@ class ImageNetVal(object):
 
     def __call__(self):
         self.model.eval()
-        # print('Start evaulation')
-        # print(self.model.module.V1.norm1.running_mean.data.cpu().numpy())
-        # print(self.model.module.V1.norm1.momentum)
         start = time.time()
         record = {'loss': 0, 'top1': 0, 'top5': 0}
         with torch.no_grad():
@@ -370,9 +354,7 @@ class ImageNetVal(object):
                 p1, p5 = accuracy(output, target, topk=(1, 5))
                 record['top1'] += p1
                 record['top5'] += p5
-        # print('Evaluation done')
-        # print(self.model.module.V1.norm1.running_mean.data.cpu().numpy())
-        # print(self.model.module.V1.norm1.momentum)
+
         for key in record:
             record[key] /= len(self.data_loader.dataset.samples)
         record['dur'] = (time.time() - start) / len(self.data_loader)

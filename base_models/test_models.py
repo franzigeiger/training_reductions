@@ -1,5 +1,6 @@
 import functools
 import importlib
+import itertools
 import logging
 import os
 
@@ -7,6 +8,7 @@ import numpy as np
 import torch
 import torchvision
 from brainscore.submission.utils import UniqueKeyDict
+from candidate_models.base_models import TFSlimModel
 from candidate_models.base_models.cornet import TemporalPytorchWrapper
 from candidate_models.model_commitments.cornets import CORnetCommitment
 from model_tools.activations import PytorchWrapper
@@ -14,8 +16,10 @@ from model_tools.brain_transformation import ModelCommitment
 from model_tools.utils import s3
 from torch.nn import Module
 
-from nets.trainer import output_path
-from nets.trainer import train
+from base_models import hmax
+from base_models.mobilenet import get_mobilenet as get_mobilenet_local
+from base_models.trainer import output_path
+from base_models.trainer import train
 from transformations.layer_based import apply_to_net
 from transformations.model_based import apply_to_one_layer
 
@@ -25,18 +29,9 @@ seed = 0
 batch_fix = False
 
 
-# def cornet_long(identifier, init_weights=True, type='layer', function=None, config=None):
-#
-#     cornet(identifier, init_weights, else config + {'model_func': function})
-
 def cornet(identifier, init_weights=True, config=None):
     _logger.info('Run normal benchmark')
-    # if batch_fix:
-    #     identifier = f'{identifier}_BF'
     model = get_model(identifier, init_weights, config)
-    # for name, m in model.named_modules():
-    #     if type(m) == nn.BatchNorm2d and m.num_batches_tracked.data.cpu() == 0:
-    #         m.momentum = 0
     from model_tools.activations.pytorch import load_preprocess_images
     preprocessing = functools.partial(load_preprocess_images, image_size=224)
     wrapper = TemporalPytorchWrapper(identifier=identifier, model=model,
@@ -53,11 +48,6 @@ def get_model(identifier, init_weights=True, config=None):
     cornet_type = 'S'
     np.random.seed(seed)
     torch.manual_seed(seed)
-    # if 'batchnorm' in config or batch_fix:
-    #     print('We load the alternative batchnorm model!')
-    #     mod = importlib.import_module(f'cornet.cornet_s_compression')
-    #     identifier = f'{identifier}_BF'
-    # else:
     mod = importlib.import_module(f'cornet.cornet_{cornet_type.lower()}')
     model_ctr = getattr(mod, f'CORnet_{cornet_type.upper()}')
     model = model_ctr()
@@ -107,6 +97,41 @@ def get_alexnet(init_weights=False):
     return model_ctr(pretrained=init_weights)
 
 
+def get_hmax(identifier, image_size):
+    path = os.path.join(os.path.dirname(__file__), 'universal_patch_set.mat')
+    model = hmax.HMAX(path)
+    from model_tools.activations.pytorch import load_preprocess_images
+    preprocessing = functools.partial(load_preprocess_images, image_size=image_size)
+    wrapper = PytorchWrapper(identifier=identifier, model=model,
+                             preprocessing=preprocessing, batch_size=10)
+    wrapper.image_size = image_size
+    return wrapper
+
+
+def get_mobilenet(identifier, init_weights=True, image_size=224):
+    if 'mobilenet_v1_1.0_224' not in identifier:
+        model = get_mobilenet_local(False)
+        if 'random' not in identifier:
+            model = load_weights(identifier, model)
+        from model_tools.activations.pytorch import load_preprocess_images
+        preprocessing = functools.partial(load_preprocess_images, image_size=image_size)
+        wrapper = PytorchWrapper(identifier=identifier, model=model,
+                                 preprocessing=preprocessing)
+        wrapper.image_size = image_size
+        return wrapper
+    multiplier = 1.0
+    version = 1
+    image_size = 224
+    identifier = f"mobilenet_v{version}_{multiplier}_{image_size}"
+    if (version == 1 and multiplier in [.75, .5, .25]) or (version == 2 and multiplier == 1.4):
+        net_name = f"mobilenet_v{version}_{multiplier * 100:03.0f}"
+    else:
+        net_name = f"mobilenet_v{version}"
+    return TFSlimModel.init(
+        identifier, preprocessing_type='inception', image_size=image_size, net_name=net_name,
+        model_ctr_kwargs={'depth_multiplier': multiplier})
+
+
 def get_weights(identifier):
     if identifier == 'CORnet-S_base':
         WEIGHT_MAPPING = {
@@ -132,13 +157,10 @@ def run_model_training(model, identifier, config=None, train_func=None):
         config = {'layers': ['decoder']}
     if 'full' not in config:
         for name, m in model.named_parameters():
-            # if type(m) == torch.nn.Conv2d or type(m) == torch.nn.Linear or type(m) == torch.nn.BatchNorm2d:
             if any(value in name for value in config['layers']):
                 m.requires_grad = True
             else:
                 m.requires_grad = False
-                print(f'don\'t train {name}')
-    # model.decoder.requires_grad = True
     if train_func:
         model = train_func(identifier, model)
     else:
@@ -216,6 +238,30 @@ def alexnet_brainmodel(identifier, init_weights=True, function=None):
     return brain_model
 
 
+def mobilenet_brainmodel(identifier, init_weights=True, function=None):
+    model = get_mobilenet(identifier, init_weights)
+    if identifier == 'mobilenet_v1_1.0_224':
+        lay = layers['mobilenet_v1']
+    else:
+        lay = layers['mobilenet_pytorch']
+    brain_model = ModelCommitment(identifier=identifier, activations_model=model,
+                                  layers=lay)
+    return brain_model
+
+
+def hmax_brainmodel(identifier, init_weights=True, function=None):
+    model = get_hmax(identifier, 224)
+    if identifier.startswith('hmax_2'):
+        lay = layers['hmax_2']
+    elif identifier.startswith('hmax_3'):
+        lay = layers['hmax_3']
+    else:
+        lay = layers['hmax']
+    brain_model = ModelCommitment(identifier=identifier, activations_model=model,
+                                  layers=lay)
+    return brain_model
+
+
 def resnet_michael(identifier, init_weights=True, function=None):
     from tbs import load_model
     from tbs.tfkeras_wrapper_for_brainscore import TFKerasWrapper, resnet_preprocessing
@@ -278,15 +324,24 @@ layers = {
         [f'features.denseblock3.denselayer{i + 1}.conv2' for i in range(16)] + ['features.norm5'],
     'resnet101': resnext101_layers(),
     'resnet-50':
-        ['bn1'] +
-        ['layer1.0.bn3', 'layer1.1.bn3', 'layer1.2.bn3'] +
-        ['layer2.0.downsample.1', 'layer2.0.bn3', 'layer2.1.bn3', 'layer2.2.bn3', 'layer2.3.bn3'] +
-        ['layer3.0.downsample.1', 'layer3.0.bn3', 'layer3.1.bn3', 'layer3.2.bn3', 'layer3.3.bn3',
-         'layer3.4.bn3', 'layer3.5.bn3'] +
-        ['layer4.0.downsample.1', 'layer4.0.bn3', 'layer4.1.bn3', 'layer4.2.bn3'] +
+        ['conv1'] +
+        ['layer1.0.conv3', 'layer1.1.conv3', 'layer1.2.conv3'] +
+        ['layer2.0.downsample.0', 'layer2.1.conv3', 'layer2.2.conv3', 'layer2.3.conv3'] +
+        ['layer3.0.downsample.0', 'layer3.1.conv3', 'layer3.2.conv3', 'layer3.3.conv3',
+         'layer3.4.conv3', 'layer3.5.conv3'] +
+        ['layer4.0.downsample.0', 'layer4.1.conv3', 'layer4.2.conv3'] +
         ['avgpool'],
+    'mobilenet_v1':
+        ['Conv2d_0'] + list(itertools.chain(
+            *[[f'Conv2d_{i + 1}_depthwise', f'Conv2d_{i + 1}_pointwise'] for i in range(13)])) +
+        ['AvgPool_1a'],
+    # 'hmax': [f'c1_{i:02d}' for i in [8, 10,12,14,16,18,20,22]] + [f'c2_{i}' for i in range(8)] + [f's1_{i:02d}' for i in [7,9,11,13,15,17,19,21,23,25,29,31,33,35,37]] + [f's2_{i}' for i in range(8)]
+    'hmax': ['s1_out', 'c1_out', 'c2_out'],
+    'hmax_2': [f's2_{i}' for i in range(4)],
+    'hmax_3': [f's2_{i}' for i in range(4, 8)],
+    'mobilenet_pytorch': ['model.0.0'] + [f'model.{i}.0' for i in range(1, 14)] + [f'model.{i}.3' for i in
+                                                                                   range(1, 14)] + ['model.14']
 }
-
 
 class ModelLayers(UniqueKeyDict):
     def __init__(self, layers):
@@ -296,8 +351,6 @@ class ModelLayers(UniqueKeyDict):
 
     @staticmethod
     def _item(item):
-        # if item.startswith('mobilenet'):
-        #     return "_".join(item.split("_")[:2])
         if item.startswith('bagnet'):
             return 'bagnet'
         return item

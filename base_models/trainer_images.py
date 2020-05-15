@@ -19,6 +19,9 @@ import torchvision
 import tqdm
 from PIL import Image
 from torch.nn import Module
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+from base_models.datasubset import get_dataloader
 
 Image.warnings.simplefilter('ignore')
 logger = logging.getLogger(__name__)
@@ -27,15 +30,17 @@ torch.backends.cudnn.benchmark = False
 normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
 ngpus = 2
-epochs = 43
-output_path = '/braintree/home/fgeiger/weight_initialization/nets/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
-data_path = '/braintree/data2/active/common/imagenet_raw/'
+epochs = 20
+data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
+output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9
 step_size = 20
 lr = .1
 workers = 20
+image_load = 1000
+
 if ngpus > 0:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -78,23 +83,27 @@ def get_model(pretrained=False):
 def train(identifier,
           model,
           restore_path=None,  # useful when you want to restart training
-          save_train_epochs=.1,  # how often save output during training
+          save_train_epochs=1,  # how often save output during training
           save_val_epochs=.5,  # how often save output during validation
           save_model_epochs=1,  # how often save model weigths
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
-    if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
+    if lr != .1:
+        identifier = f'{identifier}_lr{lr}'
+    print(f'Start training model {identifier} for {epochs} epochs')
+    if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pthh.tar'):
         logger.info('Model already trained')
         return
     restore_path = output_path
     logger.info('We start training the model')
+    logger.info(f'We run on device {device} with count {torch.cuda.device_count()}')
     if ngpus > 1 and torch.cuda.device_count() > 1:
         logger.info('We have multiple GPUs detected')
         model = nn.DataParallel(model)
         model = model.to(device)
     elif ngpus > 0 and torch.cuda.device_count() is 1:
-        logger.info('We run on GPU')
+        logger.info('We run on one GPU')
         model = model.to(device)
     else:
         logger.info('No GPU detected!')
@@ -102,33 +111,44 @@ def train(identifier,
     validator = ImageNetVal(model)
 
     start_epoch = 0
-    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
+    stored = [w for w in os.listdir(output_path) if f'{identifier}_latesst_checkpoint.pth.tar' in w]
     if len(stored) > 0:
         restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
-        ckpt_data = torch.load(restore_path)
-        start_epoch = ckpt_data['epoch']
+        ckpt_data = torch.load(restore_path)  # , map_location=torch.device('cpu')
+        if ckpt_data['epoch'] < epochs + 1:
+            start_epoch = ckpt_data['epoch']
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
         model.load_state_dict(ckpt_data['state_dict'])
+        try:
+            model.load_state_dict(ckpt_data['state_dict'])
+        except Exception:
+            model.module.load_state_dict(ckpt_data['state_dict'])
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
+    if output_path is not None and os.path.isfile(output_path + f'results_{identifier}.pkl'):
+        records = pickle.load(open(output_path + f'results_{identifier}.pkl', 'rb+'))
     recent_time = time.time()
 
     nsteps = len(trainer.data_loader)
-    if save_train_epochs is not None:
-        save_train_steps = (np.arange(0, epochs + 1,
-                                      save_train_epochs) * nsteps).astype(int)
-    if save_val_epochs is not None:
-        save_val_steps = (np.arange(0, epochs + 1,
-                                    save_val_epochs) * nsteps).astype(int)
-    if save_model_epochs is not None:
-        save_model_steps = (np.arange(0, epochs + 1,
-                                      save_model_epochs) * nsteps).astype(int)
+
+    save_train_steps = (np.arange(0, epochs + 1,
+                                  save_train_epochs) * nsteps).astype(int) if save_train_epochs else None
+    save_val_steps = (np.arange(0, epochs + 1,
+                                save_val_epochs) * nsteps).astype(int) if save_val_epochs else None
+    save_model_steps = (np.arange(0, epochs + 1,
+                                  save_model_epochs) * nsteps).astype(int) if save_model_epochs else None
+    add = [0, int(nsteps * 0.1), int(nsteps * 0.2), int(nsteps * 0.3), int(nsteps * 0.4),
+           int(nsteps * 0.5), int(nsteps * 0.6), int(nsteps * 0.7), int(nsteps * 0.8),
+           int(nsteps * 0.9)]
+    save_model_steps = np.concatenate((add, save_model_steps))
+    print(f'Save also forst epoch steps {add}')
 
     results = {'meta': {'step_in_epoch': 0,
                         'epoch': start_epoch,
                         'wall_time': time.time()}
                }
+
     for epoch in tqdm.trange(start_epoch, epochs + 1, initial=start_epoch, desc='epoch'):
         data_load_start = np.nan
         for step, data in enumerate(tqdm.tqdm(trainer.data_loader, desc=trainer.name)):
@@ -138,7 +158,6 @@ def train(identifier,
             if save_val_steps is not None:
 
                 if global_step in save_val_steps:
-                    print('we do this 1')
                     results[validator.name] = validator()
                     trainer.model.train()
 
@@ -161,8 +180,13 @@ def train(identifier,
 
                 if save_model_steps is not None:
                     if global_step in save_model_steps:
-                        torch.save(ckpt_data, output_path +
-                                   f'{identifier}_epoch_{epoch:02d}.pth.tar')
+                        e = global_step / len(trainer.data_loader)
+                        if e % 1 == 0:
+                            torch.save(ckpt_data, output_path +
+                                       f'{identifier}_epoch_{int(e):02d}.pth.tar')
+                        else:
+                            torch.save(ckpt_data, output_path +
+                                       f'{identifier}_epoch_{e:.1f}.pth.tar')
 
             else:
                 if len(results) > 1:
@@ -171,6 +195,7 @@ def train(identifier,
             if epoch < epochs:
                 frac_epoch = (global_step + 1) / len(trainer.data_loader)
                 record = trainer(frac_epoch, *data)
+                train_loss = record['loss']
                 record['data_load_dur'] = data_load_time
                 results = {'meta': {'step_in_epoch': step + 1,
                                     'epoch': frac_epoch,
@@ -181,6 +206,11 @@ def train(identifier,
                         results[trainer.name] = record
 
             data_load_start = time.time()
+        trainer.lr.step(train_loss, epoch=epoch)
+        print(f'Learning rate epoch {epoch}: {trainer.optimizer.param_groups[0]["lr"]}, train loss {train_loss}')
+        if trainer.optimizer.param_groups[0]["lr"] < 0.0001:
+            print('Learning rate too low')
+            break
     if ngpus > 1 and torch.cuda.device_count() > 1:
         return model.module
     return model
@@ -251,49 +281,30 @@ class ImageNetTrain(object):
                                          lr,
                                          momentum=momentum,
                                          weight_decay=weight_decay)
-        self.lr = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size)
+        # self.lr = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size)
+        self.lr = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=3)
         self.loss = nn.CrossEntropyLoss()
         if ngpus > 0:
             self.loss = self.loss.cuda()
 
     def data(self):
-        dataset = torchvision.datasets.ImageFolder(
-            os.path.join(data_path, 'train'),
-            torchvision.transforms.Compose([
-                torchvision.transforms.RandomResizedCrop(224),
-                torchvision.transforms.RandomHorizontalFlip(),
-                torchvision.transforms.ToTensor(),
-                normalize,
-            ]))
-        data_loader = torch.utils.data.DataLoader(dataset,
-                                                  batch_size=batch_size,
-                                                  shuffle=True,
-                                                  num_workers=workers,
-                                                  pin_memory=True)
-        return data_loader
+        return get_dataloader(image_load=image_load)
 
     def __call__(self, frac_epoch, inp, target):
         start = time.time()
 
-        self.lr.step(epoch=frac_epoch)
         with torch.autograd.detect_anomaly():
             if ngpus > 0:
                 inp = inp.to(device)
-                # target =target.to(device)
-                # inp.to('cuda')
                 target = target.cuda(non_blocking=True)
-            # print(inp)
             output = self.model(inp)
-            # print(output)
             record = {}
             loss = self.loss(output, target)
             record['loss'] = loss.item()
             record['top1'], record['top5'] = accuracy(output, target, topk=(1, 5))
             record['top1'] /= len(output)
             record['top5'] /= len(output)
-            record['learning_rate'] = self.lr.get_lr()[0]
-            # print(loss)
-            # print(f'shape {loss.shape}')
+            record['learning_rate'] = self.optimizer.param_groups[0]['lr']
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -314,7 +325,7 @@ class ImageNetVal(object):
 
     def data(self):
         dataset = torchvision.datasets.ImageFolder(
-            os.path.join(data_path, 'val_in_folders'),
+            os.path.join(data_path, 'val'),
             torchvision.transforms.Compose([
                 torchvision.transforms.Resize(256),
                 torchvision.transforms.CenterCrop(224),
@@ -338,7 +349,6 @@ class ImageNetVal(object):
                 if ngpus > 0:
                     inp = inp.to(device)
                     target = target.to(device)
-                    # = target.cuda(non_blocking=True)
                 output = self.model(inp)
 
                 record['loss'] += self.loss(output, target).item()
@@ -349,7 +359,7 @@ class ImageNetVal(object):
         for key in record:
             record[key] /= len(self.data_loader.dataset.samples)
         record['dur'] = (time.time() - start) / len(self.data_loader)
-
+        print(f'Validation accuracy: Top1 {record["top1"]}, Top5 {record["top5"]}\n')
         return record
 
 
@@ -366,7 +376,9 @@ def accuracy(output, target, topk=(1,)):
 if __name__ == '__main__':
     with open(output_path + f'results_CORnet-S_train_IT_random_2_gpus.pkl', 'rb') as f:
         data = pickle.load(f)
-        print(data[0])
+        # validation = data['val']
+        item = data[-1]
+        print(item)
         print(data[len(data) - 1])
     # np.random.seed(0)
     # torch.manual_seed(0)

@@ -1339,19 +1339,7 @@ trained_models = {
         'IT.conv2': do_kernel_normal_distribution_init,
         'IT.conv3': do_kernel_normal_distribution_init,
     },
-    'CORnet-S_brain2_t7_t12_knall_IT_bi_v2': {
-        'layers': ['V2.conv3', 'V4.conv3', 'IT.conv3', 'decoder'],
-        'V4.conv_input': do_kernel_normal_distribution_init,
-        'V4.skip': do_kernel_normal_distribution_init,
-        'V4.conv1': do_kernel_normal_distribution_init,
-        'V4.conv2': do_kernel_normal_distribution_init,
-        'V4.conv3': do_kernel_normal_distribution_init,
-        'IT.conv_input': do_kernel_normal_distribution_init,
-        'IT.skip': do_kernel_normal_distribution_init,
-        'IT.conv1': do_kernel_normal_distribution_init,
-        'IT.conv2': do_kernel_normal_distribution_init,
-        'IT.conv3': do_kernel_normal_distribution_init,
-    },  # until here
+  # until here
 }
 
 # Base

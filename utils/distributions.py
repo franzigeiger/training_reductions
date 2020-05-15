@@ -8,30 +8,26 @@ import scipy.stats as st
 import torch
 from sklearn import mixture
 
-from nets import global_data
+from base_models import global_data
+from base_models.global_data import base_dir
 from utils.gabors import gabor_kernel_3, show_kernels, plot_weights
-
-dir = '/braintree/home/fgeiger/weight_initialization/'
-
-
-# dir = '/home/franzi/Projects/weight_initialization/'
 
 
 def mixture_gaussian(param, n_samples, components=0, name=None, analyze=False):
-    if path.exists(f'{dir}/gm_{name}_samples.pkl'):
+    if path.exists(f'{base_dir}/gm_{name}_samples.pkl'):
         best_gmm = load_mixture_gaussian(name)
         if not analyze and global_data.seed == 0:
             print(f'Load samples from file {name}')
-            pickle_in = open(f'{dir}/gm_{name}_samples.pkl', "rb")
+            pickle_in = open(f'{base_dir}/gm_{name}_samples.pkl', "rb")
             dict = pickle.load(pickle_in)
             samples = dict['samples']
             if samples.shape[0] == n_samples:
                 return samples
             else:
                 name = f'{name}_{n_samples}'
-                if path.exists(f'{dir}/gm_{name}_samples.pkl'):
+                if path.exists(f'{base_dir}/gm_{name}_samples.pkl'):
                     print(f'Load samples from file {name}')
-                    pickle_in = open(f'{dir}/gm_{name}_samples.pkl', "rb")
+                    pickle_in = open(f'{base_dir}/gm_{name}_samples.pkl', "rb")
                     dict = pickle.load(pickle_in)
                     return dict['samples']
         else:
@@ -63,11 +59,11 @@ def mixture_gaussian(param, n_samples, components=0, name=None, analyze=False):
     if name is not None and not analyze and global_data.seed == 0:
         print(f'Save samples and mixture gaussian in file {name}')
         dict = {'samples': samples}
-        pickle_out = open(f'{dir}/gm_{name}_samples.pkl', "wb")
+        pickle_out = open(f'{base_dir}/gm_{name}_samples.pkl', "wb")
         pickle.dump(dict, pickle_out)
         dict = {'comp': components, 'weights': best_gmm.weights_, 'means': best_gmm.means_,
                 'cov': best_gmm.covariances_, 'precision': best_gmm.precisions_cholesky_}
-        pickle_out = open(f'{dir}/gm_{name}_dist.pkl', "wb")
+        pickle_out = open(f'{base_dir}/gm_{name}_dist.pkl', "wb")
         pickle.dump(dict, pickle_out)
     if analyze:
         centers = best_gmm.means_
@@ -75,14 +71,14 @@ def mixture_gaussian(param, n_samples, components=0, name=None, analyze=False):
             centers = centers.reshape(centers.shape[0], 3, 3)
             centers = centers.reshape(1, centers.shape[0], 3, 3)
             print(best_gmm.weights_)
-            plot_weights(centers, name)
+            # plot_weights(centers, name)
         # mixture_analysis(best_gmm.weights_, best_gmm.means_, best_gmm.covariances_, name)
         return best_gmm
         # return samples
     return samples
 
 
-def mixture_analysis(pi, mu, cov, name):
+def mixture_analysis(pi, mu, cov, name, gs=None):
     # k components: pi = (k) , mu = (k), cov = (k,k,k)
     print(pi.shape, mu.shape, cov.shape)
     print(mu)
@@ -90,7 +86,7 @@ def mixture_analysis(pi, mu, cov, name):
     if pi.shape[0] == 8:
         filters = mu.reshape((8, 3, 3))
         filters = filters.reshape(4, 2, 3, 3)
-        plot_weights(filters, f'gm_{name}_weights')
+        plot_weights(filters, name)
     else:
         filters = np.zeros((4, 3, 7, 7))
         for i in range(4):
@@ -102,11 +98,11 @@ def mixture_analysis(pi, mu, cov, name):
                                         y_c=beta[8],
                                         scale=beta[9], ks=7)
                 filters[i, int(s / 10)] = filter
-        show_kernels(filters, f'gm_{name}_gabors')
+        show_kernels(filters, name, gs)
 
 
 def load_mixture_gaussian(name):
-    pickle_in = open(f'{dir}/gm_{name}_dist.pkl', "rb")
+    pickle_in = open(f'{base_dir}/gm_{name}_dist.pkl', "rb")
     GM = pickle.load(pickle_in)
     # dict = {'comp': components,'weights':best_gmm.weights_,'means': best_gmm.means_, 'cov':best_gmm.covariances_}
     gmm = mixture.GaussianMixture(n_components=GM['comp'],
@@ -275,9 +271,9 @@ def set_half_running_averages(checkpoint, config):
     state_dict = checkpoint['state_dict']
     for k, v in state_dict.items():
         if 'running' in k:
-            if path.exists(f'{dir}resources/{k}_weights.pkl'):
+            if path.exists(f'{base_dir}resources/{k}_weights.pkl'):
                 print(f'Load {k} from file {k}')
-                pickle_in = open(f'{dir}resources/{k}_weights.pkl', "rb")
+                pickle_in = open(f'{base_dir}resources/{k}_weights.pkl', "rb")
                 values = pickle.load(pickle_in)
                 state_dict[k] = torch.Tensor(values['weights'])
             else:
@@ -286,7 +282,7 @@ def set_half_running_averages(checkpoint, config):
                 # weights = np.random.normal(mu, std, size=v.shape[0])
                 print(f'Save samples and mixture gaussian in file {k}')
                 dict = {'weights': weights}
-                pickle_out = open(f'{dir}resources/{k}_weights.pkl', "wb")
+                pickle_out = open(f'{base_dir}resources/{k}_weights.pkl', "wb")
                 pickle.dump(dict, pickle_out)
                 state_dict[k] = torch.Tensor(weights)
         # if 'batches_tracked' in k:

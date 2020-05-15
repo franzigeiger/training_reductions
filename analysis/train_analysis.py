@@ -3,7 +3,7 @@ import pickle
 
 from plot.plot_data import plot_data_map, plot_date_map_custom_x
 
-dir = '/braintree/home/fgeiger/weight_initialization/nets/model_weights'
+dir = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights'
 
 
 def plot_training_effort(name):

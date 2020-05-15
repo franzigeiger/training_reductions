@@ -5,8 +5,8 @@ import sys
 
 from brainscore import score_model
 
+from base_models.pool import brain_translated_pool, batchnorm_shuffle
 from benchmark.database import create_connection, store_score
-from nets.pool import brain_translated_pool, batchnorm_shuffle
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName('DEBUG'),

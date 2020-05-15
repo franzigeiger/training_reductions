@@ -4,6 +4,7 @@ import io
 import logging
 import os
 import pickle
+import pprint
 import shlex
 import subprocess
 import time
@@ -26,8 +27,8 @@ torch.backends.cudnn.benchmark = False
 normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
 ngpus = 2
-epochs = 1
-output_path = '/braintree/home/fgeiger/weight_initialization/nets/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
+epochs = 20
+output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
 data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4
@@ -83,9 +84,12 @@ def train(identifier,
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
-    # if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
-    #     logger.info('Model already trained')
-    #     return
+    if lr != .1:
+        identifier = f'{identifier}_lr{lr}'
+    print(f'Start training model {identifier}')
+    if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
+        logger.info('Model already trained')
+        return
     restore_path = output_path
     logger.info('We start training the model')
     if ngpus > 1 and torch.cuda.device_count() > 1:
@@ -101,19 +105,114 @@ def train(identifier,
     validator = ImageNetVal(model)
 
     start_epoch = 0
+    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
+    if len(stored) > 0:
+        restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
+        ckpt_data = torch.load(restore_path)
+        if ckpt_data['epoch'] < epochs + 1:
+            start_epoch = ckpt_data['epoch']
+            if start_epoch > epochs:
+                start_epoch = epochs - 1
+                restore_path = output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'
+                ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
+
+        logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
+
+        class Wrapper(Module):
+            def __init__(self, model):
+                super(Wrapper, self).__init__()
+                self.module = model
+
+        model = Wrapper(model)
+        try:
+            model.load_state_dict(ckpt_data['state_dict'])
+        except:
+            model.module.load_state_dict(ckpt_data['state_dict'])
+        model = model.module
+        trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
+
+    records = []
+    if output_path is not None and os.path.isfile(output_path + f'results_{identifier}.pkl'):
+        records = pickle.load(open(output_path + f'results_{identifier}.pkl', 'rb+'))
     recent_time = time.time()
-    for epoch in tqdm.trange(start_epoch, epochs, initial=start_epoch, desc='epoch'):
+
+    nsteps = len(trainer.data_loader)
+
+    save_train_steps = (np.arange(0, epochs + 1,
+                                  save_train_epochs) * nsteps).astype(int) if save_train_epochs else None
+    save_val_steps = (np.arange(0, epochs + 1,
+                                save_val_epochs) * nsteps).astype(int) if save_val_epochs else None
+    save_model_steps = (np.arange(1, epochs + 1,
+                                  save_model_epochs) * nsteps).astype(int) if save_model_epochs else None
+    save_model_steps = np.concatenate(([0, int(nsteps * 0.1), int(nsteps * 0.2), int(nsteps * 0.3), int(nsteps * 0.4),
+                                        int(nsteps * 0.5), int(nsteps * 0.6), int(nsteps * 0.7), int(nsteps * 0.8),
+                                        int(nsteps * 0.9)], save_model_steps))
+    results = {'meta': {'step_in_epoch': 0,
+                        'epoch': start_epoch,
+                        'wall_time': time.time()}
+               }
+    for epoch in tqdm.trange(start_epoch, epochs + 1, initial=start_epoch, desc='epoch'):
         data_load_start = np.nan
         for step, data in enumerate(tqdm.tqdm(trainer.data_loader, desc=trainer.name)):
             data_load_time = time.time() - data_load_start
             global_step = epoch * len(trainer.data_loader) + step
-            trainer.model.train()
-            frac_epoch = (global_step + 1) / len(trainer.data_loader)
-            trainer(frac_epoch, *data)
+
+            if save_val_steps is not None:
+
+                if global_step in save_val_steps:
+                    results[validator.name] = validator()
+                    trainer.model.train()
+
+            if output_path is not None:
+                records.append(results)
+                if len(results) > 1:
+                    pickle.dump(records, open(output_path + f'results_{identifier}.pkl', 'wb+'))
+
+                ckpt_data = {}
+                # ckpt_data['flags'] = __dict__.copy()
+                ckpt_data['epoch'] = epoch
+                ckpt_data['state_dict'] = model.state_dict()
+                ckpt_data['optimizer'] = trainer.optimizer.state_dict()
+
+                if save_model_secs is not None:
+                    if time.time() - recent_time > save_model_secs:
+                        torch.save(ckpt_data, output_path +
+                                   f'{identifier}_latest_checkpoint.pth.tar')
+                        recent_time = time.time()
+
+                if save_model_steps is not None:
+                    if global_step in save_model_steps:
+                        # print('Save weights')
+                        # print(model.module.V1.norm1.running_mean.data.cpu().numpy())
+                        e = global_step / len(trainer.data_loader)
+                        if e % 1 == 0:
+                            torch.save(ckpt_data, output_path +
+                                       f'{identifier}_epoch_{int(e):02d}.pth.tar')
+                        else:
+                            torch.save(ckpt_data, output_path +
+                                       f'{identifier}_epoch_{e:.1f}.pth.tar')
+            else:
+                if len(results) > 1:
+                    pprint.pprint(results)
+
+            if epoch < epochs:
+                frac_epoch = (global_step + 1) / len(trainer.data_loader)
+                # print('Start training')
+                # print(model.module.V1.norm1.running_mean.data.cpu().numpy())
+                record = trainer(frac_epoch, *data)
+                record['data_load_dur'] = data_load_time
+                results = {'meta': {'step_in_epoch': step + 1,
+                                    'epoch': frac_epoch,
+                                    'wall_time': time.time()}
+                           }
+                if save_train_steps is not None:
+                    if step in save_train_steps:
+                        results[trainer.name] = record
 
             data_load_start = time.time()
-    duration = time.time() - recent_time
-    return {'time': duration}
+    if ngpus > 1 and torch.cuda.device_count() > 1:
+        return model.module
+    return model
 
 
 def test(layer='decoder', sublayer='avgpool', time_step=0, imsize=224):
@@ -255,6 +354,9 @@ class ImageNetVal(object):
 
     def __call__(self):
         self.model.eval()
+        # print('Start evaulation')
+        # print(self.model.module.V1.norm1.running_mean.data.cpu().numpy())
+        # print(self.model.module.V1.norm1.momentum)
         start = time.time()
         record = {'loss': 0, 'top1': 0, 'top5': 0}
         with torch.no_grad():
@@ -268,7 +370,9 @@ class ImageNetVal(object):
                 p1, p5 = accuracy(output, target, topk=(1, 5))
                 record['top1'] += p1
                 record['top5'] += p5
-
+        # print('Evaluation done')
+        # print(self.model.module.V1.norm1.running_mean.data.cpu().numpy())
+        # print(self.model.module.V1.norm1.momentum)
         for key in record:
             record[key] /= len(self.data_loader.dataset.samples)
         record['dur'] = (time.time() - start) / len(self.data_loader)

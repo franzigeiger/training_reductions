@@ -1,11 +1,12 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns
+from itertools import chain
 
-from benchmark.database import load_scores, get_connection
-from nets.global_data import layer_best_2, random_scores, best_special_brain, layers, convergence_epoch, benchmarks, \
-    benchmarks_public, best_models_brain_avg_all, convergence_images
-from plot.plot_data import plot_data_base, plot_bar_benchmarks, scatter_plot, plot_data_double
+import numpy as np
+
+from base_models.global_data import layer_best_2, random_scores, layers, convergence_epoch, benchmarks, \
+    benchmarks_public, convergence_images
+from benchmark.database import load_scores, get_connection, load_error_bared
+from plot.plot_data import plot_data_base, plot_bar_benchmarks, scatter_plot, plot_data_double, red_palette, my_palette, \
+    plot_heatmap, blue_palette
 
 
 # layers = ['full', 'V1.conv1', 'V1.conv2',
@@ -35,21 +36,75 @@ def plot_over_epoch(models):
         plot_data_base(data, f'{benchmarks_labels[i]} Benchmark over epochs', epochs, 'Score over epochs', 'Score')
 
 
-def plot_models_benchmarks(models, file_name):
+def plot_models_benchmarks(models, file_name, benchmarks, convergence=True, gs=None):
     model_dict = {}
     conn = get_connection()
     epoch = 6
     names = []
     for model in models.keys():
-        names.append(f'{model}_epoch_{epoch:02d}')
+        if convergence and model in convergence_epoch:
+            postfix = f'_epoch_{convergence_epoch[model]:02d}'
+        else:
+            postfix = f'_epoch_06'
+        names.append(f'{model}{postfix}')
     model_dict = load_scores(conn, names, benchmarks)
-    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet']
+    if len(benchmarks) < 6:
+        benchmarks_labels = ['V4', 'IT', 'Behavior', 'Imagenet']
+    else:
+        benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet']
     data_set = {}
     # We replace the model id, a more human readable version
     for id, desc in models.items():
-        data_set[desc] = model_dict[f'{id}_epoch_{epoch:02d}']
-        print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
-    plot_bar_benchmarks(data_set, benchmarks_labels, 'Model scores in epoch 6', 'Scores', file_name)
+        if convergence and id in convergence_epoch:
+            postfix = f'_epoch_{convergence_epoch[id]:02d}'
+        else:
+            postfix = f'_epoch_06'
+        data_set[desc] = model_dict[f'{id}{postfix}']
+        # print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
+    plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, gs=gs)
+
+
+def plot_models_vs(models, file_name, convergence=False, imagenet=False, gs=None, selection=[]):
+    model_dict = {}
+    conn = get_connection()
+    epoch = 6
+    names = []
+    for name, mod in models.items():
+        for model in mod.values():
+            if convergence:
+                epoch = convergence_epoch[model]
+            names.append(f'{model}_epoch_{epoch:02d}')
+    model_dict = load_scores(conn, names, benchmarks)
+    labels = []
+    data_set = {}
+    # We replace the model id, a more human readable version
+    for name, models in models.items():
+        labels.append(name)
+        # data_set[name] = {}
+        for model_name, model in models.items():
+            if model_name not in data_set:
+                data_set[model_name] = []
+            # if imagenet:
+            #     data_set[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][5]))
+            # else:
+            data_set[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]))
+
+    if convergence and 'CORnet-S_full' in convergence_epoch:
+        full_tr = load_scores(conn, [f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}'], benchmarks)[
+            f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}']
+    else:
+        full_tr = load_scores(conn, ['CORnet-S_full_epoch_06'], benchmarks)['CORnet-S_full_epoch_06']
+        # print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
+    # if imagenet:
+    #     line =np.mean(full_tr[5])
+    # else:
+    line = np.mean(full_tr[selection])
+    if len(selection) == 3:
+        y = r"\textbf{mean(V4, IT, Behavior)} "
+    else:
+        y = r"\textbf{mean(V1,V2,V4,IT,Behavior)}"
+    pals = [blue_palette, '#ABB2B9']
+    plot_bar_benchmarks(data_set, labels, '', y, file_name, line=line, label=True, grey=False, gs=gs)
 
 
 def plot_model_avg_benchmarks(models, file_name):
@@ -60,14 +115,14 @@ def plot_model_avg_benchmarks(models, file_name):
     for model in models.keys():
         names.append(f'{model}_epoch_{epoch:02d}')
     model_dict = load_scores(conn, names, benchmarks)
-    benchmarks_labels = ['mean(IT,V4,Behavior)', 'Imagenet']
+    benchmarks_labels = ['mean(V1,V2,IT,V4,Behavior)', 'Imagenet']
     data_set = {}
     # We replace the model id, a more human readable version
     for id, desc in models.items():
         data = model_dict[f'{id}_epoch_{epoch:02d}']
-        data_set[desc] = [np.mean(data[2:5]), data[5]]
-        print(f'Mean of brain benchmark model {desc}, {np.mean(data[2:5])}')
-    plot_bar_benchmarks(data_set, benchmarks_labels, 'Model scores in epoch 6', 'Scores', file_name)
+        data_set[desc] = [np.mean(data[0:5]), data[5]]
+        print(f'Mean of brain benchmark model {desc}, {np.mean(data[0:5])}')
+    plot_bar_benchmarks(data_set, benchmarks_labels, '', 'Scores', file_name)
 
 
 def plot_models_benchmark_vs_public(models, file_name):
@@ -86,50 +141,56 @@ def plot_models_benchmark_vs_public(models, file_name):
         data_set[desc] = model_dict[f'{id}_epoch_{epoch:02d}']
         data_set[f'{desc} public'] = model_dict_pub[f'{id}_epoch_{epoch:02d}']
         print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
-    plot_bar_benchmarks(data_set, benchmarks_labels, 'Model scores in epoch 6', 'Scores', file_name)
+    plot_bar_benchmarks(data_set, benchmarks_labels, 'Model scores in epoch 6', 'Score [% of standard training]',
+                        file_name, grey=True)
 
 
-def plot_benchmarks_over_epochs(model, epochs=None):
-    benchmarks = [
-        # 'movshon.FreemanZiemba2013.V1-pls',
-        #                        'movshon.FreemanZiemba2013.V2-pls',
-        'dicarlo.Majaj2015.V4-pls',
-        'dicarlo.Majaj2015.IT-pls',
-        'dicarlo.Rajalingham2018-i2n',
-        'fei-fei.Deng2009-top1']
+def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selection=[2, 3, 4], ax=None):
     model_dict = {}
     conn = get_connection()
     if epochs is None:
         epochs = (0, 5, 10, 15, 20)
 
     names = []
+    # for epoch in epochs:
+    #     if epoch % 1 == 0:
+    #         names.append(f'{model}_epoch_{epoch:02d}')
+    #     else:
+    #         names.append(f'{model}_epoch_{epoch:.1f}')
+    model_dict = load_error_bared(conn, [model], benchmarks, epochs=epochs, convergence=True)
+    full = model_dict[model]
+
+    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet', 'Mean']
+    data = {}
+    for i in range(len(benchmarks)):
+        if i in selection:
+            data[benchmarks_labels[i]] = []
+            for epoch in epochs:
+                if epoch % 1 == 0:
+                    frac = (model_dict[f'{model}_epoch_{epoch:02d}'][i] / full[i]) * 100
+                else:
+                    frac = (model_dict[f'{model}_epoch_{epoch:.1f}'][i] / full[i]) * 100
+                data[benchmarks_labels[i]].append(frac)
+        data[benchmarks_labels[i]].append(100)
+    data[benchmarks_labels[-1]] = []
     for epoch in epochs:
         if epoch % 1 == 0:
-            names.append(f'{model}_epoch_{epoch:02d}')
+            frac = (np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]) / np.mean(full[selection])) * 100
         else:
-            names.append(f'{model}_epoch_{epoch:.1f}')
-    model_dict[model] = load_scores(conn, names, benchmarks)
-    # model_dict[model][f'{model}_epoch_00'] = load_scores(conn, ['CORnet-S_random'], benchmarks)['CORnet-S_random']
-    full = model_dict[model][f'{model}_epoch_43']
-    benchmarks_labels = ['V4', 'IT', 'Behavior', 'Imagenet']  # ['V1', 'V2',]
-    data = {bench: [] for bench in benchmarks_labels}
-    for i in range(4):
-        for epoch in epochs:
-            if epoch % 1 == 0:
-                frac = (model_dict[model][f'{model}_epoch_{epoch:02d}'][i] / full[i]) * 100
-            else:
-                frac = (model_dict[model][f'{model}_epoch_{epoch:.1f}'][i] / full[i]) * 100
-            data[benchmarks_labels[i]].append(frac)
-        # data['CORnet-S_full_epoch_0'] = [0]*3 + [model_dict['CORnet-S']['CORnet-S'][i]]
-    # plot_data_base(data, f'Resnet50(Michael version) Brain-Score benchmarks', epochs, 'Epoch', 'Score', x_ticks=epochs,
-    #                log=True)
-    plot_data_base(data, f'CORnet-S Brain-Score benchmarks', epochs, 'Epoch', 'Score [% of  final score]',
-                   x_ticks=[value for value in epochs if value not in [0.1, 0.3, 0.5, 0.7, 0.9]], percent=True,
-                   log=True, annotate=True, annotate_pos=10)
-    # plot_data_base(data, f'{model} Brain-Score benchmarks', epochs, 'Epoch', 'Score', x_ticks=epochs)
+            frac = (np.mean(model_dict[f'{model}_epoch_{epoch:.1f}'][selection]) / np.mean(full[selection])) * 100
+        data[benchmarks_labels[-1]].append(frac)
+    data[benchmarks_labels[-1]].append(100)
+    plot_data_base(data, f'', r'\textbf{Epoch}', r'\textbf{mean(V4, IT, behavior)} [\% of standard training]',
+                   epochs + [43],
+                   x_ticks=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
+                       43],
+                   x_labels=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
+                       'Conv'],
+                   percent=True, alpha=0.5, log=True, annotate=True, legend=False, annotate_pos=10, ax=ax,
+                   palette=red_palette)
 
 
-def plot_first_epochs(models, epochs=None, brain=True, convergence=True):
+def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None):
     model_dict = {}
     conn = get_connection()
     if epochs is None:
@@ -182,8 +243,10 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True):
         data[name] = scores
 
     title = f'Brain scores mean vs epochs' if brain else 'Imagenet score vs epochs'
-    plot_data_base(data, title, x_values, 'Epochs', 'Score', x_ticks=epochs + [10, 20, 30, 40, 50], log=True,
-                   percent=True, special_xaxis=True)
+    plot_data_base(data, 'First epochs', x_values, 'Epochs', 'mean(V4, IT, Behavior) [% of standard training]',
+                   x_ticks=epochs + [30, 40, 50], log=True,
+                   percent=True, special_xaxis=True, legend=False, only_blue=False, palette=red_palette, annotate=True,
+                   annotate_pos=1, ax=ax)
 
 
 def plot_single_benchmarks(models, epochs=None, compare_batchfix=False, run_mean=False):
@@ -232,116 +295,74 @@ def plot_single_benchmarks(models, epochs=None, compare_batchfix=False, run_mean
         plot_data_base(data, title, epochs, 'Epoch', 'Score', x_ticks=epochs, log=True)
 
 
-def score_over_layers(models, random):
+def score_over_layers(models, random, labels, bench, convergence=True, ax=None):
+    if bench is not None:
+        benchmarks = bench
     conn = get_connection()
     names = []
-    for model in models.keys():
-        if model != "CORnet-S_random":
-            names.append(f'{model}_epoch_06')
-        else:
-            names.append(model)
-    model_dict = load_scores(conn, names, benchmarks)
-    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet']
+    if convergence and 'CORnet-S_full' in convergence_epoch:
+        full_tr = load_scores(conn, [f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}'], benchmarks)[
+            f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}']
+    else:
+        full_tr = load_scores(conn, ['CORnet-S_full_epoch_06'], benchmarks)['CORnet-S_full_epoch_06']
+    model_dict = load_error_bared(conn, list(chain(models.keys(), random.keys())), benchmarks, convergence=convergence)
+    if len(benchmarks) < 6:
+        benchmarks_labels = ['V4', 'IT', 'Behavior', 'Imagenet']
+    else:
+        benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet']
     data = {}
-    for i in range(6):
+    err = {}
+    x_ticks = {}
+    for i in range(len(benchmarks)):
         data[benchmarks_labels[i]] = []
-        for model, number in models.items():
-            if model != "CORnet-S_random":
-                data[benchmarks_labels[i]].append(model_dict[f'{model}_epoch_06'][i])
-            else:
-                data[benchmarks_labels[i]].append(model_dict[f'{model}'][i])
-
-    for model in random.keys():
-        if model != "CORnet-S_random":
-            names.append(f'{model}_epoch_06')
-        else:
-            names.append(model)
-    model_dict = load_scores(conn, names, benchmarks)
-    data2 = {}
-    for i in range(6):
-        data2[benchmarks_labels[i]] = []
-        for model, number in random.items():
-            if model != "CORnet-S_random":
-                data2[benchmarks_labels[i]].append(model_dict[f'{model}_epoch_06'][i])
-            else:
-                data2[benchmarks_labels[i]].append(model_dict[f'{model}'][i])
-
-    plot_data_double(data, data2, f'Benchmarks over layers', x_name='Number of trained layers', y_name='Score',
-                     x_ticks=list(models.values()), scale_fix=[0.0, 0.6], x_ticks_2=list(random.values()))
+        err[benchmarks_labels[i]] = []
+        x_ticks[benchmarks_labels[i]] = []
+        layers = []
+        for model, layer in models.items():
+            layers.append(layer_best_2[layer])
+            frac = (model_dict[model][i] / full_tr[i]) * 100
+            frac_err = (model_dict[model][len(benchmarks):][i] / full_tr[i]) * 100
+            data[benchmarks_labels[i]].append(frac)
+            err[benchmarks_labels[i]].append(frac_err)
+        x_ticks[benchmarks_labels[i]] = layers
+    plot_data_double(data, data2=None, err=err, name=f'Artificial Genome + Critical Training',
+                     x_name='Number of trained layers',
+                     y_name=r'Benchmark Score [% of standard training]',
+                     x_ticks=x_ticks, x_ticks_2=[], percent=True, ax=ax, pal=red_palette, annotate_pos=1)
 
 
-def plot_figure_2():
-    sns.set_style("whitegrid", {'grid.color': '.95', })
-    sns.set_context("talk")
-    fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
-    score_over_layers_avg(best_special_brain, best_models_brain_avg_all, random_scores, imagenet=False,
-                          convergence=False, ax=ax1)
-    score_over_layers_avg(best_special_brain, best_models_brain_avg_all, random_scores, imagenet=True,
-                          convergence=False, ax=ax2)
-    # file_name = name.replace(' ', '_')
-    plt.savefig(f'figure_2.png')
-    plt.show()
-
-
-def score_over_layers_avg(models, second, random, imagenet=False, convergence=False, ax=None):
+def score_over_layers_avg(all_models, random, all_labels=[], imagenet=False, convergence=False, ax=None, selection=[]):
     conn = get_connection()
-    names = []
-
-    for model in list(models.keys()) + list(second.keys()):
-        if convergence and model in convergence_epoch:
-            postfix = f'_epoch_{convergence_epoch[model]:02d}'
-        else:
-            postfix = f'_epoch_06'
-        if model != "CORnet-S_random":
-            names.append(f'{model}{postfix}')
-        else:
-            names.append(model)
-    # model_dict = load_scores(conn, names, benchmarks)
     data = {}
-
+    err2 = {}
     full = 0
-    for model in random.keys():
-        if model != "CORnet-S_random":
-            if convergence:
-                names.append(f'{model}_epoch_{convergence_epoch[model]:02d}')
-            else:
-                names.append(f'{model}_epoch_06')
-        else:
-            names.append(model)
-    model_dict = load_scores(conn, names, benchmarks)
+    names = []
+    for models in all_models:
+        names.extend(models.keys())
+    names.extend(random.keys())
+    model_dict = load_error_bared(conn, names, benchmarks, convergence=convergence)
     data2 = {}
     data2['Score'] = []
+    err2['Score'] = []
     layers2 = []
     for model, layer in random.items():
-        if convergence and model in convergence_epoch:
-            postfix = f'_epoch_{convergence_epoch[model]:02d}'
-        else:
-            postfix = f'_epoch_06'
         layers2.append(layer_best_2[layer])
-        if imagenet:
-            if model == "CORnet-S_random":
-                percent = (np.mean(model_dict[f'{model}'][5]) / full) * 100
-                data2['Score'].append(percent)
-            elif model == 'CORnet-S_full':
-                full = np.mean(model_dict[f'{model}{postfix}'][5])
-                data2['Score'].append(100)
-            else:
-                percent = (np.mean(model_dict[f'{model}{postfix}'][5]) / full) * 100
-                data2['Score'].append(percent)
+        if model == 'CORnet-S_full':
+            full = np.mean(model_dict[model][selection])
+            full_err = (np.mean(model_dict[model][6:][selection]) / full) * 100
+            data2['Score'].append(100)
+            err2['Score'].append(full_err)
         else:
-            if model == "CORnet-S_random":
-                percent = (np.mean(model_dict[f'{model}'][2:5]) / full) * 100
-                data2['Score'].append(percent)
-            elif model == 'CORnet-S_full':
-                full = np.mean(model_dict[f'{model}{postfix}'][2:5])
-                data2['Score'].append(100)
-            else:
-                percent = (np.mean(model_dict[f'{model}{postfix}'][2:5]) / full) * 100
-                data2['Score'].append(percent)
+            percent = (np.mean(model_dict[model][selection]) / full) * 100
+            percent_error = (np.mean(model_dict[model][6:][selection]) / full) * 100
+            data2['Score'].append(percent)
+            err2['Score'].append(percent_error)
     x_ticks = {}
     labels = {}
-    for models, name in zip([models, second], ['Selective training', 'Consecutive Training']):
+    err = {}
+    for models, name in zip(all_models, all_labels):
         data[name] = []
+        err[name] = []
         layers = []
         for model, layer in models.items():
             if convergence and model in convergence_epoch:
@@ -349,69 +370,204 @@ def score_over_layers_avg(models, second, random, imagenet=False, convergence=Fa
             else:
                 postfix = f'_epoch_06'
             layers.append(layer_best_2[layer])
-            if imagenet:
-                if model == "CORnet-S_random":
-                    percent = (np.mean(model_dict[f'{model}'][5]) / full) * 100
-                    data[name].append(percent)
-                elif model == 'CORnet-S_full':
-                    full = np.mean(model_dict[f'{model}{postfix}'][5])
-                    data[name].append(100)
-                else:
-                    percent = (np.mean(model_dict[f'{model}{postfix}'][5]) / full) * 100
-                    data[name].append(percent)
+            if model == 'CORnet-S_full':
+                full = np.mean(model_dict[model][selection])
+                data[name].append(100)
             else:
-                if model == "CORnet-S_random":
-                    percent = (np.mean(model_dict[f'{model}'][2:5]) / full) * 100
-                    data[name].append(percent)
-                elif model == 'CORnet-S_full':
-                    full = np.mean(model_dict[f'{model}{postfix}'][2:5])
-                    data[name].append(100)
-                else:
-                    percent = (np.mean(model_dict[f'{model}{postfix}'][2:5]) / full) * 100
-                    data[name].append(percent)
+                percent = (np.mean(model_dict[model][selection]) / full) * 100
+                data[name].append(percent)
+            full_err = (np.mean(model_dict[model][6:][selection]) / full) * 100
+            err[name].append(full_err)
         x_ticks[name] = layers
-        labels[name] = [value.replace('special', 'trained') if 'special' in value else value for value in
-                        models.values()]
+        # short = name.split('(')[1][:-1]
+        # labels[name] = [f'{value.split(".")[0]}_{short}' for value in models.values()]
+        labels[name] = [name]
 
     if imagenet:
         title = f'Imagenet over layers'
-        y = 'Imagenet[% of standard training]'
+        y = r"Imagenet}[% of standard training]"
     else:
         title = f'Brain-Score Benchmark mean(V4, IT, Behavior) over layers'
-        y = 'mean(V4, IT, Behavior)[% of standard training]'
+        if len(selection) == 3:
+            y = r"mean(V4, IT, Behavior) [% of standard training]"
+        else:
+            y = r"mean(V1,V2,V4,IT,Behavior) [% of standard training]"
 
-    plot_data_double(data, data2, '', x_name='Number of trained layers',
+    plot_data_double(data, data2, '', err=err, err2=err2, x_name='Number of trained layers',
                      y_name=y, x_ticks=x_ticks,
-                     x_ticks_2=layers2, percent=True, data_labels=labels, ax=ax)
+                     x_ticks_2=layers2, percent=True, annotate_pos=0, pal=my_palette, ax=ax)
 
 
-def image_scores(model1, model2, imgs, brain=True, ax=None):
+def image_scores(models, imgs, labels, ax=None, selection=[]):
     names = []
     conn = get_connection()
-    for model in [model1, model2]:
+    for model in models:
         for img in imgs:
             name = f'{model}_img{img}'
             names.append(f'{name}_epoch_{convergence_images[name]}')
+        if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
+            model = f'{model}_seed42'
+        names.append(f'{model}_epoch_{convergence_epoch[model]}')
+    names.append('CORnet-S_full_epoch_43')
     model_dict = load_scores(conn, names, benchmarks)
-    data = {'Selective training': []}
-    data2 = {'Score': []}
+    data2 = {}
+    full = np.mean(model_dict['CORnet-S_full_epoch_43'][selection])
     for i in imgs:
-        name1 = f'{model1}_img{i}'
-        name2 = f'{model2}_img{i}'
-        if brain:
-            data['Selective training'].append(np.mean(model_dict[f'{name1}_epoch_{convergence_images[name1]}'][2:4]))
-            data2['Score'].append(np.mean(model_dict[f'{name2}_epoch_{convergence_images[name2]}'][2:4]))
-        else:
-            data['Selective training'].append(np.mean(model_dict[f'{name1}_epoch_{convergence_images[name1]}'][5]))
-            data2['Score'].append(np.mean(model_dict[f'{name2}_epoch_{convergence_images[name2]}'][5]))
-    if brain:
-        title = f'Brain scores mean vs number of weights'
-        y = 'Score'
-    else:
+        for model, name in zip(models, labels):
+            data2[name] = []
+            name1 = f'{model}_img{i}'
+            frac = (np.mean(model_dict[f'{name1}_epoch_{convergence_images[name1]}'][selection]) / full) * 100
+            data2[name].append(frac)
+            if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
+                model = f'{model}_seed42'
+            frac = (np.mean(model_dict[f'{model}_epoch_{convergence_epoch[model]}'][selection]) / full) * 100
+            data2[name].append(frac)
+
+    if len(selection) == 1:
         title = 'Imagenet score vs number of weights'
-        y = 'Score'
-    plot_data_double(data, data2, title, x_name='Number of images', y_name=y, x_ticks={'Selective training': imgs},
-                     x_ticks_2=imgs, percent=False, log=True, ax=ax)
+        y = r'Imagenet [% of standard training]'
+    else:
+        title = f'Brain scores mean vs number of weights'
+        y = r'mean(V4, IT, Behavior) [% of standard training]'
+    imgs.append(1200000)
+    plot_data_double(data2, {}, '', x_name='Number of images in million', y_name=y,
+                     x_ticks={'IT init, selective training': imgs},
+                     x_ticks_2=imgs, percent=True, log=True, ax=ax, million=True)
+
+
+def image_scores_single(model, imgs, selection=[], ax=None):
+    names = []
+    conn = get_connection()
+    for img in imgs:
+        name = f'{model}_img{img}'
+        names.append(name)
+    # if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
+    #     model = f'{model}_seed42'
+    # names.append(f'{model}_epoch_{convergence_epoch[model]}')
+    names.append('CORnet-S_full')
+    # model_dict = load_scores(conn, names, benchmarks)
+    model_dict = load_error_bared(conn, names, benchmarks, convergence=True)
+    full = model_dict[model]
+    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet', 'Mean']
+    data = {}
+    for i in range(len(benchmarks)):
+        if i in selection:
+            data[benchmarks_labels[i]] = []
+            for j in imgs:
+                name1 = f'{model}_img{j}'
+                frac = (np.mean(model_dict[name1][i]) / full[i]) * 100
+                data[benchmarks_labels[i]].append(frac)
+            frac = (np.mean(model_dict[model][i]) / full[i]) * 100
+            data[benchmarks_labels[i]].append(frac)
+    data[benchmarks_labels[-1]] = []
+    for j in imgs:
+        name1 = f'{model}_img{j}'
+        frac = (np.mean(model_dict[name1][selection]) / np.mean(full[selection])) * 100
+        data[benchmarks_labels[-1]].append(frac)
+    frac = (np.mean(model_dict[model][selection]) / np.mean(full[selection])) * 100
+    data[benchmarks_labels[-1]].append(frac)
+    imgs.append(1280000)
+    plot_data_base(data, '', r'\textbf{Images} [Million]', r'\textbf{Score} [\% of standard training]', x_values=imgs,
+                   x_ticks=[100, 1000, 10000, 100000, 1280000], x_labels=['100', '1k', '10k', '100k', '1.3M'],
+                   million=True, palette=red_palette, alpha=0.5, use_xticks=True,
+                   percent=True, log=True, annotate=True, legend=False, annotate_pos=3, ax=ax)
+
+
+def image_epoch_heatmap(model, imgs, epochs, selection=[], ax=None):
+    names = []
+    conn = get_connection()
+    # delta= 'CORnet-S_full'
+    # if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
+    #     model1 = model
+    # else:
+    #     model1 = model
+    for img in imgs:
+        name = f'{model}_img{img}'
+        # for epoch in epochs:
+        #     names.append(f'{name}_epoch_{epoch:02d}')
+        names.append(name)
+    names.append(model)
+    # for epoch in epochs:
+    #     names.append(f'{model}_epoch_{epoch:02d}')
+    names.append('CORnet-S_full')
+    model_dict = load_error_bared(conn, names, epochs=epochs, benchmarks=benchmarks)
+    full = np.mean(model_dict['CORnet-S_full'][selection])
+    matrix = np.zeros([len(imgs) + 1, len(epochs) + 1])
+    data = {}
+    for i in range(len(imgs)):
+        for j in range(len(epochs)):
+            name1 = f'{model}_img{imgs[i]}_epoch_{epochs[j]:02d}'
+            frac = (np.mean(model_dict[name1][selection]) / full)
+            matrix[i, j] = frac
+        name = f'{model}_img{imgs[i]}'
+        # name = f'{name}_epoch_{convergence_images[name]:02d}'
+        frac = (np.mean(model_dict[name][selection]) / full)
+        matrix[i, -1] = frac
+
+    # names.append(f'{model1}_epoch_{convergence_epoch[model1]:02d}')
+    for j in range(len(epochs)):
+        name1 = f'{model}_epoch_{epochs[j]:02d}'
+        frac = (np.mean(model_dict[name1][selection]) / full)
+        matrix[-1, j] = frac
+    # name = f'{model}_epoch_{convergence_epoch[model]:02d}'
+    frac = (np.mean(model_dict[model][selection]) / full)
+    matrix[-1, -1] = frac
+    plot_heatmap(matrix, 'Epochs', 'Images', title='Standard training epochs/images trade-off', annot=True, ax=ax,
+                 cbar=False, cmap='YlOrRd', percent=False,
+                 fmt='.0%', vmin=0, vmax=1, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'], alpha=0.8)
+    # plot_data_base(data, f'CORnet-S Brain-Score benchmarks', imgs, 'Epoch', r'Score [% of standard training]',
+    #                x_ticks=imgs, percent=True,log=True, annotate=True, legend=False, annotate_pos=3, ax=ax)
+
+
+def delta_heatmap(model1, model2, imgs, epochs, selection=[], ax=None):
+    names = []
+    conn = get_connection()
+    for model in [model1, model2]:
+        if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
+            model_spec = model
+        else:
+            model_spec = model
+        for img in imgs:
+            name = f'{model}_img{img}'
+            for epoch in epochs:
+                names.append(f'{name}_epoch_{epoch:02d}')
+            names.append(f'{name}_epoch_{convergence_images[name]}')
+        names.append(f'{model_spec}_epoch_{convergence_epoch[model_spec]}')
+        for epoch in epochs:
+            names.append(f'{model}_epoch_{epoch:02d}')
+        names.append('CORnet-S_full_epoch_43')
+    model_dict = load_scores(conn, names, benchmarks)
+    full = np.mean(model_dict['CORnet-S_full_epoch_43'][selection])
+    matrix = np.zeros([len(imgs) + 1, len(epochs) + 1])
+    data = {}
+    for i in range(len(imgs)):
+        for j in range(len(epochs)):
+            name1 = f'{model1}_img{imgs[i]}_epoch_{epochs[j]:02d}'
+            name2 = f'{model2}_img{imgs[i]}_epoch_{epochs[j]:02d}'
+            matrix[i, j] = calc_dif(name1, name2, model_dict, full, selection)
+        name = f'{model1}_img{imgs[i]}'
+        name = f'{name}_epoch_{convergence_images[name]:02d}'
+        name2 = f'{model2}_img{imgs[i]}'
+        name2 = f'{name2}_epoch_{convergence_images[name2]:02d}'
+        matrix[i, -1] = calc_dif(name, name2, model_dict, full, selection)
+    names.append(f'{model1}_epoch_{convergence_epoch[model1]:02d}')
+    for j in range(len(epochs)):
+        name1 = f'{model1}_epoch_{epochs[j]:02d}'
+        name2 = f'{model2}_epoch_{epochs[j]:02d}'
+        matrix[-1, j] = calc_dif(name1, name2, model_dict, full, selection)
+    name = f'CORnet-S_cluster2_v2_IT_trconv3_bi_epoch_{convergence_epoch["CORnet-S_cluster2_v2_IT_trconv3_bi"]:02d}'
+    name2 = f'{model2}_epoch_{convergence_epoch[model2]:02d}'
+    matrix[-1, -1] = calc_dif(name, name2, model_dict, full, selection)
+    plot_heatmap(matrix, r'\textbf{Epochs}', r'\textbf{Images}',
+                 title=r'\textbf{Mean difference-Standard training \& TA+GC}', annot=True, ax=ax,
+                 cbar=False, cmap='coolwarm', percent=False,
+                 fmt='.0%', vmin=-0.30, vmax=0.30, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'])
+
+
+def calc_dif(name1, name2, model_dict, full, selection):
+    frac1 = (np.mean(model_dict[name1][selection]) / full)
+    frac2 = (np.mean(model_dict[name2][selection]) / full)
+    return frac1 - frac2
 
 
 def score_layer_depth(values, brain=True):
@@ -470,14 +626,19 @@ def score_layer_depth(values, brain=True):
         rand_names.append(f'Random {l}')
     title = f'Brain scores mean vs number of weights' if brain else 'Imagenet score vs number of weights'
     scatter_plot(weights, results, x_label='Num of weights', y_label='Score', labels=list(values.values()) + rand_names,
-                 title=title, ax=ax)
+                 title=title)
 
 
 models = {
     # Batchnrom corrected
+    # Layer 1
+    # 'CORnet-S_train_V2': 'V1 random train after',
+    # 'CORnet-S_train_gabor_multi_dist' : 'Gabor multidimensional distribution ',
+    # 'CORnet-S_train_gabor_scrumble' : 'Gabor scrumble existing parameter',
+    # 'CORnet-S_train_gabor_dist' : 'Gabor per parameter distribution',
 
     # #  Layer 1 & 2
-    # 'CORnet-S_train_V2': 'V1 random train after',
+
     # 'CORnet-S_train_gabor_dist_weight_dist_channel' : 'V1 base',
     # 'CORnet-S_train_gabor_dist_weight_dist_channel_ra_BF' : 'V1 no batchnorm',
     # 'CORnet-S_train_gabor_dist_weight_dist_channel_bi_BF' : 'V1 batchnorm',
@@ -490,9 +651,9 @@ models = {
     # 'CORnet-S_train_wmc0_wmc1_bi': 'V1 channel dist',
     # 'CORnet-S_train_kn1_kn2_bi_v2': 'V1 kernel normal',
     # 'CORnet-S_train_ln1_ln2_bi': 'V1 layer normal',
-    # 'CORnet-S_train_cn1_cn2_bi' : 'V1 channel normal',
-    # 'CORnet-S_train_gmk1_bd2_bi' : 'Gabor plus best dist',
-    # 'CORnet-S_train_gmk1_cl2_bi' : 'Cluster l2',
+    # 'CORnet-S_train_cn1_cn2_bi': 'V1 channel normal',
+    # 'CORnet-S_train_gmk1_bd2_bi': 'Gabor plus best dist',
+    # 'CORnet-S_train_gmk1_cl2_bi': 'Cluster l2',
 
     # Layer 3
     # 'CORnet-S_train_gmk1_wmc2_ln3' : "V2.conv1 Layer norm dist",
@@ -636,18 +797,23 @@ models = {
     # 'CORnet-S_brainmutual_IT_trconv3_bi': 'IT.conv3 brainmutual',
     # 'CORnet-S_brainbest2_IT_trconv3_bi': 'IT.conv3 brainbest2',
     # 'CORnet-S_brainboth2_IT_trconv3_bi': 'IT.conv3 brainboth2',
-    'CORnet-S_cluster2_v2_IT_trconv3_bi': 'IT.conv3 Cluster',
-    'CORnet-S_cluster5_v2_IT_trconv3_bi': 'IT.conv3 cluster 5',
-    'CORnet-S_cluster4_v2_IT_trconv3_bi': 'IT.conv3 cluster 4',
-    'CORnet-S_cluster3_v2_IT_trconv3_bi': 'IT.conv3 cluster 3',
-    'CORnet-S_cluster6_v2_IT_trconv3_bi': 'IT.conv3 cluster 6',
-    'CORnet-S_cluster7_v2_IT_trconv3_bi': 'IT.conv3 cluster 7',
-    'CORnet-S_cluster8_v2_IT_trconv3_bi': 'IT.conv3 cluster 8',
-    'CORnet-S_cluster_v2_IT_trconv3_bi': 'IT.conv3 cluster',  # 0.4081663359539218
+    # 'CORnet-S_cluster2_v2_IT_trconv3_bi': 'IT.conv3 Cluster',
+    # 'CORnet-S_cluster5_v2_IT_trconv3_bi': 'IT.conv3 cluster 5',
+    # 'CORnet-S_cluster4_v2_IT_trconv3_bi': 'IT.conv3 cluster 4',
+    # 'CORnet-S_cluster3_v2_IT_trconv3_bi': 'IT.conv3 cluster 3',
+    # 'CORnet-S_cluster6_v2_IT_trconv3_bi': 'IT.conv3 cluster 6',
+    # 'CORnet-S_cluster7_v2_IT_trconv3_bi': 'IT.conv3 cluster 7',
+    # 'CORnet-S_cluster8_v2_IT_trconv3_bi': 'IT.conv3 cluster 8',
+    # 'CORnet-S_cluster_v2_IT_trconv3_bi_seed42': 'IT.conv3 cluster',  # 0.4081663359539218
     # 'CORnet-S_train_conv3_bi' : 'Train only conv3s',
+    # 'CORnet-S_cluster2_v2_IT_bi_seed42' : '',
     # 'CORnet-S_brain_wmc15_IT_bi' : 'Init no train',
-    # 'CORnet-S_cluster_v2_IT_trconv3_bi' : 'Cluster v2',
-
+    'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42': 'Gabor + Cluster',
+    # 'CORnet-S_cluster2_v2_IT_trconv3_bi' : 'Cluster v2 IT',
+    'CORnet-S_cluster10_IT_trconv3_bi': 'All cluster',
+    # 'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42' : 'Cluster v2',
+    # 'CORnet-S_cluster10_V4_trconv3_bi' : 'All cluster',
+    'CORnet-S_cluster11_IT_trconv3_bi': 'Only gabors + KN',
     # full train:
     # 'CORnet-S_train_V4': 'V2 random train after',
     # # 'CORnet-S_train_gmk1_gmk2_kn3_ln4_ln5_wmc6_bi_full':'V2.conv2 train',
@@ -676,10 +842,11 @@ if __name__ == '__main__':
     # plot_benchmarks_over_epochs('CORnet-S_full',
     #                             (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 7, 10, 15, 20, 43))
     # plot_figure_2()
-    # plot_models_benchmarks(models, 'first_generation')
+    plot_models_benchmarks(models, 'first_generation', benchmarks)
     # plot_model_avg_benchmarks(models, 'first_generation')
     # image_scores('CORnet-S_brainboth2_IT_trconv3_bi', 'CORnet-S_full',[100,1000,10000,100000,500000], brain=True)
-    image_scores('CORnet-S_brain_t7_t12_wmc15_IT_bi', 'CORnet-S_full', [100, 1000, 10000, 100000, 500000], brain=True)
+    # image_scores('CORnet-S_cluster2_v2_IT_trconv3_bi', 'CORnet-S_full', [100, 1000, 10000, 100000, 500000], brain=True)
+    # image_scores('CORnet-S_cluster2_v2_IT_trconv3_bi', 'CORnet-S_full', [100, 1000, 10000, 100000, 500000], brain=False)
     # plot_single_benchmarks({
     #                         # 'CORnet-S_train_gabor_dist_both_kernel_bi_BF': 'V1',
     #                         # 'CORnet-S_train_gabor_dist_both_kernel_bi_full': 'V1 train',
@@ -709,29 +876,38 @@ if __name__ == '__main__':
     #                        , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
     # plot_first_epochs({  # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi' : 'V2.conv2',
     #     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': 'V2.conv3_trained',
-    #     'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained',
-    #     'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3_trained',
-    #     # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2',
-    #     'CORnet-S_full': 'Standard training',
-    # }
-    #     , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6], convergence=True, brain=True)
-    # plot_first_epochs({  # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi' : 'V2.conv2',
-    #     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': 'V2.conv3_trained',
-    #     'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained',
-    #     'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3_trained',
-    #     # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2',
-    #     'CORnet-S_full': 'Standard training',
-    # }
-    #     , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6], convergence=True, brain=False)
-    # plot_first_epochs({  # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi' : 'V2.conv2',
-    #     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': 'V2.conv3_trained',
-    #     'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained gaussian mixture',
+    #     # 'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained',
     #     # 'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3_trained',
-    #     'CORnet-S_cluster_IT_trconv3_bi' : 'IT.conv3_trained cluster',
+    #     'CORnet-S_cluster2_v2_IT_trconv3_bi': 'IT.conv3_special',
+    #     'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42': 'V4.conv3_special',
+    #     'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42': 'V2.conv3_special',
+    #     # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2',
+    #     'CORnet-S_full': 'Standard training',
+    # }
+    #     , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6, 10, 20], convergence=True,
+    #     brain=True)
+    # plot_first_epochs({  # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi' : 'V2.conv2',
+    #     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': 'V2.conv3_trained',
+    #     'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained',
+    #     'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3_trained',
     #     # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2',
     #     'CORnet-S_full': 'Standard training',
     # }
     #     , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6], convergence=True, brain=False)
+    plot_first_epochs({  # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi' : 'V2.conv2',
+        # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': 'V2.conv3_trained',
+        # 'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained gaussian mixture',
+        # 'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3_trained',
+        # 'CORnet-S_cluster_IT_trconv3_bi' : 'IT.conv3_trained cluster',
+        # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2',
+        'CORnet-S_full': 'Standard training',
+        'CORnet-S_full_img500000': 'Standard training 50% imgs',
+        'CORnet-S_cluster2_v2_IT_trconv3_bi': 'AG+CT 100% Imgs',
+        'CORnet-S_cluster2_v2_IT_trconv3_bi_img500000': 'AG+CT 50% Imgs',
+        'CORnet-S_train_conv3_bi_img50000': 'KN+CT 50%',
+        'CORnet-S_train_conv3_bi': 'KN+CT 100% Imgs',
+    }
+        , epochs=[0, 1, 2, 3, 6, 20], convergence=True, brain=True)
 
     # plot_single_benchmarks(['CORnet-S_full', 'CORnet-S_train_gabor_dist_both_kernel'], brain=False, compare_batchfix=True)
     # # plot_single_benchmarks(best_models_brain, brain=False)
@@ -741,3 +917,14 @@ if __name__ == '__main__':
     # score_over_layers_avg(best_special_brain, random_scores)
 
     # score_over_layers_avg(best_special_brain, random_scores, imagenet=True, convergence=False)
+    # [, 'Consecutive Training']
+    # plot_models_vs({'Mixture gaussian' : { 'Selective':'CORnet-S_brain_t7_t12_wmc15_IT_bi','Consecutive':'CORnet-S_brain_wmc15_IT_bi'},
+    #                 'Cluster' : { 'Selective':'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42', 'Consecutive':'CORnet-S_cluster2_v2_IT_bi_seed42'},
+    #                 'Kernel normal' : { 'Selective':'CORnet-S_brain3_t7_t12_knall_IT_bi', 'Consecutive':'CORnet-S_brain3_knall_IT_bi'},
+    #                 'No gabor prior' : { 'Selective':'CORnet-S_brain2_t7_t12_knall_IT_bi_v2', 'Consecutive':'CORnet-S_brain2_knall_IT_bi_v2'},
+    #                 }, 'comparison', convergence=False)
+    # plot_models_vs({'Mixture gaussian' : { 'Selective':'CORnet-S_brain_t7_t12_wmc15_IT_bi','Consecutive':'CORnet-S_brain_wmc15_IT_bi'},
+    #                 'Cluster' : { 'Selective':'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42', 'Consecutive':'CORnet-S_cluster2_v2_IT_bi_seed42'},
+    #                 'Kernel normal' : { 'Selective':'CORnet-S_brain3_t7_t12_knall_IT_bi', 'Consecutive':'CORnet-S_brain3_knall_IT_bi'},
+    #                 'No gabor prior' : { 'Selective':'CORnet-S_brain2_t7_t12_knall_IT_bi_v2', 'Consecutive':'CORnet-S_brain2_knall_IT_bi_v2'},
+    #                 }, 'comparison', convergence=False, imagenet=True)

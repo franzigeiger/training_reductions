@@ -2,7 +2,7 @@ from brainscore.submission.utils import UniqueKeyDict
 from brainscore.utils import LazyLoad
 from torch import nn
 
-from nets.test_models import cornet_s_brainmodel
+from base_models.test_models import cornet_s_brainmodel
 # cornet has
 from transformations.layer_based import apply_norm_dist, apply_all_jumbler, apply_fixed_value, apply_fixed_value_small
 

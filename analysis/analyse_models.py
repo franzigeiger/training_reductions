@@ -1,9 +1,12 @@
 import math
+import pickle
 from heapq import nlargest
+from os import path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import pyplot
+import seaborn as sns
+from matplotlib import pyplot, gridspec
 from matplotlib.lines import Line2D
 from model_tools.brain_transformation import ModelCommitment
 from numpy.random.mtrand import RandomState
@@ -13,10 +16,14 @@ from sklearn.metrics import explained_variance_score
 from sklearn.model_selection import train_test_split
 from torch import nn
 
-from nets.pool import brain_translated_pool, base_model_pool
-from nets.test_models import alexnet, cornet_s_brainmodel, get_model
+from base_models import global_data, layers
+from base_models.global_data import base_dir
+from base_models.pool import brain_translated_pool, base_model_pool
+from base_models.test_models import alexnet, cornet_s_brainmodel, get_model
 from plot.plot_data import plot_data_map, plot_data_base, plot_two_scales, plot_pie, my_palette_light, plot_heatmap
 from utils.cluster import cluster_data
+from utils.distributions import load_mixture_gaussian, mixture_analysis
+from utils.gabors import plot_weights
 
 weights = [9408, 36864, 8192, 16384, 65536, 2359296, 32768, 65536, 262144, 9437184, 262144, 131072, 262144, 1048576,
            37748736, 1048576, 512000]
@@ -439,7 +446,7 @@ def cluster_kernel_weights():
         if type(m) == nn.Conv2d:
             weights = m.weight.data.numpy()
             # if weights.shape[-1] == 1 :
-            if weights.shape[-1] != 1:
+            if True:
                 weights.squeeze()
                 new = weights.reshape(weights.shape[0], weights.shape[1], -1)
                 new = weights.reshape(new.shape[0], -1)
@@ -452,14 +459,14 @@ def cluster_kernel_weights():
                 kmeans = cluster_data(labels_channel, name=name)
                 centers = kmeans.cluster_centers_
                 centers = centers.reshape(centers.shape[0], weights.shape[1], -1)
-                centers = centers.reshape(centers.shape[0], weights.shape[1], weights.shape[2], weights.shape[2])
+                centers = centers.reshape(centers.shape[0], weights.shape[1], centers.shape[2], centers.shape[2])
                 labels = kmeans.labels_
                 # plot_histogram(labels.flatten(), name, bins=kmeans.n_clusters)
-                # mean, std =  calc_mean_std(labels)
-                # weight_stds = calc_weight_std(new, kmeans.cluster_centers_, kmeans.labels_)
-                # out = {'mean' : mean, 'std': std, 'weight_stds' : weight_stds, 'components' : n_components[name], 'centers' : centers}
-                # pickle_out = open(f'cluster_{name}.pkl', "wb")
-                # pickle.dump(out, pickle_out)
+                mean, std = calc_mean_std(labels_channel)
+                weight_stds = calc_weight_std(new, kmeans.cluster_centers_, kmeans.labels_)
+                out = {'mean': mean, 'std': std, 'weight_stds': weight_stds, 'centers': centers}
+                pickle_out = open(f'cluster2_{name}.pkl', "wb")
+                pickle.dump(out, pickle_out)
                 if index > 0:
                     predict_next_kernel_typed(prev, prev_kernel, labels_channel, labels, name)
                 prev = labels_channel
@@ -757,6 +764,47 @@ def plot_mixture_components():
     plt.show()
 
 
+def plot_layer_centers(gs=None):
+    import torch.nn as nn
+    model = get_model('CORnet-S_base', True)
+    index = 0
+    # dir = '/home/franzi/Projects/weight_initialization'
+    # dir = '/braintree/home/fgeiger/weight_initialization'
+    show = False
+    if gs is None:
+        plt.figure(figsize=(10, 10), frameon=False)
+        sns.set_style("white")
+        sns.set_context("talk")
+        inner = gridspec.GridSpec(5, 1)
+        ax = plt.gca()
+        show = True
+    else:
+        inner = gridspec.GridSpecFromSubplotSpec(5, 1,
+                                                 subplot_spec=gs, wspace=0.1, hspace=0.1)
+    # fig1, axes = ax.subplots(5, 1, figsize=(10, 10))
+    ax_id = 0
+    for name, m in model.named_modules():
+        if type(m) == nn.Conv2d:
+            if index == 0:
+                if path.exists(f'{base_dir}/gm_gabor_0_samples.pkl'):
+                    best_gmm = load_mixture_gaussian('gabor_0')
+                    mixture_analysis(best_gmm.weights_, best_gmm.means_, best_gmm.covariances_, name, inner[ax_id])
+                    ax_id += 1
+            else:
+                if m.weight.data.shape[-1] > 1:
+                    name = f'cluster_{global_data.layers[index]}'
+                    pickle_in = open(f'{base_dir}/{name}.pkl', "rb")
+                    cluster = pickle.load(pickle_in)
+                    centers = cluster['centers'].squeeze()
+                    plot_weights(centers.reshape(1, centers.shape[0], centers.shape[1], centers.shape[2]), name,
+                                 inner[ax_id], layers[index])
+                    ax_id += 1
+            index += 1
+    if show:
+        plt.savefig(f'layer_centers.png')
+        plt.show()
+
+
 if __name__ == '__main__':
     # function_name = 'weight_mean_std'
     # function_name = 'kernel_weight_dist'
@@ -772,6 +820,8 @@ if __name__ == '__main__':
     # visualize_second_layer('CORnet-S')
     # plot_mixture_components()
     # cluster_weights()
+    # plot_layer_centers()
+    # figure_five()
     cluster_kernel_weights()
     # weight_std_factor('CORnet-S')
     # weight_init_percent('CORnet-S', 5, True)

@@ -5,8 +5,9 @@ import sys
 
 from brainscore import score_model
 
+from base_models.test_models import cornet_s_brainmodel, resnet_brainmodel, alexnet_brainmodel, mobilenet_brainmodel, \
+    hmax_brainmodel
 from benchmark.database import create_connection, store_score
-from nets.test_models import cornet_s_brainmodel, resnet_brainmodel, alexnet_brainmodel
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName('DEBUG'),
@@ -30,6 +31,10 @@ def get_model(identifier):
         return resnet_brainmodel(identifier, init_weights=True)
     if identifier.startswith('alexnet'):
         return alexnet_brainmodel(identifier, init_weights=True)
+    if identifier.startswith('mobilenet'):
+        return mobilenet_brainmodel(identifier, init_weights=True)
+    if identifier.startswith('hmax'):
+        return hmax_brainmodel(identifier, init_weights=True)
 
 
 def score_models(model, benchmark):
@@ -40,7 +45,7 @@ def score_models(model, benchmark):
     else:
         path = f'{dir_path}/../scores.sqlite'
     db = create_connection(path)
-    os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,brainscore.score_model"
+    # os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,brainscore.score_model"
     base_model = model.split('_')[0]
     try:
         d = datetime.datetime.now()

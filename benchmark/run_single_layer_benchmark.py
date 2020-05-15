@@ -7,8 +7,8 @@ import traceback
 # from submission import brain_translated_pool
 from brainscore import score_model
 
+from base_models.model_based_pool import brain_translated_pool
 from benchmark.database import create_connection, store_score
-from nets.model_based_pool import brain_translated_pool
 
 logger = logging.getLogger(__name__)
 

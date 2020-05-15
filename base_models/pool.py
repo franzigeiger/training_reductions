@@ -2,8 +2,8 @@ from brainscore.submission.ml_pool import MLBrainPool
 from brainscore.submission.utils import UniqueKeyDict
 from brainscore.utils import LazyLoad
 
-from nets import test_models as model_file
-from nets.test_models import cornet_s_brainmodel, model_layers
+from base_models import test_models as model_file
+from base_models.test_models import cornet_s_brainmodel, model_layers
 from transformations.configurable import apply_nullify_small, apply_nullify_high, apply_low_variance_cut, \
     apply_high_variance_cut, apply_overflow_weights
 from transformations.layer_based import *

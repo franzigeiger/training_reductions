@@ -7,7 +7,7 @@ import torch.nn as nn
 from scipy.stats import norm
 from torch.nn import init
 
-from nets.global_data import conv_to_norm, layers
+from base_models.global_data import conv_to_norm, layers
 from transformations.transformation_utils import do_fit_gabor_init, do_correlation_init, do_gabors, do_fit_gabor_dist, \
     do_correlation_init_no_reshape, do_kernel_convolution_init, do_distribution_gabor_init, do_scrumble_gabor_init, \
     do_batch_from_image_init
@@ -392,6 +392,8 @@ def apply_generic_other(model, configuration):
                     bias = configuration['bn_init'](bias, config=configuration, previous=previous_weights,
                                                     index=idx, shape=m.bias.data.cpu().shape)
                     m.bias.data = torch.Tensor(bias)
+                elif m.bias is not None and 'no_bn' in configuration:
+                    m.bias.data.fill_(0)
             idx += 1
         if type(m) == nn.BatchNorm2d and name in configuration:
             trained_weigts = trained

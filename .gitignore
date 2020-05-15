@@ -1,2 +1,11 @@
 .idea/
 *.iml
+/db_backups/
+/plot_output/
+*.png
+*.pkl
+*.pkl_old
+*.npy
+*.svg
+*.mat
+*.pth.tar

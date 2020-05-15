@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import norm
 from torch import nn
 
-from nets.test_models import cornet_s_brainmodel
+from base_models.test_models import cornet_s_brainmodel
 from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap, plot_histogram, scatter_plot
 
 

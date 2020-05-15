@@ -29,7 +29,7 @@ normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
 ngpus = 2
 epochs = 45
-output_path = '/braintree/home/fgeiger/weight_initialization/nets/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
+output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
 data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4
@@ -104,12 +104,15 @@ def train(identifier,
     validator = ImageNetVal(model)
 
     start_epoch = 0
-    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' in w]
+    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' is w]
     if len(stored) > 0:
         restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
         ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
         if ckpt_data['epoch'] < epochs + 1:
             start_epoch = ckpt_data['epoch']
+        if start_epoch > 20:
+            logger.info(f'Model already trained until epoch {start_epoch}, stop training!')
+            return
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
 
         class Wrapper(Module):
@@ -138,6 +141,9 @@ def train(identifier,
                                 save_val_epochs) * nsteps).astype(int) if save_val_epochs else None
     save_model_steps = (np.arange(0, epochs + 1,
                                   save_model_epochs) * nsteps).astype(int) if save_model_epochs else None
+    save_model_steps = np.concatenate(([0, int(nsteps * 0.1), int(nsteps * 0.2), int(nsteps * 0.3), int(nsteps * 0.4),
+                                        int(nsteps * 0.5), int(nsteps * 0.6), int(nsteps * 0.7), int(nsteps * 0.8),
+                                        int(nsteps * 0.9)], save_model_steps))
 
     results = {'meta': {'step_in_epoch': 0,
                         'epoch': start_epoch,

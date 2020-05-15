@@ -8,12 +8,12 @@ import numpy as np
 import torch
 from numpy.random.mtrand import RandomState
 
-import nets.trainer_images as image_train
-from nets import train_model, trainer, trainer_convergence, test_models, global_data
-from nets.full_trainer import train as full_train
-from nets.resnet_init import train_other
-from nets.trainer_convergence import train as conv_train
-from nets.trainer_first_epoch import train as train_first
+import base_models.trainer_images as image_train
+from base_models import train_model, trainer, trainer_convergence, test_models, global_data
+from base_models.full_trainer import train as full_train
+from base_models.trainer_convergence import train as conv_train
+from base_models.trainer_first_epoch import train as train_first
+from base_models.transfer_models import train_other
 from transformations import layer_based
 
 logger = logging.getLogger(__name__)
@@ -96,6 +96,3 @@ def score_model_console():
 
 logger.info(f"Running {' '.join(sys.argv)}")
 fire.Fire(command='score_model_console')
-
-# if __name__ == '__main__':
-#     train_model('CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full')

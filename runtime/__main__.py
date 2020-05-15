@@ -1,6 +1,6 @@
 import sys
 
-from nets.global_data import best_models_brain_avg_all
+from base_models.global_data import best_models_brain_avg_all
 from runtime.compression import measure_performance
 
 if __name__ == '__main__':

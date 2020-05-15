@@ -1,16 +1,24 @@
 import os
+import pickle
 import sys
+from os import path
 
 import cornet
 import numpy as np
 import scipy as st
+import tensorflow as tf
 import torch
 from torch import nn
 
+from base_models import get_model, run_model_training, layers, get_config, conv_to_norm, global_data, \
+    apply_generic_other
+from base_models.global_data import base_dir
+from base_models.test_models import get_mobilenet, get_resnet50
+from base_models.trainer_performance import train
+from base_models.transfer_models import create_config
 from benchmark.database import create_connection, store_analysis
-from nets import get_model, run_model_training, layers, get_config, conv_to_norm
-from nets.trainer_performance import train
 from utils.distributions import mixture_gaussian, best_fit_distribution
+from utils.models import mobilenet_mapping, mapping_1, mobilenet_mapping_5, mobilenet_mapping_6
 
 
 def measure_performance(identifier, title, do_epoch=False, do_analysis=False):
@@ -32,9 +40,50 @@ def measure_performance(identifier, title, do_epoch=False, do_analysis=False):
         # store_analysis(db, (identifier, time['time'], hyp_w[-1] - hyp[-1], hyp_w[-1], hyp[-1], 0))
 
 
-def get_params(identifier):
-    config = get_config(identifier)
-    model = get_model(identifier, False, config)
+param_list = {}
+
+
+def get_params(identifier, hyperparams=True):
+    if 'hmax' in identifier:
+        return 0
+    if identifier in param_list:
+        return param_list[identifier]
+    if identifier.startswith('mobilenet'):
+        if identifier.startswith('mobilenet_v1_1.0'):
+            params = get_mobilenet_params()
+            print(f'{identifier} has {params} parameter')
+            return params
+        else:
+            model = get_mobilenet(f'{identifier}_random')._model
+            mapping = mobilenet_mapping
+            if '_v5' in identifier:
+                config = get_config(identifier.split('_v5_')[1])
+                mapping = mobilenet_mapping_5
+            if '_v6' in identifier:
+                config = get_config(identifier.split('_v6_')[1])
+                mapping = mobilenet_mapping_6
+            if '_v1' in identifier:
+                config = get_config(identifier.split('_v1_')[1])
+            if '_v7' in identifier:
+                config = get_config(identifier.split('_v7_')[1])
+                mapping = mobilenet_mapping_6
+            config = create_config(mapping, config, model)
+            if 'v5' in identifier or 'v6' in identifier:
+                add_layers = ['model.2.0', 'model.2.1', 'model.6.0', 'model.6.1', 'model.12.0', 'model.12.1', 'fc',
+                              'decoder']
+                config['layers'] = config['layers'] + add_layers
+            del config['bn_init']
+            del config['batchnorm']
+            model = apply_generic_other(model, config)
+    elif identifier.startswith('resnet'):
+        model = get_resnet50(False)
+        base = identifier.split('_v3_')[1] if '_v3_' in identifier else identifier.split('_v1_')[1]
+        config = get_config(base)
+        config = create_config(mapping_1, config, model)
+        model = apply_generic_other(model, config)
+    else:
+        config = get_config(identifier)
+        model = get_model(identifier, False, config)
     values = 0
     hyper_params = 0
     all = 0
@@ -49,14 +98,19 @@ def get_params(identifier):
             for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
             if any(value in name for value in config['layers']):
                 values += size
-            elif name in config:
+                print(f'layer {name} is trained, size {size}')
+            elif name in config and hyperparams:
                 this_mod = sys.modules[__name__]
-                str(config[name])
-                func = getattr(this_mod, config[name].__name__)
-                # print(config[name].__name__)
+                if identifier.startswith('mobilenet') or identifier.startswith('resnet'):
+                    func = getattr(this_mod, config[config[name]].__name__)
+                    idx = layers.index(config[name])
+                else:
+                    func = getattr(this_mod, config[name].__name__)
                 params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
                 values += params
                 hyper_params += params
+                print(
+                    f'layer {name} saves {size} weights and replaces it with {params} so {params / size} params')
             all += size
             idx += 1
             layer.append(name)
@@ -65,22 +119,42 @@ def get_params(identifier):
             hyp_w.append(values)
         if type(m) == nn.BatchNorm2d and 'batchnorm' in config:
             size = 1
-            for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
-            if any(value in conv_to_norm[name] for value in config['layers']):
-                this_mod = sys.modules[__name__]
-                values += size
-            elif conv_to_norm[name] in config:
-                this_mod = sys.modules[__name__]
-                str(config['bn_init'])
-                func = getattr(this_mod, config['bn_init'].__name__)
-                params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
-                values += params
-                hyper_params += params
+            # name = config[name] if identifier.startswith('mobilenet') else name
+            if name in conv_to_norm:
+                for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
+                if any(value in conv_to_norm[name] for value in config['layers']):
+                    this_mod = sys.modules[__name__]
+                    values += size
+                if conv_to_norm[name] in config and hyperparams:
+                    this_mod = sys.modules[__name__]
+                    str(config['bn_init'])
+                    func = getattr(this_mod, config['bn_init'].__name__)
+                    params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
+                    values += params
+                    hyper_params += params
+        # if type(m) == nn.Linear and name is not 'decoder' and name is not 'fc':
+        #     size=1
+        #     for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
+        #     values += size
+    param_list[identifier] = values
+    print(f'{identifier} has {values} parameter')
     return values
 
-    # plot_data_base({'Total weights': all_w, 'Unfrozen values': hyp_w, 'Distribution Parameters': hyp},
-    #                f'Weight compression for {title}',
-    #                layer[0:(len(layer))], rotate=True, y_name='Num. of parameters')
+
+def get_mobilenet_params():
+    model = get_mobilenet('mobilenet_v1_1.0_224')
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+        shape = variable.get_shape()
+        variable_parameters = 1
+        for dim in shape:
+            variable_parameters *= dim.value
+        total_parameters += variable_parameters
+    return total_parameters
+
+
+if __name__ == '__main__':
+    get_params('CORnet-S_cluster2_v2_IT_trconv3_bi')
 
 
 def benchmark_epoch(identifier):
@@ -132,9 +206,13 @@ def do_kernel_convolution_init(weights, previous, **kwargs):
 
 def do_distribution_gabor_init(weights, config, index, **kwargs):
     if index != 0:
-        params = np.load(config[f'file_{index}'])
+        rel = config[f'file_{index}']
+        file = path.join(path.dirname(__file__), f'..{rel}')
+        params = np.load(file)
     else:
-        params = np.load(f'{config["file"]}')
+        rel = config[f'file']
+        file = path.join(path.dirname(__file__), f'..{rel}')
+        params = np.load(file)
     param, tuples = prepare_gabor_params(params)
     # np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
@@ -490,3 +568,15 @@ def apply_generic(model, configuration):
                 m.weight.data = torch.Tensor(previous_weights)
             idx += 1
     return model
+
+
+def do_cluster_init(model, config, index, **kwargs):
+    # cluster = {'mean' : mean, 'std': std, 'weight_stds' : weight_stds, 'components' : n_components[name]}
+    name = f'cluster_{global_data.layers[index]}'
+    pickle_in = open(f'{base_dir}/{name}.pkl', "rb")
+    cluster = pickle.load(pickle_in)
+    means = cluster['mean']
+    stds = cluster['std']
+    weight_stds = cluster['weight_stds']
+    centers = cluster['centers'].squeeze()
+    return len(centers.flatten()) + len(weight_stds) + len(stds) + len(means)

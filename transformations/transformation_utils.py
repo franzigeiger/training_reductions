@@ -10,7 +10,8 @@ from skimage.filters import gabor_kernel
 from skimage.transform import resize
 from sklearn import feature_selection
 
-from nets import global_data
+from base_models import global_data
+from base_models.global_data import base_dir
 from transformations.layer_based import random_state
 from utils.correlation import auto_correlation, generate_correlation_map, kernel_convolution
 from utils.distributions import mixture_gaussian, best_fit_distribution, poisson_sample
@@ -216,9 +217,13 @@ def do_kernel_convolution_init(weights, previous, **kwargs):
 
 def do_distribution_gabor_init(weights, config, index, shape, **kwargs):
     if index != 0:
-        params = np.load(config[f'file_{index}'])
+        rel = config[f'file_{index}']
+        file = path.join(path.dirname(__file__), f'..{rel}')
+        params = np.load(file)
     else:
-        params = np.load(f'{config["file"]}')
+        rel = config["file"]
+        file = path.join(path.dirname(__file__), f'..{rel}')
+        params = np.load(file)
     param, tuples = prepare_gabor_params(params)
     # np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
@@ -233,7 +238,7 @@ def do_distribution_gabor_init(weights, config, index, shape, **kwargs):
                                     scale=beta[9], ks=shape[-1])
             new_weights[i, int(s / 10)] = filter
     # if weights.shape[1] == 3:
-    #     show_kernels(weights, 'distribution_init')
+    # show_kernels(new_weights, 'distribution_init')
     # else:
     #     plot_conv_weights(weights, 'distribution_init_kernel')
     return new_weights
@@ -338,10 +343,9 @@ def do_best_dist_init_layer(weights, **kwargs):
 
 def do_best_dist_init_kernel(weights, shape, index, **kwargs):
     name = f'best_dist_kernel_{index}'
-    dir = '/braintree/home/fgeiger/weight_initialization/'
     print(f'Best dist with name {name}')
-    if path.exists(f'{dir}/{name}.pkl'):
-        samples, best = load_distribution(name, dir)
+    if path.exists(f'{base_dir}/{name}.pkl'):
+        samples, best = load_distribution(name, base_dir)
         if weights.shape == shape and global_data.seed == 0:
             print(f'We use stored weights for best distribution {best}')
             return samples
@@ -374,19 +378,19 @@ def do_best_dist_init_kernel(weights, shape, index, **kwargs):
         scale = p[-1]
         new_weights[i] = best_dist.rvs(size=shape[1:], *arg, loc=loc, scale=scale)
     if shape == weights.shape and global_data.seed == 0:
-        save_distribution(name, dir, new_weights, best)
+        save_distribution(name, base_dir, new_weights, best)
     return new_weights
 
 
-def save_distribution(name, dir, samples, distribution):
+def save_distribution(name, base_dir, samples, distribution):
     print(f'Save best distribution {distribution} for layer: {name}')
     dict = {'samples': samples, 'distribution': distribution}
-    pickle_out = open(f'{dir}/{name}.pkl', "wb")
+    pickle_out = open(f'{base_dir}/{name}.pkl', "wb")
     pickle.dump(dict, pickle_out)
 
 
-def load_distribution(name, dir):
-    pickle_in = open(f'{dir}/{name}.pkl', "rb")
+def load_distribution(name, base_dir):
+    pickle_in = open(f'{base_dir}/{name}.pkl', "rb")
     dist = pickle.load(pickle_in)
     return dist['samples'], dist['distribution']
 
@@ -563,9 +567,9 @@ def do_batch_from_image_init(module, previous, model, previous_module, previous_
 
 def do_cluster_init(weights, shape, previous, config, index, **kwargs):
     # cluster = {'mean' : mean, 'std': std, 'weight_stds' : weight_stds, 'components' : n_components[name]}
-    dir = '/braintree/home/fgeiger/weight_initialization'
+    idx = index
     name = f'cluster_{global_data.layers[index]}'
-    pickle_in = open(f'{dir}/{name}.pkl', "rb")
+    pickle_in = open(f'{base_dir}/{name}.pkl', "rb")
     cluster = pickle.load(pickle_in)
     frac = shape[1] / weights.shape[1]
     means = cluster['mean']
@@ -577,7 +581,7 @@ def do_cluster_init(weights, shape, previous, config, index, **kwargs):
         types = np.zeros([len(means)])
         for j in range(len(means)):
             types[j] = np.abs(np.round(np.random.normal(means[j], stds[j]) * frac))
-        kernel = np.zeros(shape[1:])
+        kernel = np.zeros([shape[1], weights.shape[-1], weights.shape[-1]])
         index = 0
         for j in range(len(types)):
             amount = types[j]
@@ -595,6 +599,18 @@ def do_cluster_init(weights, shape, previous, config, index, **kwargs):
             noise = np.random.normal(0, weight_stds[-1], center.shape)
             kernel[index] = center + noise
             index += 1
+        big_kernel = np.zeros(shape[1:])
+        if shape[-1] != weights.shape[-1]:
+            for i in range(kernel.shape[0]):
+                big_channel = resize(kernel[i], (shape[-1], shape[-1]),
+                                     anti_aliasing=True)
+                big_kernel[i] = big_channel
+        else:
+            big_kernel = kernel
         random_order = random_state.permutation(shape[1])
-        new_weights[i] = kernel[random_order]
+        new_weights[i] = big_kernel[random_order]
+    # if dx==0:
+    #     show_kernels(new_weights, 'cluster_kernels')
     return new_weights
+
+# def do_linear_regression_function():
