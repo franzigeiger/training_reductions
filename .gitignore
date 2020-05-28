@@ -9,3 +9,5 @@
 *.svg
 *.mat
 *.pth.tar
+*pycache*
+/base_models/model_weights/
