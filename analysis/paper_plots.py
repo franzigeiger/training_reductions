@@ -274,25 +274,28 @@ def plot_figure_4():
 def plot_figure_1():
     sns.set_style("whitegrid", {'grid.color': '.95', })
     sns.set_context("talk")
-    fig1, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 8),
-                                         gridspec_kw={'left': 0.06, 'right': 0.97, 'bottom': 0.1})
+    fig1, (ax1_1, ax1_2, ax2, ax3) = plt.subplots(1, 4, figsize=(24, 8),
+                                                  gridspec_kw={'left': 0.06, 'right': 0.97, 'bottom': 0.1,
+                                                               'width_ratios': [.1, 1, 1, 1]})
     best = {
         'CORnet-S_cluster2_v2_IT_trconv3_bi': 'IT.conv3_special',
         'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42': 'V4.conv3_special',
         'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42': 'V2.conv3_special',
     }
     image_epoch_score({'CORnet-S_full': 'Standard training'}, [100, 1000, 10000, 50000, 100000, 500000],
-                      [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20], selection, ax1)
+                      [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20], selection, (ax1_1, ax1_2))
+    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates} [$10^{12}$]', ha='center')  # xlabel
     plot_benchmarks_over_epochs('CORnet-S_full',
                                 [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 7, 10, 15, 20],
                                 benchmarks, ax=ax2, selection=[0, 1, 2, 3, 4, 5])
     image_scores_single('CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000], selection=[0, 1, 2, 3, 4, 5],
                         ax=ax3)
-    for n, ax in enumerate((ax1, ax2, ax3)):
+    for n, ax in enumerate((ax1_1, ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
         ax.text(-0.08, 1.04, text, transform=ax.transAxes,
                 weight='semibold', size=22)
-    plt.tight_layout()
+    plt.subplots_adjust(wspace=0.04, hspace=0)
+    # plt.tight_layout()
     plt.savefig(f'figure_1.svg')
     plt.show()
 
