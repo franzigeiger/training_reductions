@@ -306,7 +306,7 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
                      x_ticks_2=params2, data_labels=labels, ax=ax, million=True, log=log, annotate_pos=0)
 
 
-def image_epoch_score(models, imgs, epochs, selection=[], ax=None):
+def image_epoch_score(models, imgs, epochs, selection=[], axes=None):
     names = []
     conn = get_connection()
     params = {}
@@ -357,12 +357,35 @@ def image_epoch_score(models, imgs, epochs, selection=[], ax=None):
         y = r"\textbf{mean(V4, IT, Behavior)}"
     else:
         y = r"\textbf{mean(V1,V2,V4,IT,Behavior)}"  # [\% of standard training]
-    plot_data_double(data, {}, '', x_name=r'\textbf{Supervised synaptic updates} [$10^{12}$]',
-                     x_labels=np.array([0, .001, .01, .1, 1, 10, 100]) * 1000000, scatter=True, percent=False,
-                     alpha=0.8,
-                     y_name=y, x_ticks=params, pal=['#424949', '#168A82', '#1DB33D', '#FF3210'], log=True,
-                     x_ticks_2={}, ax=ax, million=True,
-                     annotate_pos=0)
+    for i, ax in enumerate(axes):
+        zero_indices = {key: np.array([tick == 0 for tick in xticks]) for key, xticks in params.items()}
+        if i == 0:  # axis plotting the x=0 value
+            ax_data = {key: np.array(values)[zero_indices[key]].tolist() for key, values in data.items()}
+            xticks = {key: np.array(values)[zero_indices[key]].tolist() for key, values in params.items()}
+            xticklabels = np.array([0])
+        else:  # axis plotting everything x>0
+            ax_data = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in data.items()}
+            xticks = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in params.items()}
+            xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * 1000000
+            ax.spines['left'].set_visible(False)
+            ax.yaxis.set_visible(False)
+        plot_data_double(ax_data, {}, '', x_name='',
+                         x_labels=xticklabels, scatter=True, percent=False,
+                         alpha=0.8,
+                         y_name=y, x_ticks=xticks, pal=['#424949', '#168A82', '#1DB33D', '#FF3210'], log=True,
+                         x_ticks_2={}, ax=ax, million=True,
+                         annotate_pos=0)
+
+        # adopted from https://stackoverflow.com/a/32186074/2225200
+        d = .015  # how big to make the diagonal lines in axes coordinates
+        kwargs = dict(transform=ax.transAxes, color='#dedede', clip_on=False)
+        if i == 0:
+            m = 1 / .1
+            ax.plot((1 - d * m, 1 + d * m), (-d, +d), **kwargs)
+        else:
+            kwargs.update(transform=ax.transAxes)
+            ax.plot((-d, +d), (-d, +d), **kwargs)
+        axes[0].set_ylim(axes[1].get_ylim())
 
 
 def get_full(conn, convergence):
