@@ -222,7 +222,7 @@ def get_model_params(models, hyperparams=True):
 
 
 def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=False, ax=None, selection=[], log=False,
-                    layer_random=layer_random, pal=None, percent=True):
+                    layer_random=layer_random, pal=None, percent=True, ylim=None):
     conn = get_connection()
     full_score = get_full(conn, convergence)
     full = np.mean(full_score[selection])
@@ -301,15 +301,14 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
         y = f'{y} [\% of standard training]'
 
     if pal is None:
-        pal = ['#1DB33D', '#168A82', '#1D9FB3']
+        pal = blue_palette
     plot_data_double(data2, data, '', err=err2, err2=err, x_name=r'\textbf{Number of trained parameters} [Million]',
-                     x_labels=None,
+                     x_labels=None, ylim=ylim,
                      y_name=y, x_ticks=params, pal=pal, percent=percent,
                      x_ticks_2=params2, data_labels=labels, ax=ax, million=True, log=log, annotate_pos=0)
 
 
-def image_epoch_score(models, imgs, epochs, selection=[], ax=None, mark_highest=True):
-
+def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=True):
     names = []
     conn = get_connection()
     params = {}
@@ -339,25 +338,28 @@ def image_epoch_score(models, imgs, epochs, selection=[], ax=None, mark_highest=
     high_y = 0
     val = 0
     for model in names:
-        percent = (np.mean(model_dict[model][selection]) / full) * 100
-        if percent > 0.0:
+        if percent:
+            frac = (np.mean(model_dict[model][selection]) / full) * 100
+        else:
+            frac = np.mean(model_dict[model][selection])
+        if frac > 0.0:
             if 'img' not in model:
                 base_model = model.partition('_epoch')[0]
                 epoch = float(model.partition('_epoch_')[2])
-                data[models[base_model]].append(percent)
+                data[models[base_model]].append(frac)
                 score = (1280000 * epoch * (parameter[base_model] / 1000000))  #
                 print(
-                    f'Mode l{base_model} in epoch {epoch} with full imagenet set leads to score {score} with brain score {percent}')
+                    f'Mode l{base_model} in epoch {epoch} with full imagenet set leads to score {score} with brain score {frac}')
                 params[models[base_model]].append(score)
             else:
                 base_model = model.partition('_img')[0]
                 imgs = int(model.partition('_img')[2].partition('_')[0])
                 epoch = float(model.partition('_img')[2].partition('_epoch_')[2])
                 score = (imgs * epoch * (parameter[base_model] / 1000000))  # (parameter[base_model] / 1000000) *
-                data[models[base_model]].append(percent)
+                data[models[base_model]].append(frac)
                 params[models[base_model]].append(score)
                 print(
-                    f'Mode l{base_model} in epoch {epoch} with {imgs} images leads to score {score} with brain score {percent}')
+                    f'Mode l{base_model} in epoch {epoch} with {imgs} images leads to score {score} with brain score {frac}')
         if percent > high_y:
             high_y = percent
             high_x = score
@@ -378,11 +380,12 @@ def image_epoch_score(models, imgs, epochs, selection=[], ax=None, mark_highest=
             xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * 1000000
             ax.spines['left'].set_visible(False)
             ax.yaxis.set_visible(False)
-        plot_data_double(ax_data, {}, '', x_name=r'\textbf{Supervised synaptic updates} [$10^{12}$]',
-                         x_labels=xticklabels, scatter=True, percent=False,
+        plot_data_double(ax_data, {}, '', x_name='',
+                         x_labels=xticklabels, scatter=True, percent=percent,
                          alpha=0.8,
-                         y_name=y, x_ticks=xticks, pal=['#424949', '#168A82', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#ABB2B9',
-                          '#1DB33D', ], log=True,
+                         y_name=y, x_ticks=xticks,
+                         pal=['#2CB8B8', '#186363', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#259C9C', '#36E3E3', '#9AC3C3'],
+                         log=True,
                          x_ticks_2={}, ax=ax, million=True,
                          annotate_pos=0)
 
@@ -390,7 +393,7 @@ def image_epoch_score(models, imgs, epochs, selection=[], ax=None, mark_highest=
         d = .015  # how big to make the diagonal lines in axes coordinates
         kwargs = dict(transform=ax.transAxes, color='#dedede', clip_on=False)
         if i == 0:
-            m = 1 / .1
+            m = 1 / .05
             ax.plot((1 - d * m, 1 + d * m), (-d, +d), **kwargs)
         else:
             kwargs.update(transform=ax.transAxes)

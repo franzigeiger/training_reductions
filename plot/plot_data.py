@@ -14,16 +14,17 @@ benchmarks = ['dicarlo.Majaj2015.V4-pls', 'dicarlo.Majaj2015.IT-pls', 'dicarlo.R
 
 benchmarks_small = ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n']
 
-
-my_palette = ['#1DB33D', '#168A82', '#1D9FB3', '#995d13']
+my_palette = ['#168A82', '#FF3210', '#1D9FB3', '#995d13']
 my_palette_light = ['#75FF93', '#B3F5FF', '#FFBAAD', '#cfa256']
 red_palette = ['#FF3210', '#803E33', '#CC290C', '#FF7D66', '#99665D', '#424949']
 green_palette = ['#1DB33D', '#75FF93', '#29FF57', '#58BF6E', '#147F2C']
-blue_palette = ['#168A82', '#9FE0DC', '#10635E', '#709D9A', '#2B3D3C']
+blue_palette = ['#168A82', '#5D7575', '#9FE0DC', '#10635E', '#709D9A', '#2B3D3C']
+# blue_palette = ['#168A82', '#5D7575', '#259C9C', '#36E3E3', '#9AC3C3']
 grey_palette = ['#ACB9C6', '#ABB2B9', '#7C8287', '#6C7175', '#24303B']
 my_palette_mix = ['#995d13', '#cfa256', '#0c7169', '#58b0a7', '#296e85', '#549ebe', ]
 combi = ['#1D9FB3', '#FFBAAD', '#FF3210', '#B3F5FF', '#1DB31E', '#91FF91', '#995d13', '#cfa256']
 pal_of_pals = [red_palette, blue_palette, green_palette, grey_palette]
+
 
 def get_all_perturbations():
     return ['', '_random', '_jumbler', '_kernel_jumbler', '_channel_jumbler', '_norm_dist', '_norm_dist_kernel']
@@ -223,15 +224,16 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
             ax.errorbar(x_ticks_2, data2['Score'], yerr=err2['Score'],
                         label='Kaiming Normal + Downstream Training (KN+DT)',
                         linestyle="--",
-                        marker="^", alpha=alpha, color='#424949', )
+                        marker="^", alpha=alpha, color='#5d7575', )
         else:
             ax.plot(x_ticks_2, data2['Score'], label='Kaiming Normal + Downstream Training (KN+DT)', scalex=True,
                     linestyle="--",
-                    marker="^", alpha=alpha, color='#424949', )
+                    marker="^", alpha=alpha, color='#5d7575', )
         full_y = data2['Score'][0]
         full_x = x_ticks_2[0]
         if data_labels:
-            ax.annotate(s='Standard Training', xy=(full_x, full_y), color='#424949')
+            ax.annotate(s='Standard Training', xy=(full_x, full_y), color='#5d7575')
+            ax.annotate(s='Downstream Training', xy=(x_ticks_2[-1], data2['Score'][-1]), color='#5d7575')
     idx = 0
     legend = False
     for key, value in data.items():
@@ -258,11 +260,12 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
                             ha='center', color=cols[id] if isinstance(cols, list) else cols)  # color='#ABB2B9',
         elif annotate_pos is not None:
             label = data_labels[idx] if isinstance(data_labels, list) else key
-            ax.annotate(label,  # this is the text
-                        (x_ticks[key][annotate_pos], data[key][annotate_pos]),  # this is the point to label
-                        textcoords="offset points",  # how to position the text
-                        xytext=(-10, 19),  # distance from text to points (x,y)
-                        ha='center', color=cols[0] if isinstance(cols, list) else cols)
+            if len(x_ticks[key]) > 0:
+                ax.annotate(label,  # this is the text
+                            (x_ticks[key][annotate_pos], data[key][annotate_pos]),  # this is the point to label
+                            textcoords="offset points",  # how to position the text
+                            xytext=(-10, 19),  # distance from text to points (x,y)
+                            ha='center', color=cols[0] if isinstance(cols, list) else cols)
         idx += 1
     if log:
         ax.set_xscale('symlog')
@@ -506,7 +509,7 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
                 pal = ['#ABB2B9'] + my_palette[:(len(data) - 2)] + ['#424949']
     else:
         pals = [blue_palette, '#ABB2B9']
-        pals = ['#ABB2B9'] + blue_palette
+        pals = [blue_palette[1], blue_palette[0], '#ABB2B9']
 
     for key, value in data.items():
         if label:

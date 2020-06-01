@@ -37,16 +37,7 @@ def plot_over_epoch(models):
 
 
 def plot_models_benchmarks(models, file_name, benchmarks, convergence=True, gs=None, ax=None):
-    model_dict = {}
     conn = get_connection()
-    epoch = 6
-    # names = []
-    # for model in models.keys():
-    #     if convergence and model in convergence_epoch:
-    #         postfix = f'_epoch_{convergence_epoch[model]:02d}'
-    #     else:
-    #         postfix = f'_epoch_06'
-    #     names.append(f'{model}{postfix}')
     model_dict = load_error_bared(conn, models.keys(), benchmarks)
     if len(benchmarks) < 6:
         benchmarks_labels = ['V4', 'IT', 'Behavior', 'Imagenet']
@@ -56,13 +47,8 @@ def plot_models_benchmarks(models, file_name, benchmarks, convergence=True, gs=N
     err = {}
     # We replace the model id, a more human readable version
     for id, desc in models.items():
-        # if convergence and id in convergence_epoch:
-        #     postfix = f'_epoch_{convergence_epoch[id]:02d}'
-        # else:
-        #     postfix = f'_epoch_06'
         data_set[desc] = model_dict[id][:5]
         err[desc] = model_dict[id][6:-1]
-        # print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
     plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, yerr=err, gs=gs, ax=ax)
 
 
@@ -571,7 +557,7 @@ def delta_heatmap(model1, model2, imgs, epochs, selection=[], ax=None):
     name2 = f'{model2}_epoch_{convergence_epoch[model2]:02d}'
     matrix[-1, -1] = calc_dif(name, name2, model_dict, full, selection)
     plot_heatmap(matrix, r'\textbf{Epochs}', r'\textbf{Images}',
-                 title=r'\textbf{Mean difference-Standard training \& TA+GC}', annot=True, ax=ax,
+                 title=r'\textbf{Mean difference - Standard training \& GC+ST}', annot=True, ax=ax,
                  cbar=False, cmap='RdYlGn', percent=False, alpha=0.6,
                  fmt='.0%', vmin=-0.30, vmax=0.30, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'])
 
