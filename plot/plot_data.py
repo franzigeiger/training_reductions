@@ -36,10 +36,14 @@ def get_all_models():
     return ['CORnet-S', 'alexnet', 'resnet101']
 
 
-def formatter(x, pos, percent=False, million=False, trillion=False):
-    if trillion:  # 10^12
-        # HACK: values are passed as 10^6 -> multiply to correct number
+def formatter(x, pos, percent=False, million=False, million_base=False, trillion=False):
+    if trillion and not million_base:  # 10^12
+        # HACK: values are incorrectly passed as 10^6 -> multiply to correct number
         x = x * pow(10, 6)
+    if million_base and trillion:
+        # HACK: values are incorrectly passed -> change to correct number
+        x = x / pow(10, 2)
+    if trillion or million_base:
         if x == 0:
             return "0"
         base = int(log10(x))
@@ -116,9 +120,8 @@ def plot_data(benchmarks, data, labels, name, scale_fix=None):
 
 def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=None, x_ticks=None, scale_fix=None,
                    rotate=False, alpha=1.0,
-                   million=False,
                    log=False, use_xticks=False, percent=False, special_xaxis=False, annotate=False,
-                   annotate_pos=0, ax=None, only_blue=False, legend=True, palette=None):
+                   annotate_pos=0, ax=None, only_blue=False, legend=True, palette=None, **formatter_kwargs):
     sns.set()
     sns.set_context("talk")
     sns.set_style("white")
@@ -198,7 +201,7 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
 
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_labels)
-    output_paper_quality(ax, name, x_name, y_name, percent, million=million)
+    output_paper_quality(ax, name, x_name, y_name, percent, **formatter_kwargs)
     ax.tick_params(bottom=True, left=False)
 
     if show:

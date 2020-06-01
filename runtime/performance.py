@@ -308,7 +308,7 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
                      x_ticks_2=params2, data_labels=labels, ax=ax, million=True, log=log, annotate_pos=0)
 
 
-def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=True):
+def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=True, make_trillions=False):
     names = []
     conn = get_connection()
     params = {}
@@ -376,16 +376,18 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
         else:  # axis plotting everything x>0
             ax_data = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in data.items()}
             xticks = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in params.items()}
+            # when make_trillions==True, this should actually be *10^12, but due to downstream hacks we leave it at ^6
             xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * pow(10, 6)
             ax.spines['left'].set_visible(False)
             ylabel = ''
+        kwargs = dict(trillion=True) if make_trillions else dict(trillion=True, million_base=True)
         plot_data_double(ax_data, {}, '', x_name='',
                          x_labels=xticklabels, scatter=True, percent=percent,
                          alpha=0.8,
                          y_name=ylabel, x_ticks=xticks,
                          pal=['#2CB8B8', '#186363', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#259C9C', '#36E3E3', '#9AC3C3'],
                          log=True,
-                         x_ticks_2={}, ax=ax, trillion=True,
+                         x_ticks_2={}, ax=ax, **kwargs,
                          annotate_pos=0)
 
         # adopted from https://stackoverflow.com/a/32186074/2225200
