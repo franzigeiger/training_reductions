@@ -362,8 +362,6 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
                       f'leads to score {score} with brain score {frac}')
         if percent > high_y:
             high_y = percent
-            high_x = score
-            val = np.mean(model_dict[model][selection])
     if len(selection) == 3:
         y = r"\textbf{mean(V4, IT, Behavior)}"
     else:
@@ -374,16 +372,17 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
             ax_data = {key: np.array(values)[zero_indices[key]].tolist() for key, values in data.items()}
             xticks = {key: np.array(values)[zero_indices[key]].tolist() for key, values in params.items()}
             xticklabels = np.array([0])
+            ylabel = y
         else:  # axis plotting everything x>0
             ax_data = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in data.items()}
             xticks = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in params.items()}
             xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * 1000000
             ax.spines['left'].set_visible(False)
-            ax.yaxis.set_visible(False)
+            ylabel = ''
         plot_data_double(ax_data, {}, '', x_name='',
                          x_labels=xticklabels, scatter=True, percent=percent,
                          alpha=0.8,
-                         y_name=y, x_ticks=xticks,
+                         y_name=ylabel, x_ticks=xticks,
                          pal=['#2CB8B8', '#186363', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#259C9C', '#36E3E3', '#9AC3C3'],
                          log=True,
                          x_ticks_2={}, ax=ax, million=True,
@@ -398,6 +397,10 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
         else:
             kwargs.update(transform=ax.transAxes)
             ax.plot((-d, +d), (-d, +d), **kwargs)
+            # remove yticks. We can't `ax.yaxis.set_visible(False)` altogether since that would also remove the grid
+            for tic in ax.yaxis.get_major_ticks():
+                tic.tick1On = tic.tick2On = False
+            ax.set_yticklabels([])
         axes[0].set_ylim(axes[1].get_ylim())
 
 

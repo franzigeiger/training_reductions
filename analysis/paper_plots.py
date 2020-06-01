@@ -203,8 +203,6 @@ def plot_figure_1():
                                 benchmarks, ax=ax2, selection=[0, 1, 2, 3, 4, 5])
     image_scores_single('CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000], selection=[0, 1, 2, 3, 4, 5],
                         ax=ax3)
-    ax1.grid(False)
-    ax1_2.grid(False)
     for n, ax in enumerate((ax1, ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
         ax.text(-0.08, 1.04, text, transform=ax.transAxes,
