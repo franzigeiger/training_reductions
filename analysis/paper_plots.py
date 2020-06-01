@@ -197,7 +197,7 @@ def plot_figure_1():
     }
     image_epoch_score({'CORnet-S_full': 'Standard training'}, [100, 1000, 10000, 50000, 100000, 500000],
                       [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20], selection, (ax1, ax1_2))
-    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates} [$10^{12}$]', ha='center')  # xlabel
+    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates}', ha='center')  # xlabel
     plot_benchmarks_over_epochs('CORnet-S_full',
                                 [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 7, 10, 15, 20],
                                 benchmarks, ax=ax2, selection=[0, 1, 2, 3, 4, 5])

@@ -1,3 +1,5 @@
+from math import log10
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -34,7 +36,14 @@ def get_all_models():
     return ['CORnet-S', 'alexnet', 'resnet101']
 
 
-def formatter(x, pos, percent=False, million=False):
+def formatter(x, pos, percent=False, million=False, trillion=False):
+    if trillion:  # 10^12
+        # HACK: values are passed as 10^6 -> multiply to correct number
+        x = x * pow(10, 6)
+        if x == 0:
+            return "0"
+        base = int(log10(x))
+        return f"$10^{{{base}}}$"
     if million:
         mil = (x / 1000000)
         if mil >= 1:
@@ -54,12 +63,12 @@ def formatter(x, pos, percent=False, million=False):
     return x
 
 
-def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False, percent_x=False, millions=False):
+def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False, percent_x=False, **formatter_kwargs):
     ax.set_title(title, weight='semibold', size=20)
     ax.set_xlabel(xlabel, size=18)  # weight='semibold',
     ax.set_ylabel(ylabel, size=18)  # weight='semibold',
     func_percent = lambda x, pos: formatter(x, pos, percent)
-    func_mil = lambda x, pos: formatter(x, pos, million=millions)
+    func_mil = lambda x, pos: formatter(x, pos, **formatter_kwargs)
     if percent_x:
         ax.xaxis.set_major_formatter(FuncFormatter(func_percent))
     else:
@@ -68,6 +77,7 @@ def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.tick_params(bottom=False, left=False)
+
 
 def get_list_all_pert(models):
     return get_model_list(models, get_all_perturbations())
@@ -188,7 +198,7 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
 
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_labels)
-    output_paper_quality(ax, name, x_name, y_name, percent, millions=million)
+    output_paper_quality(ax, name, x_name, y_name, percent, million=million)
     ax.tick_params(bottom=True, left=False)
 
     if show:
@@ -203,7 +213,7 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
                      rotate=False, alpha=1.0,
                      x_ticks=None, log=False, x_ticks_2=None, percent=False, annotate_pos=None, data_labels=None,
                      ylim=None, scatter=False,
-                     ax=None, percent_x=False, pal=my_palette + my_palette_light, gs=None, million=False):
+                     ax=None, percent_x=False, pal=my_palette + my_palette_light, gs=None, **formatter_kwargs):
     sns.set()
     sns.set_style("whitegrid", {'grid.color': '.95', })
     sns.set_context("talk")
@@ -282,7 +292,7 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=int(rows))
     if scale_fix:
         ax.ylim(scale_fix[0], scale_fix[1])
-    output_paper_quality(ax, name, x_name, y_name, percent, percent_x=percent_x, millions=million)
+    output_paper_quality(ax, name, x_name, y_name, percent, percent_x=percent_x, **formatter_kwargs)
     if show:
         file_name = name.replace(' ', '_')
         plt.savefig(f'{file_name}.svg')
@@ -625,6 +635,7 @@ def scatter_plot(x, y, y_2=None, x_label=None, y_label=None, labels=None, title=
         plt.savefig(f'{file_name}.png')
         plt.show()
     return corr
+
 
 def plot_3d(x, y, z, name):
     sns.set()
