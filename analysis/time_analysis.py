@@ -517,7 +517,7 @@ def image_epoch_heatmap(model, imgs, epochs, selection=[], ax=None):
     #                x_ticks=imgs, percent=True,log=True, annotate=True, legend=False, annotate_pos=3, ax=ax)
 
 
-def delta_heatmap(model1, model2, imgs, epochs, selection=[], ax=None):
+def delta_heatmap(model1, model2, imgs, epochs, selection=[], title='', ax=None):
     names = []
     conn = get_connection()
     for model in [model1, model2]:
@@ -557,7 +557,7 @@ def delta_heatmap(model1, model2, imgs, epochs, selection=[], ax=None):
     name2 = f'{model2}_epoch_{convergence_epoch[model2]:02d}'
     matrix[-1, -1] = calc_dif(name, name2, model_dict, full, selection)
     plot_heatmap(matrix, r'\textbf{Epochs}', r'\textbf{Images}',
-                 title=r'\textbf{Mean difference - Standard training \& GC+ST}', annot=True, ax=ax,
+                 title=title, annot=True, ax=ax,
                  cbar=False, cmap='RdYlGn', percent=False, alpha=0.6,
                  fmt='.0%', vmin=-0.30, vmax=0.30, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'])
 

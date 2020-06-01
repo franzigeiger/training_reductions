@@ -14,15 +14,15 @@ benchmarks = ['dicarlo.Majaj2015.V4-pls', 'dicarlo.Majaj2015.IT-pls', 'dicarlo.R
 
 benchmarks_small = ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n']
 
-my_palette = ['#168A82', '#FF3210', '#1D9FB3', '#995d13']
+my_palette = ['#186363', '#2cb8b8', '#1D9FB3', '#995d13']
 my_palette_light = ['#75FF93', '#B3F5FF', '#FFBAAD', '#cfa256']
 red_palette = ['#FF3210', '#803E33', '#CC290C', '#FF7D66', '#99665D', '#424949']
 green_palette = ['#1DB33D', '#75FF93', '#29FF57', '#58BF6E', '#147F2C']
-blue_palette = ['#168A82', '#5D7575', '#9FE0DC', '#10635E', '#709D9A', '#2B3D3C']
+blue_palette = ['#2cb8b8', '#5D7575', '#10635E', '#9FE0DC', '#709D9A', '#2B3D3C']
 # blue_palette = ['#168A82', '#5D7575', '#259C9C', '#36E3E3', '#9AC3C3']
 grey_palette = ['#ACB9C6', '#ABB2B9', '#7C8287', '#6C7175', '#24303B']
 my_palette_mix = ['#995d13', '#cfa256', '#0c7169', '#58b0a7', '#296e85', '#549ebe', ]
-combi = ['#1D9FB3', '#FFBAAD', '#FF3210', '#B3F5FF', '#1DB31E', '#91FF91', '#995d13', '#cfa256']
+combi = ['#1D9FB3', '#2cb8b8', '#FF3210', '#B3F5FF', '#1DB31E', '#91FF91', '#995d13', '#cfa256']
 pal_of_pals = [red_palette, blue_palette, green_palette, grey_palette]
 
 
@@ -483,14 +483,14 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
         ax = plt.subplot(gs)
     bars = len(data)
     step_size = int(bars / 5) + 1
-    step_size = 1.5
     x = np.arange(0, step_size * len(labels), step_size)
     if bars < 3:
-        width = step_size / 0.4
+        # step_size = 1.5
+        width = step_size / 6
         font_size = 20
         # bars = 1
     elif bars < 5:
-        width = step_size / 8  # the width of the bars
+        width = step_size / 6  # the width of the bars
         font_size = 26
     else:
         width = step_size / 10
@@ -529,7 +529,7 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
                                 ha='center', va='bottom', size=font_size)
                 else:
                     ax.annotate(key,
-                                xy=(rect.get_x() + rect.get_width() / 2, height - 0.019),
+                                xy=(rect.get_x() + rect.get_width() / 2, height - 0.01),
                                 xytext=(0, 3),  # 3 points vertical offset
                                 textcoords="offset points", rotation='vertical',
                                 ha='center', va='top', size=font_size)

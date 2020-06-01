@@ -24,7 +24,7 @@ rc('font', **{'family': 'Arial', 'serif': ['Arial']})
 
 all_models = [no_init_conv3_train, ]
 # best_special_brain_2]
-all_names = ['Selective training', 'TA+GC']
+all_names = ['Critical training', 'TA+GC']
 benchmarks = [
     'movshon.FreemanZiemba2013.V1-pls',
     'movshon.FreemanZiemba2013.V2-pls',
@@ -196,8 +196,8 @@ def plot_figure_1():
         'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42': 'V2.conv3_special',
     }
     image_epoch_score({'CORnet-S_full': 'Standard training'}, [100, 1000, 10000, 50000, 100000, 500000],
-                      [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20], selection, (ax1, ax1_2))
-    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates} [$10^{12}$]', ha='center')  # xlabel
+                      [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20], selection, (ax1, ax1_2), with_weights=False)
+    fig1.text(0.2, 0, r'\textbf{Supervised updates} [$10^{12}$]', ha='center')  # xlabel
     plot_benchmarks_over_epochs('CORnet-S_full',
                                 [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 7, 10, 15, 20],
                                 benchmarks, ax=ax2, selection=[0, 1, 2, 3, 4, 5])
@@ -233,8 +233,8 @@ def plot_figure_2():
     }
     # fig = plt.figure(figsize=(16, 8), frameon=False)
     # outer = gridspec.GridSpec(1, 2, left=0.06, right=0.9, bottom=0.16)
-    plot_models_vs({'': {r'\textbf{Kaiming Normal}': 'CORnet-S_full',
-                         r'\textbf{Genome Compression}': 'CORnet-S_cluster2_v2_IT_bi'}, }, '', selection=selection,
+    plot_models_vs({'': {r'\textbf{Kaiming\\Normal}': 'CORnet-S_full',
+                         r'\textbf{Genome\\Compression}': 'CORnet-S_cluster2_v2_IT_bi'}, }, '', selection=selection,
                    ax=ax2, imagenet=False, convergence=False)
     # score_over_layers_avg([models], {}, models.values(), imagenet=False, convergence=True, ax=ax2, selection=selection)
     # ax1= plt.subplot(outer[1])
@@ -271,7 +271,7 @@ def plot_figure_3():
     ax1.imshow(im)
     ax1.set_axis_off()
 
-    im = Image.open('/home/franzi/Projects/weight_initialization/train4.png')
+    im = Image.open('/home/franzi/Projects/weight_initialization/train3.png')
     ax0.imshow(im)
     ax0.set_axis_off()
     for n, ax in enumerate((ax0, ax1, ax2, ax3)):
@@ -296,10 +296,11 @@ def plot_figure_4():
     fig1.add_axes(ax1_2)
     # fig1, (ax2, ax3) = plt.subplots(1, 2, figsize=(20, 10), )
     delta_heatmap('CORnet-S_cluster2_v2_IT_trconv3_bi', 'CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000],
-                  [0, 1, 2, 3, 5, 6, 10, 20], selection=selection, ax=ax2)
+                  [0, 1, 2, 3, 5, 6, 10, 20], selection=selection,
+                  title=r'\textbf{Mean difference - Standard training \& GC+CT}', ax=ax2)
     best = {
         'CORnet-S_full': 'Standard training',
-        'CORnet-S_cluster2_v2_IT_trconv3_bi': 'GC + ST',
+        'CORnet-S_cluster2_v2_IT_trconv3_bi': 'GC + CT',
         # 'CORnet-S_train_conv3_bi': 'TA+KN',
         'mobilenet_v1_1.0_224': 'Mobilenet',
         'resnet_v1_CORnet-S_full': 'Resnet',
@@ -327,8 +328,8 @@ def plot_figure_5():
     ax0 = plt.subplot(outer[0])
     models = {
         'CORnet-S_train_random': 'KN+DT',
-        'CORnet-S_train_conv3_bi': 'KN+ST',
-        'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42': 'GC+ST',
+        'CORnet-S_train_conv3_bi': 'KN+CT',
+        'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42': 'GC+CT',
         'CORnet-S_cluster2_v2_IT_bi_seed42': 'GC+DT'
     }
     ax1 = plt.subplot(outer[1])
@@ -396,12 +397,12 @@ def supp_4():
     fig1.add_axes(ax1_2)
     best = {
         'CORnet-S_full': 'Standard training',
-        'CORnet-S_cluster2_v2_IT_trconv3_bi': 'GC + ST',
+        'CORnet-S_cluster2_v2_IT_trconv3_bi': 'GC + CT',
         'mobilenet_v1_1.0_224': 'Mobilenet',
         'resnet_v1_CORnet-S_full': 'Resnet',
         'hmax': 'Hmax',
         'CORnet-S_cluster2_v2_IT_bi_seed42': 'GC + DT',
-        'CORnet-S_train_conv3_bi': 'KN + ST',
+        'CORnet-S_train_conv3_bi': 'KN + CT',
     }
     image_epoch_score(best, [100, 1000, 10000, 50000, 100000, 500000], [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20],
                       selection, (ax1, ax1_2))
@@ -409,6 +410,7 @@ def supp_4():
     text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[0])
     ax1.grid(False)
     ax1_2.grid(False)
+    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates} [$10^{12}$]', ha='center')  # xlabel
     for n, ax in enumerate((ax1, ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
         ax.text(-0.08, 1.04, text, transform=ax.transAxes,
@@ -423,15 +425,15 @@ def supp_5():
     plot_benchmarks_over_epochs('CORnet-S_cluster2_v2_IT_trconv3_bi',
                                 [0, 1, 3, 5, 10, 15, 20],
                                 benchmarks, selection=[0, 1, 2, 3, 4], ax=ax2)
-    plot_models_vs({'Cluster': {'Selective': 'CORnet-S_cluster2_v2_IT_trconv3_bi',
+    plot_models_vs({'Cluster': {'Critical': 'CORnet-S_cluster2_v2_IT_trconv3_bi',
                                 'Downstream': 'CORnet-S_cluster2_v2_IT_bi_seed42'},
-                    'Mixture gaussian': {'Selective': 'CORnet-S_brain_t7_t12_wmc15_IT_bi',
+                    'Mixture gaussian': {'Critical': 'CORnet-S_brain_t7_t12_wmc15_IT_bi',
                                          'Downstream': 'CORnet-S_brain_wmc15_IT_bi'},
-                    'Kernel normal': {'Selective': 'CORnet-S_brain3_t7_t12_knall_IT_bi',
+                    'Kernel normal': {'Critical': 'CORnet-S_brain3_t7_t12_knall_IT_bi',
                                       'Downstream': 'CORnet-S_brain3_knall_IT_bi'},
-                    'No gabor prior': {'Selective': 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2',
+                    'No gabor prior': {'Critical': 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2',
                                        'Downstream': 'CORnet-S_brain2_knall_IT_bi_v2'},
-                    }, 'comparison', convergence=False, ax=ax3, selection=selection)
+                    }, 'comparison', convergence=True, ax=ax3, selection=selection)
 
     for n, ax in enumerate((ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
@@ -442,15 +444,12 @@ def supp_5():
     plt.show()
 
 
-
-
-
 if __name__ == '__main__':
-    # plot_figure_1()
-    # plot_figure_2()
-    # plot_figure_3()
+    plot_figure_1()
+    plot_figure_2()
+    plot_figure_3()
     plot_figure_4()
-    # plot_figure_5()
+    plot_figure_5()
     # supp_3()
-    # supp_4()
-    # supp_5()
+    supp_4()
+    supp_5()

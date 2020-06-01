@@ -308,7 +308,7 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
                      x_ticks_2=params2, data_labels=labels, ax=ax, million=True, log=log, annotate_pos=0)
 
 
-def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=True):
+def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=True, with_weights=True):
     names = []
     conn = get_connection()
     params = {}
@@ -330,7 +330,10 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
             if name in convergence_images:
                 names.append(f'{name}_epoch_{convergence_images[name]}')
         names.append(f'{model1}_epoch_{convergence_epoch[model1]:02d}')
-    parameter = get_model_params(models, False)
+    if with_weights:
+        parameter = get_model_params(models, False)
+    else:
+        parameter = {x: 1000000 for x in models}
     names.append('CORnet-S_full_epoch_43')
     model_dict = load_scores(conn, names, benchmarks)
     full = np.mean(model_dict['CORnet-S_full_epoch_43'][selection])
