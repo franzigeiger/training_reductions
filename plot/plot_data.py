@@ -5,7 +5,6 @@ from matplotlib import gridspec
 from matplotlib import rc
 from matplotlib.ticker import ScalarFormatter, FuncFormatter
 
-from benchmark.database import load_scores, get_connection
 from utils.correlation import multivariate_gaussian
 
 rc('text', usetex=True)
@@ -20,7 +19,7 @@ my_palette = ['#1DB33D', '#168A82', '#1D9FB3', '#995d13']
 my_palette_light = ['#75FF93', '#B3F5FF', '#FFBAAD', '#cfa256']
 red_palette = ['#FF3210', '#803E33', '#CC290C', '#FF7D66', '#99665D', '#424949']
 green_palette = ['#1DB33D', '#75FF93', '#29FF57', '#58BF6E', '#147F2C']
-blue_palette = ['#168A82', '#709D9A', '#709D9A', '#709D9A', '#2B3D3C']
+blue_palette = ['#168A82', '#9FE0DC', '#10635E', '#709D9A', '#2B3D3C']
 grey_palette = ['#ACB9C6', '#ABB2B9', '#7C8287', '#6C7175', '#24303B']
 my_palette_mix = ['#995d13', '#cfa256', '#0c7169', '#58b0a7', '#296e85', '#549ebe', ]
 combi = ['#1D9FB3', '#FFBAAD', '#FF3210', '#B3F5FF', '#1DB31E', '#91FF91', '#995d13', '#cfa256']
@@ -83,16 +82,6 @@ def get_model_list(models, perturbations):
         for m in models:
             all.append(f'{m}{p}')
     return all
-
-
-def load_data(models, benchmarks):
-    db = get_connection()
-    return load_scores(db, models, benchmarks)
-
-
-def load_data_openmind(models, benchmarks):
-    db = get_connection('scores_openmind')
-    return load_scores(db, models, benchmarks)
 
 
 def plot_data(benchmarks, data, labels, name, scale_fix=None):
@@ -188,7 +177,8 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
     if log:
         ax.set_xscale('symlog')
         ax.xaxis.set_major_formatter(ScalarFormatter())
-
+    if percent:
+        ax.set_yticks(range(0, 110, 20))
         # ax.set_xticklabels(x_labels)
     if legend:
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=min(len(data), 3))
@@ -280,6 +270,8 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
         ax.set_ylim(ylim)
     if x_labels is not None:
         ax.set_xticks(x_labels)
+    if percent:
+        ax.set_yticks(range(0, 110, 20))
     rows = 1
     rows = 2 if len(data) >= 4 else rows
     rows = 3 if len(data) >= 6 else rows
@@ -473,23 +465,29 @@ def plot_heatmap(data, col_labels, row_labels, title, ax=None, percent=False, **
         plt.show()
 
 
-def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots', line=None, label=False, grey=True,
-                        gs=None):
+def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots', yerr=None, line=None, label=False,
+                        grey=True,
+                        gs=None, ax=None):
     sns.set()
     sns.set_style("white", {'grid.color': '.95', })
     sns.set_context("talk")
     # sns.set_context("paper")
-    show = True
-    if gs is None:
+    show = False
+    if gs is None and ax is None:
         fig, ax = plt.subplots(figsize=(15, 10), gridspec_kw={'bottom': 0.17})
-    else:
+        show = True
+    elif ax is None:
         ax = plt.subplot(gs)
-        show = False
     bars = len(data)
     step_size = int(bars / 5) + 1
-    x = np.arange(0, step_size * len(labels), step_size)  # the label locations
-    if bars < 5:
-        width = step_size / 6  # the width of the bars
+    step_size = 1.5
+    x = np.arange(0, step_size * len(labels), step_size)
+    if bars < 3:
+        width = step_size / 0.4
+        font_size = 20
+        # bars = 1
+    elif bars < 5:
+        width = step_size / 8  # the width of the bars
         font_size = 26
     else:
         width = step_size / 10
@@ -508,11 +506,15 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
                 pal = ['#ABB2B9'] + my_palette[:(len(data) - 2)] + ['#424949']
     else:
         pals = [blue_palette, '#ABB2B9']
+        pals = ['#ABB2B9'] + blue_palette
 
     for key, value in data.items():
         if label:
             colors = pals[idx]
-            rects = ax.bar(x - left_edge + (idx * width), value, width, label='', color=colors)
+            if yerr is not None:
+                rects = ax.bar(x - left_edge + (idx * width), value, width, yerr=yerr[key], label='', color=colors)
+            else:
+                rects = ax.bar(x - left_edge + (idx * width), value, width, label='', color=colors)
             axes.append(rects)
             for rect in rects:
                 height = rect.get_height()
@@ -521,35 +523,35 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
                                 xy=(rect.get_x() + rect.get_width() / 2, height + 0.01),
                                 xytext=(0, 3),  # 3 points vertical offset
                                 textcoords="offset points", rotation='vertical',
-                                ha='center', va='bottom')
+                                ha='center', va='bottom', size=font_size)
                 else:
                     ax.annotate(key,
-                                xy=(rect.get_x() + rect.get_width() / 2, height - 0.01),
+                                xy=(rect.get_x() + rect.get_width() / 2, height - 0.019),
                                 xytext=(0, 3),  # 3 points vertical offset
                                 textcoords="offset points", rotation='vertical',
-                                ha='center', va='top')
+                                ha='center', va='top', size=font_size)
         else:
             axes.append(ax.bar(x - left_edge + (idx * width), value, width, label=key, color=pal[idx]))
         idx += 1
     if line:
         ax.axhline(y=line, linewidth=1, color='#424949', linestyle="dashed")
         ax.annotate(r'\textbf{Standard Training}',
-                    xy=(0.5, line),
-                    xytext=(0, 3),  # 3 points vertical offset
-                    textcoords="offset points",
+                    xy=(-2, line),
+                    xytext=(0, 2),  # 3 points vertical offset
+                    textcoords="offset points", size=font_size,
                     ha='center', va='bottom')
-    ax.set_ylabel(y_label, size=18)
+    ax.set_ylabel(y_label, size=font_size)
 
     ax.set_xticks(x)
-    ax.set(ylim=[0.0, 0.6])
-    ax.legend(loc='upper center', bbox_to_anchor=(0.4, -0.07), frameon=False, ncol=min(len(data), 2))
+    # ax.set(ylim=[0.0, 0.45])
+    ax.legend(loc='lower left', bbox_to_anchor=(-0.2, 1), frameon=False, ncol=len(data))
 
     for rect in ax.patches:
         height = rect.get_height()
         ax.text(rect.get_x() + rect.get_width() / 2, height + 5, '{}'.format(height),
                 ha='center', va='bottom')
     output_paper_quality(ax, title, xlabel='', ylabel=y_label)
-    ax.set_xticklabels(labels, size=18)
+    ax.set_xticklabels(labels, size=font_size)
     if show:
         plt.tight_layout()
         plt.savefig(f'{file_name}.png')

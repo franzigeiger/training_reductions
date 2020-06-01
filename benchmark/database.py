@@ -25,6 +25,16 @@ def create_connection(db_file):
     return conn
 
 
+def load_data(models, benchmarks):
+    db = get_connection()
+    return load_scores(db, models, benchmarks)
+
+
+def load_data_openmind(models, benchmarks):
+    db = get_connection('scores_openmind')
+    return load_scores(db, models, benchmarks)
+
+
 def get_connection(name='scores'):
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
@@ -53,8 +63,8 @@ def load_model_parameter(conn):
 
 model_versions = {
     'CORnet-S_cluster2_v2_IT_trconv3_bi': ['CORnet-S_cluster2_v2_IT_trconv3_bi',
-                                           'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42'
-        , 'CORnet-S_cluster2_v2_IT_trconv3_bi_seed94'],
+                                           'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42',
+                                           'CORnet-S_cluster2_v2_IT_trconv3_bi_seed94'],
     'CORnet-S_cluster2_v2_V4_trconv3_bi': ['CORnet-S_cluster2_v2_V4_trconv3_bi',
                                            'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42'],
     'CORnet-S_train_gmk1_cl2_7_7tr_bi': ['CORnet-S_train_gmk1_cl2_7_7tr_bi', 'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42'],
@@ -64,11 +74,11 @@ model_versions = {
     'CORnet-S_cluster9_V4_trconv3_bi': ['CORnet-S_cluster9_V4_trconv3_bi', 'CORnet-S_cluster9_V4_trconv3_bi_seed42'],
     'CORnet-S_cluster9_IT_trconv3_bi': ['CORnet-S_cluster9_IT_trconv3_bi', 'CORnet-S_cluster9_IT_trconv3_bi_seed42'],
     'CORnet-S_train_wmk1_cl2_7_7tr_bi': ['CORnet-S_train_wmk1_cl2_7_7tr_bi', 'CORnet-S_train_wmk1_cl2_7_7tr_bi_seed42'],
-    'CORnet-S_full': ['CORnet-S_full', 'CORnet-S_full_seed42'],
+    'CORnet-S_full': ['CORnet-S_full', 'CORnet-S_full_seed42', ],  # 'CORnet-S_full_seed94'
     'CORnet-S_train_V4': ['CORnet-S_train_V4', 'CORnet-S_train_V4_seed42'],
     'CORnet-S_train_IT_seed_0': ['CORnet-S_train_IT_seed_0', 'CORnet-S_train_IT_seed_0_seed42'],
     'CORnet-S_train_random': ['CORnet-S_train_random', 'CORnet-S_train_random_seed42'],
-    # 'mobilenet_v1_1.0_224'  : ['mobilenet_v1_1.0_224']
+    'CORnet-S_cluster2_v2_IT_bi': ['CORnet-S_cluster2_v2_IT_bi_seed42', 'CORnet-S_cluster2_v2_IT_bi'],
 }
 
 

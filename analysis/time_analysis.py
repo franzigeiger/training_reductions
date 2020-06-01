@@ -36,47 +36,50 @@ def plot_over_epoch(models):
         plot_data_base(data, f'{benchmarks_labels[i]} Benchmark over epochs', epochs, 'Score over epochs', 'Score')
 
 
-def plot_models_benchmarks(models, file_name, benchmarks, convergence=True, gs=None):
+def plot_models_benchmarks(models, file_name, benchmarks, convergence=True, gs=None, ax=None):
     model_dict = {}
     conn = get_connection()
     epoch = 6
-    names = []
-    for model in models.keys():
-        if convergence and model in convergence_epoch:
-            postfix = f'_epoch_{convergence_epoch[model]:02d}'
-        else:
-            postfix = f'_epoch_06'
-        names.append(f'{model}{postfix}')
-    model_dict = load_scores(conn, names, benchmarks)
+    # names = []
+    # for model in models.keys():
+    #     if convergence and model in convergence_epoch:
+    #         postfix = f'_epoch_{convergence_epoch[model]:02d}'
+    #     else:
+    #         postfix = f'_epoch_06'
+    #     names.append(f'{model}{postfix}')
+    model_dict = load_error_bared(conn, models.keys(), benchmarks)
     if len(benchmarks) < 6:
         benchmarks_labels = ['V4', 'IT', 'Behavior', 'Imagenet']
     else:
-        benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet']
+        benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior']  # 'Imagenet'
     data_set = {}
+    err = {}
     # We replace the model id, a more human readable version
     for id, desc in models.items():
-        if convergence and id in convergence_epoch:
-            postfix = f'_epoch_{convergence_epoch[id]:02d}'
-        else:
-            postfix = f'_epoch_06'
-        data_set[desc] = model_dict[f'{id}{postfix}']
+        # if convergence and id in convergence_epoch:
+        #     postfix = f'_epoch_{convergence_epoch[id]:02d}'
+        # else:
+        #     postfix = f'_epoch_06'
+        data_set[desc] = model_dict[id][:5]
+        err[desc] = model_dict[id][6:-1]
         # print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
-    plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, gs=gs)
+    plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, yerr=err, gs=gs, ax=ax)
 
 
-def plot_models_vs(models, file_name, convergence=False, imagenet=False, gs=None, selection=[]):
+def plot_models_vs(models, file_name, convergence=False, imagenet=False, gs=None, ax=None, selection=[]):
     model_dict = {}
     conn = get_connection()
-    epoch = 6
+    epoch = 0
     names = []
     for name, mod in models.items():
         for model in mod.values():
-            if convergence:
-                epoch = convergence_epoch[model]
-            names.append(f'{model}_epoch_{epoch:02d}')
-    model_dict = load_scores(conn, names, benchmarks)
+            #         if convergence:
+            #             epoch = convergence_epoch[model]
+            names.append(model)
+    model_dict = load_error_bared(conn, names, benchmarks, convergence=convergence, epochs=[0])
     labels = []
     data_set = {}
+    err = {}
     # We replace the model id, a more human readable version
     for name, models in models.items():
         labels.append(name)
@@ -84,17 +87,23 @@ def plot_models_vs(models, file_name, convergence=False, imagenet=False, gs=None
         for model_name, model in models.items():
             if model_name not in data_set:
                 data_set[model_name] = []
+                err[model_name] = []
             # if imagenet:
             #     data_set[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][5]))
             # else:
-            data_set[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]))
+            if convergence:
+                data_set[model_name].append(np.mean(model_dict[model][selection]))
+                err[model_name].append(np.mean(model_dict[model][6:][selection]))
+            else:
+                data_set[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]))
+                err[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][6:][selection]))
 
-    if convergence and 'CORnet-S_full' in convergence_epoch:
-        full_tr = load_scores(conn, [f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}'], benchmarks)[
-            f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}']
-    else:
-        full_tr = load_scores(conn, ['CORnet-S_full_epoch_06'], benchmarks)['CORnet-S_full_epoch_06']
-        # print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
+    # if convergence and 'CORnet-S_full' in convergence_epoch:
+    full_tr = load_error_bared(conn, [f'CORnet-S_full'], benchmarks)[
+        f'CORnet-S_full']
+    # else:
+    #     full_tr = load_scores(conn, ['CORnet-S_full_epoch_0'], benchmarks)['CORnet-S_full_epoch_06']
+    # print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
     # if imagenet:
     #     line =np.mean(full_tr[5])
     # else:
@@ -103,8 +112,8 @@ def plot_models_vs(models, file_name, convergence=False, imagenet=False, gs=None
         y = r"\textbf{mean(V4, IT, Behavior)} "
     else:
         y = r"\textbf{mean(V1,V2,V4,IT,Behavior)}"
-    pals = [blue_palette, '#ABB2B9']
-    plot_bar_benchmarks(data_set, labels, '', y, file_name, line=line, label=True, grey=False, gs=gs)
+    pals = blue_palette
+    plot_bar_benchmarks(data_set, labels, '', y, file_name, yerr=err, line=line, label=True, grey=False, gs=gs, ax=ax)
 
 
 def plot_model_avg_benchmarks(models, file_name):
@@ -146,6 +155,7 @@ def plot_models_benchmark_vs_public(models, file_name):
 
 
 def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selection=[2, 3, 4], ax=None):
+    # TODO: Add error bars
     model_dict = {}
     conn = get_connection()
     if epochs is None:
@@ -157,12 +167,12 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
     #         names.append(f'{model}_epoch_{epoch:02d}')
     #     else:
     #         names.append(f'{model}_epoch_{epoch:.1f}')
-    model_dict = load_error_bared(conn, [model], benchmarks, epochs=epochs, convergence=True)
-    full = model_dict[model]
+    model_dict = load_error_bared(conn, [model, 'CORnet-S_full'], benchmarks, epochs=epochs, convergence=True)
+    full = model_dict['CORnet-S_full']
 
-    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet', 'Mean']
+    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Mean']
     data = {}
-    for i in range(len(benchmarks)):
+    for i in range(len(benchmarks) - 1):
         if i in selection:
             data[benchmarks_labels[i]] = []
             for epoch in epochs:
@@ -171,7 +181,8 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
                 else:
                     frac = (model_dict[f'{model}_epoch_{epoch:.1f}'][i] / full[i]) * 100
                 data[benchmarks_labels[i]].append(frac)
-        data[benchmarks_labels[i]].append(100)
+        end = (np.mean(model_dict[model][i]) / np.mean(full[i])) * 100
+        data[benchmarks_labels[i]].append(end)
     data[benchmarks_labels[-1]] = []
     for epoch in epochs:
         if epoch % 1 == 0:
@@ -179,15 +190,16 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
         else:
             frac = (np.mean(model_dict[f'{model}_epoch_{epoch:.1f}'][selection]) / np.mean(full[selection])) * 100
         data[benchmarks_labels[-1]].append(frac)
-    data[benchmarks_labels[-1]].append(100)
+    end = (np.mean(model_dict[model][selection]) / np.mean(full[selection])) * 100
+    data[benchmarks_labels[-1]].append(end)
     plot_data_base(data, f'', r'\textbf{Epoch}', r'\textbf{mean(V4, IT, behavior)} [\% of standard training]',
                    epochs + [43],
                    x_ticks=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
                        43],
                    x_labels=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
                        'Conv'],
-                   percent=True, alpha=0.5, log=True, annotate=True, legend=False, annotate_pos=10, ax=ax,
-                   palette=red_palette)
+                   percent=True, alpha=0.5, log=True, annotate=True, legend=False, annotate_pos=2, ax=ax,
+                   palette=blue_palette)
 
 
 def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None):
@@ -448,9 +460,9 @@ def image_scores_single(model, imgs, selection=[], ax=None):
     # model_dict = load_scores(conn, names, benchmarks)
     model_dict = load_error_bared(conn, names, benchmarks, convergence=True)
     full = model_dict[model]
-    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Imagenet', 'Mean']
+    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Mean']
     data = {}
-    for i in range(len(benchmarks)):
+    for i in range(len(benchmarks) - 1):
         if i in selection:
             data[benchmarks_labels[i]] = []
             for j in imgs:
@@ -469,7 +481,7 @@ def image_scores_single(model, imgs, selection=[], ax=None):
     imgs.append(1280000)
     plot_data_base(data, '', r'\textbf{Images} [Million]', r'\textbf{Score} [\% of standard training]', x_values=imgs,
                    x_ticks=[100, 1000, 10000, 100000, 1280000], x_labels=['100', '1k', '10k', '100k', '1.3M'],
-                   million=True, palette=red_palette, alpha=0.5, use_xticks=True,
+                   million=True, palette=blue_palette, alpha=0.5, use_xticks=True,
                    percent=True, log=True, annotate=True, legend=False, annotate_pos=3, ax=ax)
 
 
@@ -560,7 +572,7 @@ def delta_heatmap(model1, model2, imgs, epochs, selection=[], ax=None):
     matrix[-1, -1] = calc_dif(name, name2, model_dict, full, selection)
     plot_heatmap(matrix, r'\textbf{Epochs}', r'\textbf{Images}',
                  title=r'\textbf{Mean difference-Standard training \& TA+GC}', annot=True, ax=ax,
-                 cbar=False, cmap='coolwarm', percent=False,
+                 cbar=False, cmap='RdYlGn', percent=False, alpha=0.6,
                  fmt='.0%', vmin=-0.30, vmax=0.30, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'])
 
 
