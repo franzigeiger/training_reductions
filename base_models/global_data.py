@@ -198,6 +198,7 @@ best_brain_avg = {
 convergence_epoch = {
     'CORnet-S_full': 43,
     'CORnet-S_full_seed42': 29,
+    'CORnet-S_full_seed94': 28,
     'CORnet-S_train_V2': 20,
     'CORnet-S_train_V2_seed42': 32,
     'CORnet-S_train_V4': 43,
@@ -226,7 +227,8 @@ convergence_epoch = {
     'alexnet_v4_CORnet-S_cluster2_v2_V4_trconv3_bi': 32,  # check
     'alexnet_v4_CORnet-S_cluster2_v2_IT_trconv3_bi': 28,  # check
     'CORnet-S_cluster2_v2_V4_bi_seed42': 30,  # double check
-    'CORnet-S_cluster2_v2_IT_bi_seed42': 27,
+    'CORnet-S_cluster2_v2_IT_bi_seed42': 31,
+    'CORnet-S_cluster2_v2_IT_bi': 24,
     'CORnet-S_cluster2_v2_V4_trconv3_bi': 41,  # 27
     'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42': 27,  # 27
     'CORnet-S_cluster2_v2_V4_trconv3_bi_seed94': 25,  # 27

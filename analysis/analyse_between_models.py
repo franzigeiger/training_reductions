@@ -1,4 +1,5 @@
-from plot.plot_data import plot_data, load_data, benchmarks, get_all_perturbations, get_list_all_models, \
+from benchmark.database import load_data
+from plot.plot_data import plot_data, benchmarks, get_all_perturbations, get_list_all_models, \
     benchmarks_small
 
 

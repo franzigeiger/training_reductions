@@ -238,6 +238,7 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
         else:
             frac = np.mean(model_dict[model][selection])
             percent_err = np.mean(model_dict[model][6:][selection])
+        print(f'MOdel {model} has score {frac}')
         data['Score'].append(frac)
         err['Score'].append(percent_err)
     data2 = {}
@@ -267,6 +268,7 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
             else:
                 frac = np.mean(model_dict[model][selection])
                 percent_err = np.mean(model_dict[model][6:][selection])
+            print(f'MOdel {model} has score {frac}')
             data2[name].append(frac)
             err2[name].append(percent_err)
         if '(' in name:
@@ -306,7 +308,8 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
                      x_ticks_2=params2, data_labels=labels, ax=ax, million=True, log=log, annotate_pos=0)
 
 
-def image_epoch_score(models, imgs, epochs, selection=[], axes=None):
+def image_epoch_score(models, imgs, epochs, selection=[], ax=None, mark_highest=True):
+
     names = []
     conn = get_connection()
     params = {}
@@ -332,9 +335,11 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None):
     names.append('CORnet-S_full_epoch_43')
     model_dict = load_scores(conn, names, benchmarks)
     full = np.mean(model_dict['CORnet-S_full_epoch_43'][selection])
-
+    high_x = 0
+    high_y = 0
+    val = 0
     for model in names:
-        percent = np.mean(model_dict[model][selection])  # / full) * 100
+        percent = (np.mean(model_dict[model][selection]) / full) * 100
         if percent > 0.0:
             if 'img' not in model:
                 base_model = model.partition('_epoch')[0]
@@ -342,7 +347,7 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None):
                 data[models[base_model]].append(percent)
                 score = (1280000 * epoch * (parameter[base_model] / 1000000))  #
                 print(
-                    f'Mode l{base_model} in epoch {epoch} with full imagenet set leads to score {score}')
+                    f'Mode l{base_model} in epoch {epoch} with full imagenet set leads to score {score} with brain score {percent}')
                 params[models[base_model]].append(score)
             else:
                 base_model = model.partition('_img')[0]
@@ -352,7 +357,11 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None):
                 data[models[base_model]].append(percent)
                 params[models[base_model]].append(score)
                 print(
-                    f'Mode l{base_model} in epoch {epoch} with {imgs} images leads to score {score}')
+                    f'Mode l{base_model} in epoch {epoch} with {imgs} images leads to score {score} with brain score {percent}')
+        if percent > high_y:
+            high_y = percent
+            high_x = score
+            val = np.mean(model_dict[model][selection])
     if len(selection) == 3:
         y = r"\textbf{mean(V4, IT, Behavior)}"
     else:
@@ -369,10 +378,11 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None):
             xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * 1000000
             ax.spines['left'].set_visible(False)
             ax.yaxis.set_visible(False)
-        plot_data_double(ax_data, {}, '', x_name='',
+        plot_data_double(ax_data, {}, '', x_name=r'\textbf{Supervised synaptic updates} [$10^{12}$]',
                          x_labels=xticklabels, scatter=True, percent=False,
                          alpha=0.8,
-                         y_name=y, x_ticks=xticks, pal=['#424949', '#168A82', '#1DB33D', '#FF3210'], log=True,
+                         y_name=y, x_ticks=xticks, pal=['#424949', '#168A82', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#ABB2B9',
+                          '#1DB33D', ], log=True,
                          x_ticks_2={}, ax=ax, million=True,
                          annotate_pos=0)
 
