@@ -348,8 +348,8 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
                 epoch = float(model.partition('_epoch_')[2])
                 data[models[base_model]].append(frac)
                 score = (1280000 * epoch * (parameter[base_model] / 1000000))  #
-                print(
-                    f'Mode l{base_model} in epoch {epoch} with full imagenet set leads to score {score} with brain score {frac}')
+                print(f'Model {base_model} in epoch {epoch} with full imagenet set '
+                      f'leads to score {score} with brain score {frac}')
                 params[models[base_model]].append(score)
             else:
                 base_model = model.partition('_img')[0]
@@ -358,8 +358,8 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
                 score = (imgs * epoch * (parameter[base_model] / 1000000))  # (parameter[base_model] / 1000000) *
                 data[models[base_model]].append(frac)
                 params[models[base_model]].append(score)
-                print(
-                    f'Mode l{base_model} in epoch {epoch} with {imgs} images leads to score {score} with brain score {frac}')
+                print(f'Model {base_model} in epoch {epoch} with {imgs} images '
+                      f'leads to score {score} with brain score {frac}')
         if percent > high_y:
             high_y = percent
             high_x = score
