@@ -467,7 +467,7 @@ def image_scores_single(model, imgs, selection=[], ax=None):
     imgs.append(1280000)
     plot_data_base(data, '', r'\textbf{Images} [Million]', r'\textbf{Score} [\% of standard training]', x_values=imgs,
                    x_ticks=[100, 1000, 10000, 100000, 1280000], x_labels=['100', '1k', '10k', '100k', '1.3M'],
-                   million=True, palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]], alpha=0.5,
+                   million_base=True, palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]], alpha=0.5,
                    use_xticks=True,
                    percent=True, log=True, annotate=True, legend=False, annotate_pos=3, ax=ax)
 
