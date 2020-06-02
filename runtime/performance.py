@@ -73,9 +73,9 @@ def plot_performance(imagenet=True, entry_models=[best_brain_avg], all_labels=[]
     else:
         title = f'Brain-Score Benchmark mean(V4, IT, Behavior) vs training time'
         if len(selection) == 3:
-            y = r"mean(V4, IT, Behavior) [% of standard training]"
+            y = r"Brain Predictivity) [% of standard training]"
         else:
-            y = r"mean(V1,V2,V4,IT,Behavior) [% of standard training]"
+            y = r"Brain Predictivity [% of standard training]"
     plot_data_double(data, data2, '', x_name='Training time [Milliseconds/Epoch]', x_labels=[], y_name=y, x_ticks=time,
                      x_ticks_2=time2, percent=True, data_labels=labels, ax=ax, log=log)
 
@@ -128,11 +128,11 @@ def plot_num_params_epochs(imagenet=False, entry_models=[], all_labels=[], epoch
         title = f'Imagenet score vs number of parameter'
         y = r'Imagenet performance [% of standard training]'
     else:
-        title = f'Brain-Score Benchmark mean(V4, IT, Behavior) vs number of parameter'
+        title = f'Brain Predictivity vs number of parameter'
         if len(selection) == 3:
-            y = r"mean(V4, IT, Behavior) [% of standard training]"
+            y = r"Brain Predictivity [% of standard training]"
         else:
-            y = r"mean(V1,V2,V4,IT,Behavior) [% of standard training]"
+            y = r"Brain Predictivity [% of standard training]"
     col = grey_palette[:len(epochs) + 1] + blue_palette[:len(epochs) + 1] + green_palette[
                                                                             :len(epochs) + 1] + grey_palette[
                                                                                                 :len(epochs) + 1]
@@ -193,9 +193,9 @@ def plot_num_params_images(imagenet=False, entry_models=[], all_labels=[], image
     else:
         title = f'Brain-Score Benchmark mean(V4, IT, Behavior) vs number of parameter'
         if len(selection) == 3:
-            y = r"mean(V4, IT, Behavior) [% of standard training]"
+            y = r"Brain Predictivity [% of standard training]"
         else:
-            y = r"mean(V1,V2,V4,IT,Behavior) [% of standard training]"
+            y = r"Brain Predictivity [% of standard training]"
     col = grey_palette[:len(images) + 1] + blue_palette[:len(images) + 1] + green_palette[
                                                                             :len(images) + 1] + grey_palette[
                                                                                                 :len(images) + 1]
@@ -294,9 +294,9 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
     else:
         title = f'Brain-Score Benchmark mean(V4, IT, Behavior) vs number of parameter'
         if len(selection) == 3:
-            y = r"\textbf{mean(V4, IT, Behavior)}"
+            y = r"\textbf{Brain Predictivity}"
         else:
-            y = r"\textbf{mean(V1,V2,V4,IT,Behavior)}"
+            y = r"\textbf{Brain Predictivity}"
     if percent:
         y = f'{y} [\% of standard training]'
 
@@ -333,7 +333,7 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
     if with_weights:
         parameter = get_model_params(models, False)
     else:
-        parameter = {x: 1000000 for x in models}
+        parameter = {x: 1 for x in models}
     names.append('CORnet-S_full_epoch_43')
     model_dict = load_scores(conn, names, benchmarks)
     full = np.mean(model_dict['CORnet-S_full_epoch_43'][selection])
@@ -351,8 +351,8 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
                 epoch = float(model.partition('_epoch_')[2])
                 data[models[base_model]].append(frac)
                 score = (1280000 * epoch * (parameter[base_model] / 1000000))  #
-                print(
-                    f'Mode l{base_model} in epoch {epoch} with full imagenet set leads to score {score} with brain score {frac}')
+                print(f'Model {base_model} in epoch {epoch} with full imagenet set '
+                      f'leads to score {score} with brain score {frac}')
                 params[models[base_model]].append(score)
             else:
                 base_model = model.partition('_img')[0]
@@ -361,35 +361,34 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
                 score = (imgs * epoch * (parameter[base_model] / 1000000))  # (parameter[base_model] / 1000000) *
                 data[models[base_model]].append(frac)
                 params[models[base_model]].append(score)
-                print(
-                    f'Mode l{base_model} in epoch {epoch} with {imgs} images leads to score {score} with brain score {frac}')
+                print(f'Model {base_model} in epoch {epoch} with {imgs} images '
+                      f'leads to score {score} with brain score {frac}')
         if percent > high_y:
             high_y = percent
-            high_x = score
-            val = np.mean(model_dict[model][selection])
     if len(selection) == 3:
-        y = r"\textbf{mean(V4, IT, Behavior)}"
+        y = r"\textbf{Brain Predictivity}"
     else:
-        y = r"\textbf{mean(V1,V2,V4,IT,Behavior)}"  # [\% of standard training]
+        y = r"\textbf{Brain Predictivity}[\% of standard training]"  # [\% of standard training]
     for i, ax in enumerate(axes):
         zero_indices = {key: np.array([tick == 0 for tick in xticks]) for key, xticks in params.items()}
         if i == 0:  # axis plotting the x=0 value
             ax_data = {key: np.array(values)[zero_indices[key]].tolist() for key, values in data.items()}
             xticks = {key: np.array(values)[zero_indices[key]].tolist() for key, values in params.items()}
             xticklabels = np.array([0])
+            ylabel = y
         else:  # axis plotting everything x>0
             ax_data = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in data.items()}
             xticks = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in params.items()}
-            xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * 1000000
+            xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * pow(10, 6)
             ax.spines['left'].set_visible(False)
-            ax.yaxis.set_visible(False)
+            ylabel = ''
         plot_data_double(ax_data, {}, '', x_name='',
                          x_labels=xticklabels, scatter=True, percent=percent,
-                         alpha=0.8,
-                         y_name=y, x_ticks=xticks,
+                         alpha=0.8, ylim=[0, 100],
+                         y_name=ylabel, x_ticks=xticks,
                          pal=['#2CB8B8', '#186363', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#259C9C', '#36E3E3', '#9AC3C3'],
                          log=True,
-                         x_ticks_2={}, ax=ax, million=True,
+                         x_ticks_2={}, ax=ax, trillion=with_weights,
                          annotate_pos=0)
 
         # adopted from https://stackoverflow.com/a/32186074/2225200
@@ -401,6 +400,10 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
         else:
             kwargs.update(transform=ax.transAxes)
             ax.plot((-d, +d), (-d, +d), **kwargs)
+            # remove yticks. We can't `ax.yaxis.set_visible(False)` altogether since that would also remove the grid
+            for tic in ax.yaxis.get_major_ticks():
+                tic.tick1On = tic.tick2On = False
+            ax.set_yticklabels([])
         axes[0].set_ylim(axes[1].get_ylim())
 
 

@@ -6,7 +6,7 @@ from base_models.global_data import layer_best_2, random_scores, layers, converg
     benchmarks_public, convergence_images
 from benchmark.database import load_scores, get_connection, load_error_bared
 from plot.plot_data import plot_data_base, plot_bar_benchmarks, scatter_plot, plot_data_double, red_palette, my_palette, \
-    plot_heatmap, blue_palette
+    plot_heatmap, blue_palette, grey_palette
 
 
 # layers = ['full', 'V1.conv1', 'V1.conv2',
@@ -52,10 +52,10 @@ def plot_models_benchmarks(models, file_name, benchmarks, convergence=True, gs=N
     plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, yerr=err, gs=gs, ax=ax)
 
 
-def plot_models_vs(models, file_name, convergence=False, imagenet=False, gs=None, ax=None, selection=[]):
+def plot_models_vs(models, file_name, convergence=False, epoch=0, imagenet=False, gs=None, ax=None, selection=[]):
     model_dict = {}
     conn = get_connection()
-    epoch = 0
+
     names = []
     for name, mod in models.items():
         for model in mod.values():
@@ -95,9 +95,9 @@ def plot_models_vs(models, file_name, convergence=False, imagenet=False, gs=None
     # else:
     line = np.mean(full_tr[selection])
     if len(selection) == 3:
-        y = r"\textbf{mean(V4, IT, Behavior)} "
+        y = r"\textbf{Brain Predictivity} "
     else:
-        y = r"\textbf{mean(V1,V2,V4,IT,Behavior)}"
+        y = r"\textbf{Brain Predictivity}"
     pals = blue_palette
     plot_bar_benchmarks(data_set, labels, '', y, file_name, yerr=err, line=line, label=True, grey=False, gs=gs, ax=ax)
 
@@ -110,7 +110,7 @@ def plot_model_avg_benchmarks(models, file_name):
     for model in models.keys():
         names.append(f'{model}_epoch_{epoch:02d}')
     model_dict = load_scores(conn, names, benchmarks)
-    benchmarks_labels = ['mean(V1,V2,IT,V4,Behavior)', 'Imagenet']
+    benchmarks_labels = ['Brain Predictivity', 'Imagenet']
     data_set = {}
     # We replace the model id, a more human readable version
     for id, desc in models.items():
@@ -178,14 +178,14 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
         data[benchmarks_labels[-1]].append(frac)
     end = (np.mean(model_dict[model][selection]) / np.mean(full[selection])) * 100
     data[benchmarks_labels[-1]].append(end)
-    plot_data_base(data, f'', r'\textbf{Epoch}', r'\textbf{mean(V4, IT, behavior)} [\% of standard training]',
+    plot_data_base(data, f'', r'\textbf{Epoch}', r'\textbf{Score} [\% of standard training]',
                    epochs + [43],
                    x_ticks=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
                        43],
                    x_labels=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
                        'Conv'],
                    percent=True, alpha=0.5, log=True, annotate=True, legend=False, annotate_pos=2, ax=ax,
-                   palette=blue_palette)
+                   palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]])
 
 
 def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None):
@@ -241,7 +241,7 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None
         data[name] = scores
 
     title = f'Brain scores mean vs epochs' if brain else 'Imagenet score vs epochs'
-    plot_data_base(data, 'First epochs', x_values, 'Epochs', 'mean(V4, IT, Behavior) [% of standard training]',
+    plot_data_base(data, 'First epochs', x_values, 'Epochs', 'Brain Predictivity [% of standard training]',
                    x_ticks=epochs + [30, 40, 50], log=True,
                    percent=True, special_xaxis=True, legend=False, only_blue=False, palette=red_palette, annotate=True,
                    annotate_pos=1, ax=ax)
@@ -387,9 +387,9 @@ def score_over_layers_avg(all_models, random, all_labels=[], imagenet=False, con
     else:
         title = f'Brain-Score Benchmark mean(V4, IT, Behavior) over layers'
         if len(selection) == 3:
-            y = r"mean(V4, IT, Behavior) [% of standard training]"
+            y = r"Brain Predictivity [% of standard training]"
         else:
-            y = r"mean(V1,V2,V4,IT,Behavior) [% of standard training]"
+            y = r"Brain Predictivity [% of standard training]"
 
     plot_data_double(data, data2, '', err=err, err2=err2, x_name='Number of trained layers',
                      y_name=y, x_ticks=x_ticks,
@@ -426,7 +426,7 @@ def image_scores(models, imgs, labels, ax=None, selection=[]):
         y = r'Imagenet [% of standard training]'
     else:
         title = f'Brain scores mean vs number of weights'
-        y = r'mean(V4, IT, Behavior) [% of standard training]'
+        y = r'Brain Predictivity [% of standard training]'
     imgs.append(1200000)
     plot_data_double(data2, {}, '', x_name='Number of images in million', y_name=y,
                      x_ticks={'IT init, selective training': imgs},
@@ -467,11 +467,13 @@ def image_scores_single(model, imgs, selection=[], ax=None):
     imgs.append(1280000)
     plot_data_base(data, '', r'\textbf{Images} [Million]', r'\textbf{Score} [\% of standard training]', x_values=imgs,
                    x_ticks=[100, 1000, 10000, 100000, 1280000], x_labels=['100', '1k', '10k', '100k', '1.3M'],
-                   million=True, palette=blue_palette, alpha=0.5, use_xticks=True,
+                   million=True, palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]], alpha=0.5,
+                   use_xticks=True,
                    percent=True, log=True, annotate=True, legend=False, annotate_pos=3, ax=ax)
 
 
-def image_epoch_heatmap(model, imgs, epochs, selection=[], ax=None):
+def image_epoch_heatmap(model, imgs, epochs, selection=[], title=r'\textbf{Standard training epochs/images trade-off}',
+                        ax=None):
     names = []
     conn = get_connection()
     # delta= 'CORnet-S_full'
@@ -510,7 +512,7 @@ def image_epoch_heatmap(model, imgs, epochs, selection=[], ax=None):
     # name = f'{model}_epoch_{convergence_epoch[model]:02d}'
     frac = (np.mean(model_dict[model][selection]) / full)
     matrix[-1, -1] = frac
-    plot_heatmap(matrix, 'Epochs', 'Images', title='Standard training epochs/images trade-off', annot=True, ax=ax,
+    plot_heatmap(matrix, r'\textbf{Epochs}', r'\textbf{Images}', title=title, annot=True, ax=ax,
                  cbar=False, cmap='YlOrRd', percent=False,
                  fmt='.0%', vmin=0, vmax=1, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'], alpha=0.8)
     # plot_data_base(data, f'CORnet-S Brain-Score benchmarks', imgs, 'Epoch', r'Score [% of standard training]',

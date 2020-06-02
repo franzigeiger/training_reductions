@@ -1,4 +1,7 @@
+from math import log10
+
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import seaborn as sns
 from matplotlib import gridspec
@@ -34,7 +37,14 @@ def get_all_models():
     return ['CORnet-S', 'alexnet', 'resnet101']
 
 
-def formatter(x, pos, percent=False, million=False):
+def formatter(x, pos, percent=False, million=False, trillion=False):
+    if trillion:  # 10^12
+        # HACK: values are passed as 10^6 -> multiply to correct number
+        x = x * pow(10, 6)
+        if x == 0:
+            return "0"
+        base = int(log10(x))
+        return f"$10^{{{base}}}$"
     if million:
         mil = (x / 1000000)
         if mil >= 1:
@@ -54,12 +64,12 @@ def formatter(x, pos, percent=False, million=False):
     return x
 
 
-def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False, percent_x=False, millions=False):
-    ax.set_title(title, weight='semibold', size=20)
-    ax.set_xlabel(xlabel, size=18)  # weight='semibold',
-    ax.set_ylabel(ylabel, size=18)  # weight='semibold',
+def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False, percent_x=False, **formatter_kwargs):
+    ax.set_title(title, weight='semibold', size=22)
+    ax.set_xlabel(xlabel, size=20)  # weight='semibold',
+    ax.set_ylabel(ylabel, size=20)  # weight='semibold',
     func_percent = lambda x, pos: formatter(x, pos, percent)
-    func_mil = lambda x, pos: formatter(x, pos, million=millions)
+    func_mil = lambda x, pos: formatter(x, pos, **formatter_kwargs)
     if percent_x:
         ax.xaxis.set_major_formatter(FuncFormatter(func_percent))
     else:
@@ -68,6 +78,7 @@ def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.tick_params(bottom=False, left=False)
+
 
 def get_list_all_pert(models):
     return get_model_list(models, get_all_perturbations())
@@ -125,7 +136,7 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
     if x_ticks is None:
         x_ticks = x_labels
     if rotate:
-        ax.xticks(rotation='vertical', fontsize=12)
+        ax.xticks(rotation='vertical', fontsize=20)
     index = 0
     palette = palette[:len(data) - 1] + ['#ABB2B9']
     if only_blue:
@@ -188,7 +199,7 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
 
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_labels)
-    output_paper_quality(ax, name, x_name, y_name, percent, millions=million)
+    output_paper_quality(ax, name, x_name, y_name, percent, million=million)
     ax.tick_params(bottom=True, left=False)
 
     if show:
@@ -203,7 +214,7 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
                      rotate=False, alpha=1.0,
                      x_ticks=None, log=False, x_ticks_2=None, percent=False, annotate_pos=None, data_labels=None,
                      ylim=None, scatter=False,
-                     ax=None, percent_x=False, pal=my_palette + my_palette_light, gs=None, million=False):
+                     ax=None, percent_x=False, pal=my_palette + my_palette_light, gs=None, **formatter_kwargs):
     sns.set()
     sns.set_style("whitegrid", {'grid.color': '.95', })
     sns.set_context("talk")
@@ -218,17 +229,17 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
     if x_ticks is None:
         x_ticks = np.arange(len(list(data.values())[0]))
     if rotate:
-        ax.xticks(rotation='vertical', fontsize=12)
+        ax.xticks(rotation='vertical', fontsize=20)
     if data2 and len(data2['Score']) > 0:
         if err2:
             ax.errorbar(x_ticks_2, data2['Score'], yerr=err2['Score'],
                         label='Kaiming Normal + Downstream Training (KN+DT)',
                         linestyle="--",
-                        marker="^", alpha=alpha, color='#5d7575', )
+                        marker="o", alpha=alpha, color='#5d7575', )
         else:
             ax.plot(x_ticks_2, data2['Score'], label='Kaiming Normal + Downstream Training (KN+DT)', scalex=True,
                     linestyle="--",
-                    marker="^", alpha=alpha, color='#5d7575', )
+                    marker="o", alpha=alpha, color='#5d7575', )
         full_y = data2['Score'][0]
         full_x = x_ticks_2[0]
         if data_labels:
@@ -268,6 +279,8 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
                             ha='center', color=cols[0] if isinstance(cols, list) else cols)
         idx += 1
     if log:
+        ax.xaxis.set_minor_locator(mticker.LogLocator(base=10, subs='all'))
+        ax.xaxis.set_minor_formatter(mticker.NullFormatter())
         ax.set_xscale('symlog')
     if ylim is not None:
         ax.set_ylim(ylim)
@@ -282,7 +295,7 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=int(rows))
     if scale_fix:
         ax.ylim(scale_fix[0], scale_fix[1])
-    output_paper_quality(ax, name, x_name, y_name, percent, percent_x=percent_x, millions=million)
+    output_paper_quality(ax, name, x_name, y_name, percent, percent_x=percent_x, **formatter_kwargs)
     if show:
         file_name = name.replace(' ', '_')
         plt.savefig(f'{file_name}.svg')
@@ -393,7 +406,7 @@ def plot_histogram(data, name, bins=100, labels=[], x_axis='Weight distribution'
     sns.set()
     sns.set_context("paper")
     plt.hist(data, alpha=0.5, bins=bins, range=range, fill=True, histtype='bar', density=True, label=labels)
-    plt.legend(prop={'size': 10})
+    plt.legend(prop={'size': 20})
     plt.gca().set(title=name, xlabel=x_axis)
     plt.tight_layout()
     file_name = name.replace(' ', '_')
@@ -433,7 +446,7 @@ def plot_subplots_histograms(data, name, bins=100, x_axis='Weight distribution',
         lnspc = np.linspace(xmin, xmax, len(set))
         pos[idx] = lnspc
         print(set)
-        ax.legend(prop={'size': 5})
+        ax.legend(prop={'size': 20})
         axes.append(ax)
         idx += 1
     mult = multivariate_gaussian(data)
@@ -457,9 +470,9 @@ def plot_heatmap(data, col_labels, row_labels, title, ax=None, percent=False, **
     ax = sns.heatmap(data, ax=ax, **kwargs)
     ax.set_yticks(np.arange(len(kwargs['yticklabels'])) + 0.5)
     ax.set_xticks(np.arange(len(kwargs['xticklabels'])) + 0.5)
-    ax.set_title(title, size=20)
-    ax.set_xlabel(col_labels, weight='semibold', size=18)
-    ax.set_ylabel(row_labels, weight='semibold', size=18)
+    ax.set_title(title, size=22)
+    ax.set_xlabel(col_labels, weight='semibold', size=20)
+    ax.set_ylabel(row_labels, weight='semibold', size=20)
     ax.xaxis.set_tick_params(rotation=45)
     ax.yaxis.set_tick_params(rotation=45)
     if show:
@@ -539,7 +552,7 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
     if line:
         ax.axhline(y=line, linewidth=1, color='#424949', linestyle="dashed")
         ax.annotate(r'\textbf{Standard Training}',
-                    xy=(-2, line),
+                    xy=(0, line),
                     xytext=(0, 2),  # 3 points vertical offset
                     textcoords="offset points", size=font_size,
                     ha='center', va='bottom')
@@ -573,7 +586,7 @@ def plot_images(img, size, labels, theta):
                 ax.set_title(labels[idx], pad=3)
                 ax.set_xticks([])
                 ax.set_yticks([])
-                ax.title.set_fontsize(14)
+                ax.title.set_fontsize(20)
                 plt.imshow(img[idx], cmap='gray')
                 idx += 1
 
@@ -625,6 +638,7 @@ def scatter_plot(x, y, y_2=None, x_label=None, y_label=None, labels=None, title=
         plt.savefig(f'{file_name}.png')
         plt.show()
     return corr
+
 
 def plot_3d(x, y, z, name):
     sns.set()

@@ -197,14 +197,12 @@ def plot_figure_1():
     }
     image_epoch_score({'CORnet-S_full': 'Standard training'}, [100, 1000, 10000, 50000, 100000, 500000],
                       [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20], selection, (ax1, ax1_2), with_weights=False)
-    fig1.text(0.2, 0, r'\textbf{Supervised updates} [$10^{12}$]', ha='center')  # xlabel
+    fig1.text(0.2, 0, r'\textbf{Supervised updates} (training epochs x labeled images)', ha='center')  # xlabel
     plot_benchmarks_over_epochs('CORnet-S_full',
                                 [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 7, 10, 15, 20],
                                 benchmarks, ax=ax2, selection=[0, 1, 2, 3, 4, 5])
     image_scores_single('CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000], selection=[0, 1, 2, 3, 4, 5],
                         ax=ax3)
-    ax1.grid(False)
-    ax1_2.grid(False)
     for n, ax in enumerate((ax1, ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
         ax.text(-0.08, 1.04, text, transform=ax.transAxes,
@@ -233,8 +231,8 @@ def plot_figure_2():
     }
     # fig = plt.figure(figsize=(16, 8), frameon=False)
     # outer = gridspec.GridSpec(1, 2, left=0.06, right=0.9, bottom=0.16)
-    plot_models_vs({'': {r'\textbf{Kaiming\\Normal}': 'CORnet-S_full',
-                         r'\textbf{Genome\\Compression}': 'CORnet-S_cluster2_v2_IT_bi'}, }, '', selection=selection,
+    plot_models_vs({'': {r'\textbf{Kaiming \\ Normal}': 'CORnet-S_full',
+                         r'\textbf{Genome \\ Compression}': 'CORnet-S_cluster2_v2_IT_bi'}, }, '', selection=selection,
                    ax=ax2, imagenet=False, convergence=False)
     # score_over_layers_avg([models], {}, models.values(), imagenet=False, convergence=True, ax=ax2, selection=selection)
     # ax1= plt.subplot(outer[1])
@@ -297,9 +295,9 @@ def plot_figure_4():
     # fig1, (ax2, ax3) = plt.subplots(1, 2, figsize=(20, 10), )
     delta_heatmap('CORnet-S_cluster2_v2_IT_trconv3_bi', 'CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000],
                   [0, 1, 2, 3, 5, 6, 10, 20], selection=selection,
-                  title=r'\textbf{Mean difference - Standard training \& GC+CT}', ax=ax2)
+                  title=r'', ax=ax2)  # \textbf{Brain predictivity difference}[\% of standard training]
     best = {
-        'CORnet-S_full': 'Standard training',
+        'CORnet-S_full': 'Fewer training iterations',
         'CORnet-S_cluster2_v2_IT_trconv3_bi': 'GC + CT',
         # 'CORnet-S_train_conv3_bi': 'TA+KN',
         'mobilenet_v1_1.0_224': 'Mobilenet',
@@ -309,8 +307,7 @@ def plot_figure_4():
     }
     image_epoch_score(best, [100, 1000, 10000, 50000, 100000, 500000], [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20],
                       selection, (ax1, ax1_2))
-    ax1.grid(False)
-    ax1_2.grid(False)
+    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates}', ha='center')  # xlabel
     for n, ax in enumerate((ax1, ax2)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
         ax.text(-0.08, 1.04, text, transform=ax.transAxes,
@@ -389,9 +386,11 @@ def supp_4():
     sns.set_context("talk")
     fig1, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(30, 10), )
     image_epoch_heatmap('CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000],
-                        [0, 1, 2, 3, 5, 6, 10, 20], selection=selection, ax=ax3)
+                        [0, 1, 2, 3, 5, 6, 10, 20], title=r'\textbf{Standard training epochs/images scores}',
+                        selection=selection, ax=ax3)
     image_epoch_heatmap('CORnet-S_cluster2_v2_IT_trconv3_bi', [100, 1000, 10000, 50000, 100000, 500000],
-                        [0, 1, 2, 3, 5, 6, 10, 20], selection=selection, ax=ax2)
+                        [0, 1, 2, 3, 5, 6, 10, 20], title=r'\textbf{GC + CT epochs/images scores}', selection=selection,
+                        ax=ax2)
     divider = make_axes_locatable(ax1)
     ax1_2 = divider.new_horizontal(size="1800%", pad=0.1)
     fig1.add_axes(ax1_2)
@@ -408,9 +407,7 @@ def supp_4():
                       selection, (ax1, ax1_2))
     # for n, ax in enumerate((ax1)):
     text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[0])
-    ax1.grid(False)
-    ax1_2.grid(False)
-    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates} [$10^{12}$]', ha='center')  # xlabel
+    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates}', ha='center')  # xlabel
     for n, ax in enumerate((ax1, ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
         ax.text(-0.08, 1.04, text, transform=ax.transAxes,
@@ -433,7 +430,7 @@ def supp_5():
                                       'Downstream': 'CORnet-S_brain3_knall_IT_bi'},
                     'No gabor prior': {'Critical': 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2',
                                        'Downstream': 'CORnet-S_brain2_knall_IT_bi_v2'},
-                    }, 'comparison', convergence=True, ax=ax3, selection=selection)
+                    }, 'comparison', convergence=False, ax=ax3, epoch=6, selection=selection)
 
     for n, ax in enumerate((ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
@@ -446,10 +443,10 @@ def supp_5():
 
 if __name__ == '__main__':
     plot_figure_1()
-    plot_figure_2()
-    plot_figure_3()
-    plot_figure_4()
-    plot_figure_5()
+    # plot_figure_2()
+    # plot_figure_3()
+    # plot_figure_4()
+    # plot_figure_5()
     # supp_3()
-    supp_4()
-    supp_5()
+    # supp_4()
+    # supp_5()
