@@ -28,14 +28,12 @@ def visualize_first_layer(model_name, model=None, auto_correlate=False):
             filter_weights = weights.data.squeeze()
             img = np.transpose(filter_weights, (0, 2, 3, 1))
             idx = 0
-            # fig, axes = pyplot.subplots(ncols=weights.shape[0], figsize=(20, 4))
-            for j in range(number):  # in zip(axes, range(weights.shape[0])):
+            for j in range(number):
                 for i in range(number):
                     ax = plt.subplot(number, number, idx + 1)
                     ax.set_xticks([])
                     ax.set_yticks([])
                     ax.set_title(f'Kernel {idx}', pad=3)
-                    # imgs = img[range(j*8, (j*8)+number)]
                     plt.imshow(img[idx])
                     idx += 1
             plt.show()
@@ -88,12 +86,10 @@ def plot_gabor_filters():
 
 
 def plot_correlation_weights(model_name, size):
-    # model = load_model(model_name, False)
     if model_name is 'CORnet-S':
         model_name = 'base'
     model = get_model(model_name, False, trained_models[model_name])
     counter = 0
-    # visualize_first_layer('', model)
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d and counter == 0:
             weights = m.weight.data.cpu().numpy()
@@ -113,9 +109,6 @@ def plot_correlation_weights(model_name, size):
                     row = np.concatenate((row, corr), axis=0)
                 row = (row + 0.25) / (0.5)
                 matrix = np.concatenate((matrix, row), axis=1)
-                # matrix[0,0] = 1
-            # f_min, f_max = np.min(matrix), np.max(matrix)
-            # matrix = (matrix - f_min) / (f_max - f_min)
             plot_matrixImage(matrix, model_name + '_correlation_size' + str(size), size)
             return
         elif type(m) == nn.Conv2d:
@@ -123,7 +116,6 @@ def plot_correlation_weights(model_name, size):
 
 
 def plot_conv2_weights(model_name):
-    # model = load_model(model_name, False)
     model = cornet_s_brainmodel(model_name, True).activations_model._model
     counter = 0
     for name, m in model.named_modules():
@@ -138,9 +130,6 @@ def plot_conv2_weights(model_name):
                 f_min, f_max = np.min(row), np.max(row)
                 row = (row - f_min) / (f_max - f_min)
                 matrix = np.concatenate((matrix, row), axis=1)
-                # matrix[0,0] = 1
-            # f_min, f_max = np.min(matrix), np.max(matrix)
-            # matrix = (matrix - f_min) / (f_max - f_min)
             plot_matrixImage(matrix, model_name + '_conv2')
             return
         elif type(m) == nn.Conv2d:
@@ -208,7 +197,6 @@ def plot_wavelets(J, L, elems, it):
         filter_c = np.fft.fftshift(filter_c)
         if 0 not in filter_c.shape and not np.isnan(filter_c[0]).any():
             axs[i // L, i % L].imshow(normalize(filter_c.astype(float)), cmap='gray')
-            # axs[i // L, i % L].imshow(colorize(filter_c))
             axs[i // L, i % L].axis('off')
             axs[i // L, i % L].set_title(
                 "j = {} \n theta={}".format(i // L, i % L))
@@ -223,15 +211,4 @@ def plot_wavelets(J, L, elems, it):
 
 
 if __name__ == '__main__':
-    # wavelets()
-    # plot_gabor_filters()
-    # plot_conv2_weights('CORnet-S_train_second_kernel_conv_epoch_05')
     plot_conv2_weights('CORnet-S_train_gabor_dist_second_kernel_conv_epoch_05')
-    # plot_correlation_weights('CORnet-S_train_all_epoch_10', 3)
-    # plot_correlation_weights('CORnet-S_train_all_epoch_10', 7)
-    # plot_conv2_weights('CORnet-S_train_all_epoch_10')
-    # visualize_auto_correlation('CORnet-S_train_gabor_reshape')
-    # visualize_first_layer('CORnet-S_train_gabor_reshape_epoch_00')
-    # visualize_first_layer('base')
-    # plot_correlation_weights('CORnet-S_train_gabor_reshape', 3)
-    # plot_correlation_weights('CORnet-S_train_gabor_reshape_epoch_10', 7)

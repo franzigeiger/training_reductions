@@ -35,12 +35,9 @@ random_alexnet = {
 }
 
 models_alexnet = {
-    # 'alexnet_v1_CORnet-S_brain_t7_t12_wmc15_IT_bi': 'features.12',
     'alexnet_v4_CORnet-S_cluster2_v2_IT_trconv3_bi': 'features.12',
-    # 'alexnet_v1_CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'features.8',
     'alexnet_v4_CORnet-S_cluster2_v2_V4_trconv3_bi': 'features.8',
     'alexnet_v4_CORnet-S_train_gmk1_cl2_7_7tr_bi': 'features.6'
-    # 'alexnet_v1_CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wmc6_kn7_tr_bi': 'features.6'
 }
 
 layers_number = {
@@ -76,7 +73,7 @@ all_layers = {
 label = 'Artificial genome + critical training(AG + CT)'
 
 
-def score_over_layers_avg(models_resnet, random, models_alexnet={}, random_alexnet={}, imagenet=False,
+def score_over_layers_avg(models_resnet, random, imagenet=False,
                           convergence=False,
                           model_name='resnet',
                           layers_numbers=[layers_number, layers_number, layers_number_mobilenet,
@@ -92,7 +89,7 @@ def score_over_layers_avg(models_resnet, random, models_alexnet={}, random_alexn
     layers = {}
     labels = {}
     idx = 0
-    for models, label in zip([random, models_resnet],  # , random_mobilenet, models_mobilenet
+    for models, label in zip([random, models_resnet],
                              ['Resnet50 KN+DT', 'Resnet50 Transfer AG+CT', 'Alexnet KN+DT', 'Alexnet Transfer AG+CT']):
         data[label] = []
         layers[label] = []
@@ -128,7 +125,6 @@ def score_over_layers_avg(models_resnet, random, models_alexnet={}, random_alexn
                      ax=ax)
 
 def plot_first_epochs(models, epochs=None, brain=True, convergence=True, model_name='resnet'):
-    model_dict = {}
     conn = get_connection()
     if epochs is None:
         epochs = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6)
@@ -188,11 +184,3 @@ if __name__ == '__main__':
     plot_first_epochs({**models, **random}, [0, 6, 10, 20], True, convergence=True)
     score_over_layers_avg(models, random, False, convergence=True)
     score_over_layers_avg(models, random, True, convergence=True)
-    # plot_first_epochs({**models_alexnet, **random_alexnet}, [0, 6, 10, 20], False, convergence=True,
-    #                   model_name='alexnet')
-    # plot_first_epochs({**models_alexnet, **random_alexnet}, [0, 6, 10, 20], True, convergence=True,
-    #                   model_name='alexnet')
-    # score_over_layers_avg(models_alexnet, random_alexnet, False, convergence=True, model_name='alexnet',
-    #                       layers_number=layers_number_alexnet)
-    # score_over_layers_avg(models_alexnet, random_alexnet, True, convergence=True, model_name='alexnet',
-    #                       layers_number=layers_number_alexnet)

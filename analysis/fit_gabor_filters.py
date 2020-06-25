@@ -53,7 +53,6 @@ def objective_function(beta, X):
 
 
 def linear_regression(x, y, lin: LinearRegression):
-    # return 1 - lin.score(x.reshape([1,-1]),y.reshape([1,-1]))
     y_hat = lin.predict(x)
     return 1 - explained_variance_score(y, y_hat)
 
@@ -120,9 +119,7 @@ def hyperparam_gabor():
 
 
 def fit_gabors(version='V1', file='gabor_params_basinhopping'):
-    # model = get_model('CORnet-S_base', True)
     model = get_model('CORnet-S_full_epoch_43', True)
-    # model = get_resnet50(True)
     counter = 0
     length = 7 if version is 'V1' else 9
 
@@ -137,7 +134,6 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping'):
                         kernel = weights[i, j]
                         kernel = normalize(kernel)
                         bnds = ((0, 0.5), (-np.pi, 2 * np.pi), (-4, 4), (-4, 4), (-3, 3))
-                        # params = np.random.random(5)
                         params = [0.5, np.pi / 2, 2, 2, 0]
 
                         def print_fun(x, f, accepted):
@@ -146,7 +142,6 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping'):
                         if version is 'V1':
                             print('Use sklearn version')
                             bnds = ((-0.5, 1.5), (-np.pi, 2 * np.pi), (-4, 4), (-4, 4), (-3, 3), (-5, 5))
-                            # params = np.random.random(5)
                             params = [0.5, np.pi / 2, 2, 2, 0, 3]
                             minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds, 'args': (kernel),
                                                 'options': {'maxiter': 200000, 'gtol': 1e-25}}
@@ -165,11 +160,6 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping'):
                             result = basinhopping(objective_function_2, params, niter=15,
                                                   minimizer_kwargs=minimizer_kwargs,
                                                   callback=print_fun, T=0.00001)
-                        # result = minimize(objective_function, params, args=(kernel),
-                        #                   method='L-BFGS-B', bounds=bnds, options={'maxiter': 20000,'gtol': 1e-25, 'dist':True})
-                        # result = minimize(objective_function, params, args=(kernel),
-                        #                   method='BFGS', options={'maxiter': 200000, 'gtol': 1e-25, 'dist': True})
-
                         beta_hat = result.x
                         gabor_params[i, j] = np.append(beta_hat, result.fun)
                         print(f'Kernel {i}, filter {j}:')
@@ -180,8 +170,6 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping'):
 
 
 def get_fist_layer_weights():
-    model = get_model('CORnet-S_train_second_kernel_conv', True)
-    # model = get_model('CORnet-S_base', True)
     # model = get_model('CORnet-S_full_epoch_43', True)
     counter = 0
     plt.figure(figsize=(20, 20))
@@ -221,11 +209,8 @@ def get_fist_layer_weights():
 
 
 def compare_gabors(version='V1', file='gabor_params_basinhopping_bound_6_params'):
-    # file = 'gabor_params_basinhopping_bound_6_params'
     gabor_params = np.load(f'{file}.npy')
-    # model = get_model('CORnet-S_base', True)
     model = get_model('CORnet-S_full_epoch_43', True)
-    # model = get_resnet50(True)
     counter = 0
     plt.figure(figsize=(4, 25))
     gs = gridspec.GridSpec(20, 3, width_ratios=[1] * 3,
@@ -263,7 +248,6 @@ def compare_gabors(version='V1', file='gabor_params_basinhopping_bound_6_params'
                     index += 1
                 index += 3
 
-            # plt.tight_layout()
             plt.savefig(f'{file}.png')
             plt.show()
             return
@@ -292,13 +276,9 @@ def plot_parameter_distribution(name):
 
 def mutual_information():
     model = get_model('CORnet-S_base', True)
-    # model = get_model('CORnet-S_random', False)
-    # model = get_model('CORnet-S_train_second_kernel_conv_epoch_00', True)
-    counter = 0
     plt.figure(figsize=(4, 25))
     gs = gridspec.GridSpec(20, 3, width_ratios=[1] * 3,
                            wspace=0.5, hspace=0.5, top=0.95, bottom=0.05, left=0.1, right=0.95)
-    kernel_avgs = []
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d and 'V1' not in name:
             weights = m.weight.data.squeeze().numpy()
@@ -306,7 +286,6 @@ def mutual_information():
             kernels = weights.shape[0]
             for i in range(kernels):
                 for j in range(kernels):
-                    # print(f'Score kernel {i} and {j}')
                     scores[i, j] = feature_selection.mutual_info_regression(weights[i].flatten().reshape(-1, 1),
                                                                             weights[j].flatten())
             print(f'Kernel mean mutual information {np.mean(scores)}')
@@ -317,11 +296,9 @@ def mutual_information():
                 for i in range(kernels):
                     for j in range(channels):
                         for k in range(channels):
-                            # print(f'Score channel {k} and {j} in kernel {i}')
                             scores[i, j, k] = feature_selection.mutual_info_regression(
                                 weights[i, j].flatten().reshape(-1, 1), weights[i, k].flatten())
                 scores = np.mean(scores, axis=0)
-                # print(f'Channel mean mutual information {np.mean(scores)}')
                 plot_heatmap(scores, title=f'Channel mean mutual information {name}', col_labels='Channel',
                              row_labels='Channel')
 
@@ -449,7 +426,6 @@ def plot_bic(clf, X):
                 if not np.any(Y_ == i):
                     continue
                 plt.scatter(X[Y_ == i, l], X[Y_ == i, j], 1, color=color)
-                # plt.scatter(X[Y_ == i, 0], X[Y_ == i, 1], 1, color=color)
 
                 # Plot an ellipse to show the Gaussian component
                 angle = np.arctan2(w[0][j], w[0][l])
@@ -471,15 +447,11 @@ def analyze_param_dist(name, plot=False):
     params = np.load(f'{name}.npy')
     names = ['Frequency', 'Theta', 'Sigma X', 'Sigma Y', 'Offset', 'Center X', 'Center Y']
     variables = np.zeros((7, 192))
-    # for i in range(params.shape[2]-1):
-    #     param = params[:,:,i]
-    #     variables[i] = param.flatten()
     param = params[:, :, :-1]
     param = param.reshape(64, -1)
 
     pca_res = pca(param, n_components=21)
     principal_components = pca_res.transform(param)
-    # principal_components shape: (192,3)
     if plot:
         plot_2d(principal_components[:, 0], principal_components[:, 1], 'PC 1 & 2')
         plot_2d(principal_components[:, 1], principal_components[:, 2], 'PC 2 & 3')
@@ -490,7 +462,6 @@ def analyze_param_dist(name, plot=False):
                 'Principal components of gabor filter params')
     reg = fit_data(principal_components, variables.T)
     small_samples = multivariate_gaussian(principal_components.T, 10)
-    # small_samples shape (3, 10)
     full_params = reg.predict(small_samples.T)  # shape (10, 7)
     small_samples_hat = pca_res.transform(full_params)  # shape (10,3)
     full_params_hat = reg.predict(small_samples_hat)
@@ -542,21 +513,4 @@ def compare_two_values():
 
 
 if __name__ == '__main__':
-    # # hyperparam_gabor()
-    # fit_gabors('V2', name)
-    # name = 'gabors_tiago'
-    # rank_errors(name, 'gabors_sklearn')
-    # show_options()
-    # compare_gabors()
-    # name = 'gabors_V2.conv2'
-    # # name = 'gabors_tiago_scaled'
-    # np.random.seed(0)
-    # fit_gabors('V2', name)
-    # compare_gabors('V2', name)
-    # analyze_param_dist(name, True)
-    # gaussian_mixture(name)
-    # gaussian_mixture_channels(name)
-    # kernel_similarity()
-    # get_fist_layer_weights()
-    # mutual_information()
     fit_linear_regression()

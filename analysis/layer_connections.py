@@ -99,8 +99,6 @@ def impact_histogram(type='Sum impact', func=connections, random=True, upper_bou
         all = influences[i]
         all_rand = influences_rand[i]
         con = np.stack((all, all_rand), axis=0)
-        # plot_histogram(con.T, f'{type} distribution trained and random layer {layer[i]}', bins=20,
-        #                labels=['Trained', 'Random'], x_axis=type, range=[0.0, 1.5])
         plot_histogram(con.T, f'{type} distribution trained and random layer {layer[i]}', bins=7,
                        labels=['Trained', 'Random'], x_axis=type)
 
@@ -119,7 +117,6 @@ def impact_mean_std(type='Sum impact', func=connections, random=True, upper_boun
                    layer[0:(len(layer) - 1)],
                    rotate=True, scale_fix=(0.0, upper_bound))
     print(relative)
-    # plot_1_dim_data(relative, 'relative_to_mean')
 
 
 def kernel_weight_size(random=True):
@@ -131,17 +128,10 @@ def kernel_weight_size(random=True):
     label = []
     for i in range(1, 17):
         layer_sum.append(np.sum(np.abs(weights[i - 1])))
-        # layer_sum.append(np.sum(weights[i-1]))
         layer_sum_2.append(np.sum(np.abs(weights_trained[i - 1])))
-        # layer_sum_2.append(np.sum(weights_trained[i-1]))
         for j in range(sizes[i]):
             kernel_sum.append(np.sum(np.abs(kernel_weights[f'{layer[i]}_kernel{j}'])))
             label.append(f'{layer[i]}_kernel{j}')
-    version = 'untrained' if random else 'trained'
-    # plot_1_dim_data(layer_sum,name=f'Absolute sum of weights per layer {version}',
-    #                 x_name=f'Layer number', y_name='Sum')
-    # plot_1_dim_data(kernel_sum,name=f'Absolute sum of weights per kernel {version}' ,
-    #                 x_name=f'Kernel name', y_name='Sum of weights')
     plot_data_base({'trained': layer_sum, 'untrained': layer_sum_2}, f'Sum of weights per layer',
                    layer[0:(len(layer) - 1)], rotate=True, scale_fix=(-100, 82))
     plot_data_base({'trained': layer_sum, 'untrained': layer_sum_2}, f'Absolute sum of weights per layer',
@@ -198,9 +188,6 @@ def impact_heatmap():
             sum = np.sum(to_analyze.flatten())
             for k in range(to_analyze.shape[0]):
                 value = np.sum(to_analyze[k])
-                # previous_mean = previous_kernel[k]
-                # value = np.mean(to_analyze[k])
-                # data[j, k] = previous_mean * value
                 data[j, k] = value / sum
             impact.append(kernel_impact)
         plot_heatmap(data[0:limit, 0:limit], x_axis[0:limit], y_axis[0:limit],
@@ -254,16 +241,12 @@ def conv2_conv3():
         values['mean'].append(np.mean(i))
         values['std'].append(np.std(i))
         values['sum'].append(np.sum(i))
-    # scatter_plot(values['mean'], values['mean_prev'], x_label='Mean layer 7', y_label="Mean layer 6")
     scatter_plot(values['std_prev'], values['std'], x_label='Std layer 6', y_label="Std layer 7", scale_fix=[0, 0.07])
-    # scatter_plot(values['sum'], values['sum_prev'], x_label='Sum layer 7', y_label="Sum layer 6")
     z = np.polyfit(values['std_prev'], values['std'], 1)
     p = np.poly1d(z)
     res = p(values['std_prev'])
     scatter_plot(values['std_prev'], res, x_label='Std layer 6', y_label="Std layer 7", scale_fix=[0, 0.07])
     print(z)
-    # plot_data_base(values, 'Properties')
-    # plot_matrixImage(weights[6].squeeze().T, f'weights_{layer[6]}')
 
 
 def conv2_conv3_2():
@@ -282,7 +265,6 @@ def conv2_conv3_2():
     sum_corr = []
     for j in range(len(l)):
         i = l[j]
-        # scatter_plot(i,values['mean_prev'], x_label=f'Kernel {j} layer 7', y_label="Mean layer 6")
         std_corr.append(scatter_plot(i, values['std_prev'], x_label=f'Kernel {j} layer 7', y_label="Std layer 6"))
         sum_corr.append(scatter_plot(i, values['sum_prev'], x_label=f'Kernel {j} layer 7', y_label="Sum layer 6"))
     plot_data_base({'Sum/Avg': sum_corr, 'Std': std_corr}, 'Correlations')
@@ -292,44 +274,11 @@ def conv2():
     kernel_weights, layer, sizes, weights = get_layer_weigh_list(False)
     values = {}
     values['sum_prev'] = []
-    # values['mean_prev'] = []
-    # values['std_prev'] = []
     for j in range(1):
         i = weights[5][j]
         for ch in i:
-            # values['mean_prev'].append(np.mean(ch))
-            # values['std_prev'].append(np.std(ch))
             values['sum_prev'].append(np.sum(ch))
-    # values['sum'] = []
-    # values['mean'] = []
-    # values['std'] = []
-    # layer = weights[6].squeeze().T
-    # for j in range(512):
-    #     i = layer[j]
-    #     values['mean'].append(np.mean(i))
-    #     values['std'].append(np.std(i))
-    #     values['sum'].append(np.sum(i))
-    # scatter_plot(values['mean'],values['mean_prev'], x_label='Mean layer 7', y_label="Mean layer 6")
-    # scatter_plot(values['std'],values['std_prev'], x_label='Std layer 7', y_label="Std layer 6")
-    # scatter_plot(values['sum'],values['sum_prev'], x_label='Sum layer 7', y_label="Sum layer 6")
     plot_data_base(values, 'Properties')
-    # plot_matrixImage(weights[6].squeeze().T, f'weights_{layer[6]}' )
 
 if __name__ == '__main__':
     conv2_conv3()
-    # conv2()
-    # connections(plot=True)
-    # connections_mean(plot=True)
-    # impact_mean_std()
-    # impact_mean(False)
-    # impact_mean(True)
-    # impact_mean_std(func=connections, random=True, upper_bound=1.0)
-    # impact_mean_std(func=connections, random=False, upper_bound=1.0)
-    # impact_histogram(func=connections, random=False, upper_bound=1.0)
-    # impact_histogram(type='Mean impact', func=impact_mean, random=False, upper_bound=1.0)
-    # impact_mean_std('Mean impact', impact_mean, True)
-    # impact_mean_std('Mean impact', impact_mean, False)
-    # impact_heatmap()
-    # mean()
-    # kernel_weight_size(True)
-    # kernel_weight_size(False)

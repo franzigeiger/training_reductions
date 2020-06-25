@@ -1,6 +1,7 @@
 from itertools import chain
 
 import numpy as np
+from matplotlib.ticker import FuncFormatter
 
 from base_models.global_data import layer_best_2, random_scores, layers, convergence_epoch, benchmarks, \
     benchmarks_public, convergence_images
@@ -55,51 +56,48 @@ def plot_models_benchmarks(models, file_name, benchmarks, convergence=True, gs=N
 def plot_models_vs(models, file_name, convergence=False, epoch=0, imagenet=False, gs=None, ax=None, selection=[]):
     model_dict = {}
     conn = get_connection()
-
     names = []
     for name, mod in models.items():
         for model in mod.values():
-            #         if convergence:
-            #             epoch = convergence_epoch[model]
             names.append(model)
-    model_dict = load_error_bared(conn, names, benchmarks, convergence=convergence, epochs=[0])
+    full_all = load_error_bared(conn, ['CORnet-S_full'], benchmarks, True)
+    full = np.mean(full_all['CORnet-S_full'][selection])
+    model_dict = load_error_bared(conn, names, benchmarks, convergence=convergence, epochs=[epoch])
     labels = []
     data_set = {}
     err = {}
     # We replace the model id, a more human readable version
     for name, models in models.items():
         labels.append(name)
-        # data_set[name] = {}
         for model_name, model in models.items():
             if model_name not in data_set:
                 data_set[model_name] = []
                 err[model_name] = []
-            # if imagenet:
-            #     data_set[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][5]))
-            # else:
             if convergence:
-                data_set[model_name].append(np.mean(model_dict[model][selection]))
-                err[model_name].append(np.mean(model_dict[model][6:][selection]))
+                data_set[model_name].append((np.mean(model_dict[model][selection]) / full) * 100)
+                err[model_name].append((np.mean(model_dict[model][6:][selection]) / full) * 100)
             else:
-                data_set[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]))
-                err[model_name].append(np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][6:][selection]))
+                data_set[model_name].append((np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]) / full) * 100)
+                err[model_name].append((np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][6:][selection]) / full) * 100)
 
     # if convergence and 'CORnet-S_full' in convergence_epoch:
-    full_tr = load_error_bared(conn, [f'CORnet-S_full'], benchmarks)[
-        f'CORnet-S_full']
+    # full_tr = load_error_bared(conn, [f'CORnet-S_full'], benchmarks)[
+    #     f'CORnet-S_full']
     # else:
     #     full_tr = load_scores(conn, ['CORnet-S_full_epoch_0'], benchmarks)['CORnet-S_full_epoch_06']
     # print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
     # if imagenet:
     #     line =np.mean(full_tr[5])
     # else:
-    line = np.mean(full_tr[selection])
+    line = full
+    print(data_set)
     if len(selection) == 3:
-        y = r"\textbf{Brain Predictivity} "
+        y = r"\textbf{Brain Predictivity} [\% of standard training]"
     else:
-        y = r"\textbf{Brain Predictivity}"
+        y = r"\textbf{Brain Predictivity} [\% of standard training]"
     pals = blue_palette
-    plot_bar_benchmarks(data_set, labels, '', y, file_name, yerr=err, line=line, label=True, grey=False, gs=gs, ax=ax)
+    plot_bar_benchmarks(data_set, labels, '', y, file_name, yerr=err, percent=True, label=True, grey=False, gs=gs,
+                        ax=ax)
 
 
 def plot_model_avg_benchmarks(models, file_name):
@@ -141,22 +139,14 @@ def plot_models_benchmark_vs_public(models, file_name):
 
 
 def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selection=[2, 3, 4], ax=None):
-    # TODO: Add error bars
-    model_dict = {}
     conn = get_connection()
     if epochs is None:
         epochs = (0, 5, 10, 15, 20)
 
-    names = []
-    # for epoch in epochs:
-    #     if epoch % 1 == 0:
-    #         names.append(f'{model}_epoch_{epoch:02d}')
-    #     else:
-    #         names.append(f'{model}_epoch_{epoch:.1f}')
     model_dict = load_error_bared(conn, [model, 'CORnet-S_full'], benchmarks, epochs=epochs, convergence=True)
     full = model_dict['CORnet-S_full']
 
-    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Mean']
+    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Brain Predictivity']
     data = {}
     for i in range(len(benchmarks) - 1):
         if i in selection:
@@ -168,6 +158,7 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
                     frac = (model_dict[f'{model}_epoch_{epoch:.1f}'][i] / full[i]) * 100
                 data[benchmarks_labels[i]].append(frac)
         end = (np.mean(model_dict[model][i]) / np.mean(full[i])) * 100
+        print(f'MOdel {model} has score {np.mean(model_dict[model][i])}')
         data[benchmarks_labels[i]].append(end)
     data[benchmarks_labels[-1]] = []
     for epoch in epochs:
@@ -178,7 +169,7 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
         data[benchmarks_labels[-1]].append(frac)
     end = (np.mean(model_dict[model][selection]) / np.mean(full[selection])) * 100
     data[benchmarks_labels[-1]].append(end)
-    plot_data_base(data, f'', r'\textbf{Epoch}', r'\textbf{Score} [\% of standard training]',
+    plot_data_base(data, f'', r'\textbf{Training Epochs}', r'\textbf{Score} [\% of standard training]',
                    epochs + [43],
                    x_ticks=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
                        43],
@@ -189,7 +180,6 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
 
 
 def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None):
-    model_dict = {}
     conn = get_connection()
     if epochs is None:
         epochs = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6)
@@ -297,7 +287,6 @@ def score_over_layers(models, random, labels, bench, convergence=True, ax=None):
     if bench is not None:
         benchmarks = bench
     conn = get_connection()
-    names = []
     if convergence and 'CORnet-S_full' in convergence_epoch:
         full_tr = load_scores(conn, [f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}'], benchmarks)[
             f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}']
@@ -377,8 +366,6 @@ def score_over_layers_avg(all_models, random, all_labels=[], imagenet=False, con
             full_err = (np.mean(model_dict[model][6:][selection]) / full) * 100
             err[name].append(full_err)
         x_ticks[name] = layers
-        # short = name.split('(')[1][:-1]
-        # labels[name] = [f'{value.split(".")[0]}_{short}' for value in models.values()]
         labels[name] = [name]
 
     if imagenet:
@@ -439,14 +426,11 @@ def image_scores_single(model, imgs, selection=[], ax=None):
     for img in imgs:
         name = f'{model}_img{img}'
         names.append(name)
-    # if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
-    #     model = f'{model}_seed42'
-    # names.append(f'{model}_epoch_{convergence_epoch[model]}')
     names.append('CORnet-S_full')
-    # model_dict = load_scores(conn, names, benchmarks)
+    names.append(model)
     model_dict = load_error_bared(conn, names, benchmarks, convergence=True)
-    full = model_dict[model]
-    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Mean']
+    full = model_dict['CORnet-S_full']
+    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Brain Predictivity']
     data = {}
     for i in range(len(benchmarks) - 1):
         if i in selection:
@@ -465,7 +449,7 @@ def image_scores_single(model, imgs, selection=[], ax=None):
     frac = (np.mean(model_dict[model][selection]) / np.mean(full[selection])) * 100
     data[benchmarks_labels[-1]].append(frac)
     imgs.append(1280000)
-    plot_data_base(data, '', r'\textbf{Images} [Million]', r'\textbf{Score} [\% of standard training]', x_values=imgs,
+    plot_data_base(data, '', r'\textbf{Labeled Images}', r'\textbf{Score} [\% of standard training]', x_values=imgs,
                    x_ticks=[100, 1000, 10000, 100000, 1280000], x_labels=['100', '1k', '10k', '100k', '1.3M'],
                    million_base=True, palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]], alpha=0.5,
                    use_xticks=True,
@@ -476,48 +460,34 @@ def image_epoch_heatmap(model, imgs, epochs, selection=[], title=r'\textbf{Stand
                         ax=None):
     names = []
     conn = get_connection()
-    # delta= 'CORnet-S_full'
-    # if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
-    #     model1 = model
-    # else:
-    #     model1 = model
     for img in imgs:
         name = f'{model}_img{img}'
-        # for epoch in epochs:
-        #     names.append(f'{name}_epoch_{epoch:02d}')
         names.append(name)
     names.append(model)
-    # for epoch in epochs:
-    #     names.append(f'{model}_epoch_{epoch:02d}')
     names.append('CORnet-S_full')
     model_dict = load_error_bared(conn, names, epochs=epochs, benchmarks=benchmarks)
     full = np.mean(model_dict['CORnet-S_full'][selection])
     matrix = np.zeros([len(imgs) + 1, len(epochs) + 1])
-    data = {}
+
     for i in range(len(imgs)):
         for j in range(len(epochs)):
             name1 = f'{model}_img{imgs[i]}_epoch_{epochs[j]:02d}'
             frac = (np.mean(model_dict[name1][selection]) / full)
             matrix[i, j] = frac
         name = f'{model}_img{imgs[i]}'
-        # name = f'{name}_epoch_{convergence_images[name]:02d}'
         frac = (np.mean(model_dict[name][selection]) / full)
         matrix[i, -1] = frac
-
-    # names.append(f'{model1}_epoch_{convergence_epoch[model1]:02d}')
     for j in range(len(epochs)):
         name1 = f'{model}_epoch_{epochs[j]:02d}'
         frac = (np.mean(model_dict[name1][selection]) / full)
         matrix[-1, j] = frac
-    # name = f'{model}_epoch_{convergence_epoch[model]:02d}'
     frac = (np.mean(model_dict[model][selection]) / full)
     matrix[-1, -1] = frac
-    plot_heatmap(matrix, r'\textbf{Epochs}', r'\textbf{Images}', title=title, annot=True, ax=ax,
-                 cbar=False, cmap='YlOrRd', percent=False,
+    mt = lambda x, pos: '{:.0%}'.format(x)
+    plot_heatmap(matrix, r'\textbf{Training Epochs}', r'\textbf{Labeled Images}', title=title, annot=True, ax=ax,
+                 cbar=False, cmap='RdYlGn', percent=True, square=True,
                  fmt='.0%', vmin=0, vmax=1, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'], alpha=0.8)
-    # plot_data_base(data, f'CORnet-S Brain-Score benchmarks', imgs, 'Epoch', r'Score [% of standard training]',
-    #                x_ticks=imgs, percent=True,log=True, annotate=True, legend=False, annotate_pos=3, ax=ax)
-
+    for t in ax.texts: t.set_text(t.get_text() + " \%")
 
 def delta_heatmap(model1, model2, imgs, epochs, selection=[], title='', ax=None):
     names = []
@@ -558,9 +528,11 @@ def delta_heatmap(model1, model2, imgs, epochs, selection=[], title='', ax=None)
     name = f'CORnet-S_cluster2_v2_IT_trconv3_bi_epoch_{convergence_epoch["CORnet-S_cluster2_v2_IT_trconv3_bi"]:02d}'
     name2 = f'{model2}_epoch_{convergence_epoch[model2]:02d}'
     matrix[-1, -1] = calc_dif(name, name2, model_dict, full, selection)
-    plot_heatmap(matrix, r'\textbf{Epochs}', r'\textbf{Images}',
-                 title=title, annot=True, ax=ax,
-                 cbar=False, cmap='RdYlGn', percent=False, alpha=0.6,
+    mt = lambda x, pos: '{:.0%}\%'.format(x)
+    plot_heatmap(matrix, r'\textbf{Training Epochs}', r'\textbf{Labeled Images}',
+                 title=title, annot=True, ax=ax, square=True,
+                 cbar=True, cmap='RdYlGn', percent=False, alpha=0.6,
+                 cbar_kws={'format': FuncFormatter(mt), 'ticks': [-0.30, 0, 0.30]},
                  fmt='.0%', vmin=-0.30, vmax=0.30, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'])
 
 
@@ -600,10 +572,6 @@ def score_layer_depth(values, brain=True):
         res = model_dict[f'{model}_epoch_05']
         if brain:
             results.append(np.mean(res[2:4]))
-            # if index < 7:
-            #     results.append(np.mean(res[0:1]))
-            # else:
-            #     results.append(np.mean(res[0:2]))
         else:
             results.append(res[5])
     rand_names = []
@@ -617,10 +585,6 @@ def score_layer_depth(values, brain=True):
 
         if brain:
             results.append(np.mean(res[0:4]))
-            # if index < 7:
-            #     results.append(np.mean(res[0:1]))
-            # else:
-            #     results.append(np.mean(res[0:2]))
         else:
             results.append(res[5])
         rand_names.append(f'Random {l}')
@@ -630,7 +594,6 @@ def score_layer_depth(values, brain=True):
 
 
 models = {
-    # Batchnrom corrected
     # Layer 1
     # 'CORnet-S_train_V2': 'V1 random train after',
     # 'CORnet-S_train_gabor_multi_dist' : 'Gabor multidimensional distribution ',
@@ -638,14 +601,6 @@ models = {
     # 'CORnet-S_train_gabor_dist' : 'Gabor per parameter distribution',
 
     # #  Layer 1 & 2
-
-    # 'CORnet-S_train_gabor_dist_weight_dist_channel' : 'V1 base',
-    # 'CORnet-S_train_gabor_dist_weight_dist_channel_ra_BF' : 'V1 no batchnorm',
-    # 'CORnet-S_train_gabor_dist_weight_dist_channel_bi_BF' : 'V1 batchnorm',
-    # 'CORnet-S_train_gabor_dist_both_kernel' : "V1 gabor ",
-    # 'CORnet-S_train_gabor_dist_both_kernel_ra_BF' : "V1 gabor no batchnorm",
-    # 'CORnet-S_train_gabor_dist_both_kernel_bi_BF' : "V1 gabor batchnorm", # best
-
     # 'CORnet-S_train_gabor_dist_both_kernel_bi_BF': 'V1 gabor',
     # 'CORnet-S_train_wmk0_wmc1_bi': 'V1 kernel dist',
     # 'CORnet-S_train_wmc0_wmc1_bi': 'V1 channel dist',
@@ -656,13 +611,6 @@ models = {
     # 'CORnet-S_train_gmk1_cl2_bi': 'Cluster l2',
 
     # Layer 3
-    # 'CORnet-S_train_gmk1_wmc2_ln3' : "V2.conv1 Layer norm dist",
-    # 'CORnet-S_train_gmk1_wmc2_ln3_bi_BF' : "V2.conv1 Layer bn",
-    # 'CORnet-S_train_gmk1_wmc2_ln3_ra_BF' : "V2.conv1 Layer no bn",
-    # 'CORnet-S_train_gmk1_wmc2_kn3' : "V2.conv1 Kernel norm dist",
-    # 'CORnet-S_train_gmk1_wmc2_kn3_bi_BF' : "V2.conv1 Kernel bn",
-    # 'CORnet-S_train_gmk1_wmc2_kn3_ra_BF' : "V2.conv1 Kernel no bn",
-    #
     # 'CORnet-S_train_V4': 'Random init(whole V2)',
     # 'CORnet-S_train_gmk1_gmk2_ln3_bi': 'V2.input layer dist batchnorm',  # best
     # 'CORnet-S_train_gmk1_gmk2_ln3_ra' : 'V2.input layer dist no batchnorm',
@@ -711,11 +659,11 @@ models = {
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_prev6' : 'Previous std',
 
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_beta6' : 'Beta dist',
-    # # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_uniform6' : 'Uniform dist',
-    # # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_poisson6' : 'Poisson dist',
+    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_uniform6' : 'Uniform dist',
+    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_poisson6' : 'Poisson dist',
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_bi': 'Layer 6 kernel normal',
-    # # 'CORnet-S_train_gmk1_gmk2_kn3_mi4_kn5_kn6' : 'Mutual information skip layer',
-    # # 'CORnet-S_train_gmk1_gmk2_uniform3-7' : 'Uniform dist layer 3-7',
+    # 'CORnet-S_train_gmk1_gmk2_kn3_mi4_kn5_kn6' : 'Mutual information skip layer',
+    # 'CORnet-S_train_gmk1_gmk2_uniform3-7' : 'Uniform dist layer 3-7',
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_ev6' : 'Eigenvalue layer 6',
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_evd6' : 'Eigenvalue dist layer 6',
     # 'CORnet-S_train_evd1_evd2_kn3_kn4_kn5_evd6_bi' : 'Eigenvalue dist first layers',
@@ -723,20 +671,9 @@ models = {
     # 'CORnet-S_train_gmk1_gmk2_wmk3_5_wmc6' : 'All kernel gaussian',
     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_best6' : 'Layer 6 kn',
     # 'CORnet-S_train_gmk1_gmk2_kn3_mi4_kn5_bd6_bi': 'Best dist + mi',
-    # 'CORnet-S_train_gmk1_gmk2_kn3_mi4_kn5_bd6_bi' : 'best dist other 6',#*best
-
-    # 'CORnet-S_train_gmk1_gmk2_kn3_mi4_kn5_bd6_bi' : 'Layer 6 ',#*best
-    # 'CORnet-S_train_gmk1_gmk2_kn3_mi4_kn5_bd6_kn7_bi' : 'Add layer 7 kn', #*best 0.4676362894628521
-    # 'CORnet-S_train_gmk1_gmk2_bd3_6_bi' : 'Layer 6 best dist' ,
-    # 'CORnet-S_train_gmk1_gmk2_bd3_7_bi' : 'Add layer 7 best dist',
 
     # layer 7
-    # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_kn7_bi' : 'V2.conv3 new',
     # 'CORnet-S_train_V4': 'Random init V2',
-
-    # 'CORnet-S_train_gmk1_gmk2_ln3_kn4_ln5_wmk6_kn7_bi' : 'Layer 7 bn',
-    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wmk6_kn7_bi' : 'Layer 7 wk bn',
-    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7_bi' : 'Layer 7 kernel normal',
 
     # 'CORnet-S_brain_kn8_kn9_kn10_wmk11_kn12_bi' : 'Layer 12  V1 bn',
     # 'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_bi' : 'Layer 12 V2  bn',
@@ -751,23 +688,19 @@ models = {
     # 'CORnet-S_train_gmk1_gmk2_kn3_mi4_kn5_wmc6_kn7_bi' : 'Layer 7 brain mutual',
     # 'CORnet-S_train_gmk1_gmk2_bd3_bd4_bd5_wmc6_bd7_bi' : 'Layer 7 brain best dist',
     # 'CORnet-S_train_gmk1_gmk2_bd3_mi4_bd5_wmc6_bd7_bi' : 'Layer 7 brain mi bd',
-    # 'CORnet-S_train_gmk1_cl2_bd3_mi4_bd5_wcl6_bd7_bi' : 'LAyer 7 cluster',
+    # 'CORnet-S_train_gmk1_cl2_bd3_mi4_bd5_wcl6_bd7_bi' : 'Layer 7 cluster',
 
     # # Layer 8 upwards
     # 'CORnet-S_train_IT_seed_0' : 'Random init V4',
-    # # 'CORnet-S_brain2_kn8_kn9_kn10_kn11_bi' : 'V4.conv2',
-    # # 'CORnet-S_brain2_kn8_kn9_kn10_kn11_kn12_bi' : 'V4.conv3',
-    # # 'CORnet-S_brain2_knall_IT_bi' : 'IT.conv3',
-    # # 'CORnet-S_brain2_t7_kn8_kn9_kn10_kn11_bi' : 'V4.conv2',
-    # # 'CORnet-S_train_gmk1_gmk2_kn3_ln4_ln5_wmc6_bi' : 'V2.conv2 gabor',
-    # #
+    # 'CORnet-S_brain2_knall_IT_bi' : 'IT.conv3',
+    # 'CORnet-S_train_gmk1_gmk2_kn3_ln4_ln5_wmc6_bi' : 'V2.conv2 gabor',
     # 'CORnet-S_brain3_kn8_kn9_kn10_kn11_kn12_tra_bi' : 'V4.conv3 train 1',
     # 'CORnet-S_brain_kn8_kn9_kn10_wmk11_kn12_tr_bi' : 'V4.conv3 train2',
     # 'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3 train3',
     # 'CORnet-S_brain4_kn8_kn9_kn10_kn11_kn12_tra_bi' : 'V4.conv3 train4',
     # 'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi'
     # 'CORnet-S_brain_kn8_kn9_kn10_kn11_kn12_tr_bi' : 'V4.conv3 train4',
-    #     'CORnet-S_brain4_kn8_kn9_kn10_kn11_kn12_tra_bi' : 'V4.conv3 train 2',
+    # 'CORnet-S_brain4_kn8_kn9_kn10_kn11_kn12_tra_bi' : 'V4.conv3 train 2',
     # 'CORnet-S_brain3_kn8_kn9_kn10_kn11_kn12_bi' : 'V4.conv3 ',
     # 'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi' : 'V4.conv3 train 3',
     # 'CORnet-S_best_bd_mi_V4_trconv3_bi': 'V4.conv3',
@@ -778,19 +711,19 @@ models = {
     # 'CORnet-S_brainmutual_V4_trconv3_bi': 'V4.conv3 brainmutual',
     # 'CORnet-S_brainboth_V4_trconv3_bi' : 'V4.conv3 brainboth', #*best 0.4547913626969223
     #
-    'CORnet-S_train_random': 'Random init IT',
-    # # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2 new',
+    # 'CORnet-S_train_random': 'Random init IT',
+    # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2 new',
     # 'CORnet-S_brain3_t7_t12_knall_IT_bi': 'IT.conv2, conv3 train',
     # 'CORnet-S_brain_t7_t12_knk15_IT_bi': 'IT.conv2, conv3 train1',
-    # # 'CORnet-S_brain3_knall_IT_bi': 'IT.conv3 no train',
+    # 'CORnet-S_brain3_knall_IT_bi': 'IT.conv3 no train',
     # 'CORnet-S_brain3_knall_IT.conv2_bi': 'IT.conv2 no train',
     # 'CORnet-S_brain_t7_t12_wmc15_IT_bi' : 'Weight mixture channel',
     # 'CORnet-S_brain3_knall_IT_bi_full': 'IT.conv3 full train',
     # 'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3 MG',  # 0.4120501992349898
-    # # 'CORnet-S_mixture_all_trconv3_bi': 'IT.conv3 mixture',
-    # # 'CORnet-S_mix_bd_evd_mi_IT_trconv3_bi': 'IT.conv3 mix',
+    # 'CORnet-S_mixture_all_trconv3_bi': 'IT.conv3 mixture',
+    # 'CORnet-S_mix_bd_evd_mi_IT_trconv3_bi': 'IT.conv3 mix',
     # 'CORnet-S_best_bd_mi_IT_trconv3_bi' : 'IT best conv3',
-    # # 'CORnet-S_dist_allbd_IT_trconv3_bi': 'IT conv3 distr',
+    # 'CORnet-S_dist_allbd_IT_trconv3_bi': 'IT conv3 distr',
     # 'CORnet-S_mix2_trconv3_bi': 'IT conv3 mix2',
     # 'CORnet-S_brainbest_IT_trconv3_bi': 'IT.conv3 Best distribution',  # 0.4079878622341095
     # 'CORnet-S_brainboth_IT_trconv3_bi': 'IT.conv3 brainboth',  # 0.4067269833226943
@@ -806,100 +739,18 @@ models = {
     # 'CORnet-S_cluster8_v2_IT_trconv3_bi': 'IT.conv3 cluster 8',
     # 'CORnet-S_cluster_v2_IT_trconv3_bi_seed42': 'IT.conv3 cluster',  # 0.4081663359539218
     # 'CORnet-S_train_conv3_bi' : 'Train only conv3s',
-    # 'CORnet-S_cluster2_v2_IT_bi_seed42' : '',
     # 'CORnet-S_brain_wmc15_IT_bi' : 'Init no train',
-    'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42': 'Gabor + Cluster',
+    # 'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42': 'Gabor + Cluster',
     # 'CORnet-S_cluster2_v2_IT_trconv3_bi' : 'Cluster v2 IT',
-    'CORnet-S_cluster10_IT_trconv3_bi': 'All cluster',
-    # 'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42' : 'Cluster v2',
-    # 'CORnet-S_cluster10_V4_trconv3_bi' : 'All cluster',
-    'CORnet-S_cluster11_IT_trconv3_bi': 'Only gabors + KN',
-    # full train:
-    # 'CORnet-S_train_V4': 'V2 random train after',
-    # # 'CORnet-S_train_gmk1_gmk2_kn3_ln4_ln5_wmc6_bi_full':'V2.conv2 train',
-    # # 'CORnet-S_train_gabor_dist_both_kernel_bi_BF': 'V1 init train after',
-    # # 'CORnet-S_train_gabor_dist_both_kernel_bi_full':'V1 init train full',
-    # 'CORnet-S_train_gmk1_gmk2_ln3_kn4_ln5_bi' : 'V2.conv1 init train after',
-    # 'CORnet-S_train_gmk1_gmk2_ln3_kn4_ln5_bi_full':'V2.conv1 train full',
-    # 'CORnet-S_train_gmk1_gmk2_kn3_ln4_ln5_wmc6_bi' : 'V2.conv2',
-
-    # epoch 43
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_full' : 'Imagenet optimized until V2.conv2',
-    # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full' : 'Brain benchmark optimized until V2.conv2'
-
-    # Batchnorm corrected
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5': 'L5 no batchnorm',
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_BF': 'L5 batchnorm',
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_v2': 'L6 no batchnorm',
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_v2_BF': 'L6 batchnorm',
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5': 'L5.2 no batchnorm',
-    # 'CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_BF': 'L5.2 batchnorm',
+    # 'CORnet-S_cluster10_IT_trconv3_bi': 'All cluster',
+    # 'CORnet-S_cluster11_IT_trconv3_bi': 'Only gabors + KN',
 
     'CORnet-S_full': 'Standard train',
 }
 
 if __name__ == '__main__':
-    # plot_benchmarks_over_epochs('CORnet-S_full',
-    #                             (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 7, 10, 15, 20, 43))
-    # plot_figure_2()
     plot_models_benchmarks(models, 'first_generation', benchmarks)
-    # plot_model_avg_benchmarks(models, 'first_generation')
-    # image_scores('CORnet-S_brainboth2_IT_trconv3_bi', 'CORnet-S_full',[100,1000,10000,100000,500000], brain=True)
-    # image_scores('CORnet-S_cluster2_v2_IT_trconv3_bi', 'CORnet-S_full', [100, 1000, 10000, 100000, 500000], brain=True)
-    # image_scores('CORnet-S_cluster2_v2_IT_trconv3_bi', 'CORnet-S_full', [100, 1000, 10000, 100000, 500000], brain=False)
-    # plot_single_benchmarks({
-    #                         # 'CORnet-S_train_gabor_dist_both_kernel_bi_BF': 'V1',
-    #                         # 'CORnet-S_train_gabor_dist_both_kernel_bi_full': 'V1 train',
-    #                         'CORnet-S_train_gmk1_gmk2_ln3_kn4_ln5_bi':'V2.conv1 init train after',
-    #                         'CORnet-S_train_gmk1_gmk2_ln3_kn4_ln5_bi_full':'V2.conv1 init train full',
-    #                         # 'CORnet-S_train_gmk1_gmk2_kn3_ln4_ln5_wmc6_bi_full': 'V2.conv2 train',
-    #                         'CORnet-S_full': 'Standard train',
-    #                         # 'CORnet-S_train_gmk1_gmk2_kn3_ln4_ln5_wmc6_bi': 'V2.conv2',
-    #                         }
-    #                        , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
-
-    # plot_single_benchmarks({'CORnet-S_train_gabor_dist_both_kernel_bi_BF': 'V1',
-    #                         # 'CORnet-S_train_wmk0_wmc1_bi':'V1 kernel dist',
-    #                        # 'CORnet-S_train_wmc0_wmc1_bi': 'V1 channel dist',
-    #                         'CORnet-S_train_kn1_kn2_bi_v2':'V1 kernel normal',
-    #                         # 'CORnet-S_train_kn1_kn2_kn3_ln4_ln5_wmc6_bi' : 'V2.conv2',
-    #                         'CORnet-S_full': 'Full',
-    #                           }
-    #                        , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], run_mean=False)
-    # plot_single_benchmarks({'CORnet-S_train_gabor_dist_both_kernel_bi_BF': 'V1',
-    #                         'CORnet-S_train_gmk1_gmk2_kn3_ln4_ln5_wmc6_bi' : 'V2.conv2',
-    #                         # 'CORnet-S_train_wmk1_wmk2_kn3_ln4_ln5_wmc6_bi':'V2.conv2 kernel dist',
-    #                         # 'CORnet-S_train_wmc1_wmc2_kn3_ln4_ln5_wmc6_bi': 'V2.conv2 channel dist',
-    #                         'CORnet-S_train_kn1_kn2_kn3_ln4_ln5_wmc6_bi':'V2.conv2 new mixture channel',
-    #                         'CORnet-S_full': 'Full',
-    #                         }
-    #                        , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
-    # plot_first_epochs({  # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi' : 'V2.conv2',
-    #     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': 'V2.conv3_trained',
-    #     # 'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained',
-    #     # 'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3_trained',
-    #     'CORnet-S_cluster2_v2_IT_trconv3_bi': 'IT.conv3_special',
-    #     'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42': 'V4.conv3_special',
-    #     'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42': 'V2.conv3_special',
-    #     # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2',
-    #     'CORnet-S_full': 'Standard training',
-    # }
-    #     , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6, 10, 20], convergence=True,
-    #     brain=True)
-    # plot_first_epochs({  # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi' : 'V2.conv2',
-    #     # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': 'V2.conv3_trained',
-    #     'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained',
-    #     'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3_trained',
-    #     # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2',
-    #     'CORnet-S_full': 'Standard training',
-    # }
-    #     , epochs=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 4, 5, 6], convergence=True, brain=False)
-    plot_first_epochs({  # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi' : 'V2.conv2',
-        # 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': 'V2.conv3_trained',
-        # 'CORnet-S_brain_t7_t12_wmc15_IT_bi': 'IT.conv3_trained gaussian mixture',
-        # 'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12_tr_bi': 'V4.conv3_trained',
-        # 'CORnet-S_cluster_IT_trconv3_bi' : 'IT.conv3_trained cluster',
-        # 'CORnet-S_brain2_t7_t12_knall_IT_bi_v2' : 'IT.conv2',
+    plot_first_epochs({
         'CORnet-S_full': 'Standard training',
         'CORnet-S_full_img500000': 'Standard training 50% imgs',
         'CORnet-S_cluster2_v2_IT_trconv3_bi': 'AG+CT 100% Imgs',
@@ -908,23 +759,3 @@ if __name__ == '__main__':
         'CORnet-S_train_conv3_bi': 'KN+CT 100% Imgs',
     }
         , epochs=[0, 1, 2, 3, 6, 20], convergence=True, brain=True)
-
-    # plot_single_benchmarks(['CORnet-S_full', 'CORnet-S_train_gabor_dist_both_kernel'], brain=False, compare_batchfix=True)
-    # # plot_single_benchmarks(best_models_brain, brain=False)
-    # score_over_layers(layer_best, layer_random)
-    # score_over_layers_avg(best_models_brain_avg_all, random_scores)
-    # score_over_layers_avg(best_models_brain_avg_all, random_scores, imagenet=True)
-    # score_over_layers_avg(best_special_brain, random_scores)
-
-    # score_over_layers_avg(best_special_brain, random_scores, imagenet=True, convergence=False)
-    # [, 'Consecutive Training']
-    # plot_models_vs({'Mixture gaussian' : { 'Selective':'CORnet-S_brain_t7_t12_wmc15_IT_bi','Consecutive':'CORnet-S_brain_wmc15_IT_bi'},
-    #                 'Cluster' : { 'Selective':'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42', 'Consecutive':'CORnet-S_cluster2_v2_IT_bi_seed42'},
-    #                 'Kernel normal' : { 'Selective':'CORnet-S_brain3_t7_t12_knall_IT_bi', 'Consecutive':'CORnet-S_brain3_knall_IT_bi'},
-    #                 'No gabor prior' : { 'Selective':'CORnet-S_brain2_t7_t12_knall_IT_bi_v2', 'Consecutive':'CORnet-S_brain2_knall_IT_bi_v2'},
-    #                 }, 'comparison', convergence=False)
-    # plot_models_vs({'Mixture gaussian' : { 'Selective':'CORnet-S_brain_t7_t12_wmc15_IT_bi','Consecutive':'CORnet-S_brain_wmc15_IT_bi'},
-    #                 'Cluster' : { 'Selective':'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42', 'Consecutive':'CORnet-S_cluster2_v2_IT_bi_seed42'},
-    #                 'Kernel normal' : { 'Selective':'CORnet-S_brain3_t7_t12_knall_IT_bi', 'Consecutive':'CORnet-S_brain3_knall_IT_bi'},
-    #                 'No gabor prior' : { 'Selective':'CORnet-S_brain2_t7_t12_knall_IT_bi_v2', 'Consecutive':'CORnet-S_brain2_knall_IT_bi_v2'},
-    #                 }, 'comparison', convergence=False, imagenet=True)

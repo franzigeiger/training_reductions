@@ -103,7 +103,7 @@ def train(identifier,
 
     start_epoch = 0
     epochs = 1
-    stored = [w for w in os.listdir(output_path) if f'{identifier}_epoch_00.pth.tar' in w]
+    stored = [w for w in os.listdir(output_path) if f'{identifier}_epoch_000.pth.tar' in w]
     if len(stored) > 0:
         restore_path = output_path + f'{identifier}_epoch_00.pth.tar'
         ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))

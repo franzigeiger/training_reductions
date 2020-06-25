@@ -303,13 +303,13 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
     if pal is None:
         pal = blue_palette
     plot_data_double(data2, data, '', err=err2, err2=err, x_name=r'\textbf{Number of trained parameters} [Million]',
-                     x_labels=None, ylim=ylim,
+                     x_labels=None, scale_fix=ylim,
                      y_name=y, x_ticks=params, pal=pal, percent=percent,
                      x_ticks_2=params2, data_labels=labels, ax=ax, million=True, log=log, annotate_pos=0)
 
 
 def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=True, make_trillions=False,
-                      with_weights=True):
+                      with_weights=True, legend=False, log=True):
     names = []
     conn = get_connection()
     params = {}
@@ -350,16 +350,15 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
             if 'img' not in model:
                 base_model = model.partition('_epoch')[0]
                 epoch = float(model.partition('_epoch_')[2])
-                data[models[base_model]].append(frac)
-                score = (1280000 * epoch * (parameter[base_model] / 1000000))  #
-                print(f'Model {base_model} in epoch {epoch} with full imagenet set '
-                      f'leads to score {score} with brain score {frac}')
-                params[models[base_model]].append(score)
+                # data[models[base_model]].append(frac)
+                score = (1280000 * epoch * (parameter[base_model]))  #
+                img = 1280000
             else:
                 base_model = model.partition('_img')[0]
                 imgs = int(model.partition('_img')[2].partition('_')[0])
                 epoch = float(model.partition('_img')[2].partition('_epoch_')[2])
-                score = (imgs * epoch * (parameter[base_model] / 1000000))  # (parameter[base_model] / 1000000) *
+                score = (imgs * epoch * (parameter[base_model]))  # (parameter[base_model] / 1000000) *
+            if not (with_weights and score != 0 and score < pow(10, 11)):
                 data[models[base_model]].append(frac)
                 params[models[base_model]].append(score)
                 print(f'Model {base_model} in epoch {epoch} with {imgs} images '
@@ -369,45 +368,51 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
     if len(selection) == 3:
         y = r"\textbf{Brain Predictivity}"
     else:
-        y = r"\textbf{Brain Predictivity}[\% of standard training]"  # [\% of standard training]
+        y = r"\textbf{Brain Predictivity} [\% of standard training]"  # [\% of standard training]
     for i, ax in enumerate(axes):
-        zero_indices = {key: np.array([tick == 0 for tick in xticks]) for key, xticks in params.items()}
-        if i == 0:  # axis plotting the x=0 value
-            ax_data = {key: np.array(values)[zero_indices[key]].tolist() for key, values in data.items()}
-            xticks = {key: np.array(values)[zero_indices[key]].tolist() for key, values in params.items()}
-            xticklabels = np.array([0])
+        if len(axes) == 1:
+            ax_data = data
+            xticks = params
             ylabel = y
-        else:  # axis plotting everything x>0
-            ax_data = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in data.items()}
-            xticks = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in params.items()}
-            # when make_trillions==True, this should actually be *10^12, but due to downstream hacks we leave it at ^6
             xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * pow(10, 6)
-            ax.spines['left'].set_visible(False)
-            ylabel = ''
-        kwargs = dict(trillion=True) if make_trillions else dict(trillion=True, million_base=True)
+        else:
+            zero_indices = {key: np.array([tick == 0 for tick in xticks]) for key, xticks in params.items()}
+            if i == 0:  # axis plotting the x=0 value
+                ax_data = {key: np.array(values)[zero_indices[key]].tolist() for key, values in data.items()}
+                xticks = {key: np.array(values)[zero_indices[key]].tolist() for key, values in params.items()}
+                xticklabels = np.array([0])
+                ylabel = y
+            else:  # axis plotting everything x>0
+                ax_data = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in data.items()}
+                xticks = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in params.items()}
+                # when make_trillions==True, this should actually be *10^12, but due to downstream hacks we leave it at ^6
+                xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * pow(10, 6)
+                ax.spines['left'].set_visible(False)
+                ylabel = ''
+        # kwargs = dict(trillion=True) if make_trillions else dict(trillion=True, million_base=True)
         plot_data_double(ax_data, {}, '', x_name='',
                          x_labels=xticklabels, scatter=True, percent=percent,
-                         alpha=0.8, ylim=[0, 100],
+                         alpha=0.8, scale_fix=[0, 105], legend=legend,
                          y_name=ylabel, x_ticks=xticks,
-                         pal=['#2CB8B8', '#186363', '#ABB2B9', '#ABB2B9', '#ABB2B9', '#259C9C', '#36E3E3', '#9AC3C3'],
-                         log=True,
-                         x_ticks_2={}, ax=ax, **kwargs,
+                         pal=['#2CB8B8', '#186363', '#818A94', '#818A94', '#818A94', '#2B3D3C', '#36E3E3', '#9AC3C3'],
+                         log=log,
+                         x_ticks_2={}, ax=ax, million_base=True,
                          annotate_pos=0)
-
-        # adopted from https://stackoverflow.com/a/32186074/2225200
-        d = .015  # how big to make the diagonal lines in axes coordinates
-        kwargs = dict(transform=ax.transAxes, color='#dedede', clip_on=False)
-        if i == 0:
-            m = 1 / .05
-            ax.plot((1 - d * m, 1 + d * m), (-d, +d), **kwargs)
-        else:
-            kwargs.update(transform=ax.transAxes)
-            ax.plot((-d, +d), (-d, +d), **kwargs)
-            # remove yticks. We can't `ax.yaxis.set_visible(False)` altogether since that would also remove the grid
-            for tic in ax.yaxis.get_major_ticks():
-                tic.tick1On = tic.tick2On = False
-            ax.set_yticklabels([])
-        axes[0].set_ylim(axes[1].get_ylim())
+        if len(axes) > 1:
+            # adopted from https://stackoverflow.com/a/32186074/2225200
+            d = .015  # how big to make the diagonal lines in axes coordinates
+            kwargs = dict(transform=ax.transAxes, color='#dedede', clip_on=False)
+            if i == 0:
+                m = 1 / .05
+                ax.plot((1 - d * m, 1 + d * m), (-d, +d), **kwargs)
+            else:
+                kwargs.update(transform=ax.transAxes)
+                ax.plot((-d, +d), (-d, +d), **kwargs)
+                # remove yticks. We can't `ax.yaxis.set_visible(False)` altogether since that would also remove the grid
+                for tic in ax.yaxis.get_major_ticks():
+                    tic.tick1On = tic.tick2On = False
+                ax.set_yticklabels([])
+            axes[0].set_ylim(axes[1].get_ylim())
 
 
 def get_full(conn, convergence):
@@ -425,11 +430,3 @@ if __name__ == '__main__':
     plot_num_params_images(imagenet=False, entry_models=mod, all_labels=all_names, convergence=True,
                            images=[1000, 100000, 500000],
                            selection=selection)
-    # plot_performance(False)
-    # plot_num_params()
-    # plot_num_params(True)
-    # plot_performance(entry_model=best_special_brain)
-    # plot_performance(False, entry_model=best_special_brain)
-    # plot_figure_3()
-    # plot_num_params(entry_model=best_special_brain)
-    # plot_num_params(True, entry_model=best_special_brain)

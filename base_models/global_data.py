@@ -237,6 +237,7 @@ convergence_epoch = {
     'CORnet-S_cluster2_v2_IT_trconv3_bi': 38,
     'CORnet-S_train_gmk1_cl2_7_7tr_bi': 33,  # 23
     'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42': 28,  # 23
+    'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed94': 34,  # 23
     'CORnet-S_train_gmk1_cl2_7_bi_seed42': 34,
     'CORnet-S_train_conv3_bi': 29,  # 29 needs rework
     'CORnet-S_train_conv3_bi_seed42': 31,  # 29 needs rework

@@ -71,11 +71,4 @@ def compare(name2, name1='CORnet-S_full', name3=None):
 
 
 if __name__ == '__main__':
-    # plot_training_effort('CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wmc6_kn7_v2')
-    # plot_training_effort('CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full')
-    # plot_training_effort('CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_full')
-    # plot_training_effort('CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wmc6_full')
-    # plot_training_effort('CORnet-S_full')
-    # compare('CORnet-S_train_gmk1_wmc2_kn3_kn4_kn5_wmc6_full')
     compare('CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_full', name3='CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full')
-    # compare('CORnet-S_train_gabor_multi_dist')
