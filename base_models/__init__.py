@@ -1,7 +1,9 @@
 from base_models import global_data
+from base_models.pruner import train as prune_train
 from base_models.test_models import run_model_training, get_model
 from base_models.trainer_convergence import train as conv_train
 from base_models.trainer_images import train as image_train
+from transformations.layer_based import apply_norm_dist, apply_norm_dist_kernel
 from transformations.model_based import *
 from transformations.transformation_utils import do_distribution_weight_init, do_distribution_gabor_init_channel, \
     do_kernel_normal_distribution_init, do_layer_normal_distribution_init, do_channel_normal_distribution_init, \
@@ -12,8 +14,11 @@ trained_models = {
     'CORnet-S_train_random': {'layers': ["decoder"]},
     'CORnet-S_train_all': {'layers': ['V1', 'V2', 'V4', 'IT', "decoder"]},
     'CORnet-S_full': {'layers': ['V1', 'V2', 'V4', 'IT', "decoder"]},
+    'CORnet-S_full_con2': {'layers': ['V1', 'V2', 'V4', 'IT', "decoder"]},
     'CORnet-S_train_IT_random': {'layers': ['IT', 'decoder']},
     'CORnet-S_train_IT_seed_0': {'layers': ['IT', 'decoder']},
+    'CORnet-S_train_norm_dist': {'layer_func': apply_norm_dist},
+    'CORnet-S_train_norm_dist_kernel': {'layer_func': apply_norm_dist_kernel},
     'CORnet-S_train_V4': {'layers': ['V4', 'IT', 'decoder']},
     'CORnet-S_train_V2': {'model_func': apply_generic,
                           'layers': ['V2', 'V4', 'IT', "decoder"]},
@@ -1609,8 +1614,31 @@ v4 = {
     'CORnet-S_train_conv3_V2_bi': {
         'layers': ['V2.conv3', 'V4', 'IT', 'decoder']
     },
+    'CORnet-S_train_conv1_bi': {
+        'layers': ['V2.conv1', 'V4.conv1', 'IT.conv1', 'decoder'],
+    },
+    'CORnet-S_train_conv1_V4_bi': {
+        'layers': ['V2.conv1', 'V4.conv1', 'IT', 'decoder'],
+    },
+    'CORnet-S_train_conv1_V2_bi': {
+        'layers': ['V2.conv1', 'V4', 'IT', 'decoder']
+    },
     'CORnet-S_brain_t7_t12_wmc15_IT_bi': {
         'layers': ['V2.conv3', 'V4.conv3', 'IT.conv3', 'decoder'],
+        'V4.conv_input': do_kernel_normal_distribution_init,
+        'V4.skip': do_kernel_normal_distribution_init,
+        'V4.conv1': do_kernel_normal_distribution_init,
+        'V4.conv2': do_distribution_weight_init,
+        'V4.conv3': do_kernel_normal_distribution_init,
+        'IT.conv_input': do_kernel_normal_distribution_init,
+        'IT.skip': do_kernel_normal_distribution_init,
+        'IT.conv1': do_kernel_normal_distribution_init,
+        'IT.conv2': do_distribution_weight_init,
+        'IT.conv3': do_kernel_normal_distribution_init,
+        'dim_10': 1, 'dim_15': 1, 'comp_15': 4
+    },
+    'CORnet-S_brain_IT_full_train': {
+        'layers': ['V1', 'V2', 'V4', 'IT', 'decoder'],
         'V4.conv_input': do_kernel_normal_distribution_init,
         'V4.skip': do_kernel_normal_distribution_init,
         'V4.conv1': do_kernel_normal_distribution_init,
@@ -1696,6 +1724,20 @@ v4 = {
         'IT.conv3': do_kernel_normal_distribution_init,
         'full': True,
     },
+    'CORnet-S_brain3_IT_full_train': {
+        'layers': ['V1', 'V2', 'V4', 'IT', 'decoder'],
+        'V4.conv_input': do_kernel_normal_distribution_init,
+        'V4.skip': do_kernel_normal_distribution_init,
+        'V4.conv1': do_kernel_normal_distribution_init,
+        'V4.conv2': do_kernel_normal_distribution_init,
+        'V4.conv3': do_kernel_normal_distribution_init,
+        'IT.conv_input': do_kernel_normal_distribution_init,
+        'IT.skip': do_kernel_normal_distribution_init,
+        'IT.conv1': do_kernel_normal_distribution_init,
+        'IT.conv2': do_kernel_normal_distribution_init,
+        'IT.conv3': do_kernel_normal_distribution_init,
+        'full': True,
+    },
     'CORnet-S_brain3_knall_IT.conv2_bi': {
         'layers': ['IT.conv3', 'decoder'],
         'V4.conv_input': do_kernel_normal_distribution_init,
@@ -1732,6 +1774,19 @@ v4 = {
     },
     'CORnet-S_dist_allbd_IT_trconv3_bi': {
         'layers': ['V2.conv3', 'V4.conv3', 'IT.conv3', 'decoder'],
+        'V4.conv_input': do_best_dist_init_kernel,
+        'V4.skip': do_best_dist_init_kernel,
+        'V4.conv1': do_best_dist_init_kernel,
+        'V4.conv2': do_best_dist_init_kernel,
+        'V4.conv3': do_best_dist_init_kernel,
+        'IT.conv_input': do_best_dist_init_kernel,
+        'IT.skip': do_best_dist_init_kernel,
+        'IT.conv1': do_best_dist_init_kernel,
+        'IT.conv2': do_best_dist_init_kernel,
+        'IT.conv3': do_best_dist_init_kernel,
+    },
+    'CORnet-S_dist_IT_full_train': {
+        'layers': ['V1', 'V2', 'V4', 'IT', 'decoder'],
         'V4.conv_input': do_best_dist_init_kernel,
         'V4.skip': do_best_dist_init_kernel,
         'V4.conv1': do_best_dist_init_kernel,
@@ -2058,6 +2113,20 @@ v4 = {
         'IT.conv3': do_cluster_init,
         'dim_10': 1, 'dim_15': 1,
     },
+    'CORnet-S_cluster2_IT_full_train': {
+        'layers': ['V1', 'V2', 'V4', 'IT', 'decoder'],
+        'V4.conv_input': do_cluster_init,
+        'V4.skip': do_cluster_init,
+        'V4.conv1': do_cluster_init,
+        'V4.conv2': do_cluster_init,
+        'V4.conv3': do_cluster_init,
+        'IT.conv_input': do_cluster_init,
+        'IT.skip': do_cluster_init,
+        'IT.conv1': do_cluster_init,
+        'IT.conv2': do_cluster_init,
+        'IT.conv3': do_cluster_init,
+        'dim_10': 1, 'dim_15': 1,
+    },
     'CORnet-S_cluster2_v2_V4_trconv3_bi': {
         'layers': ['V2.conv3', 'V4.conv3', 'IT', 'decoder'],
         'V4.conv_input': do_cluster_init,
@@ -2160,6 +2229,32 @@ v4 = {
         'IT.conv2': do_kernel_normal_distribution_init,
         'IT.conv3': do_kernel_normal_distribution_init,
     },
+    'CORnet-S_brain2_knall_IT_bi_v2': {
+        'layers': ['decoder'],
+        'V4.conv_input': do_kernel_normal_distribution_init,
+        'V4.skip': do_kernel_normal_distribution_init,
+        'V4.conv1': do_kernel_normal_distribution_init,
+        'V4.conv2': do_kernel_normal_distribution_init,
+        'V4.conv3': do_kernel_normal_distribution_init,
+        'IT.conv_input': do_kernel_normal_distribution_init,
+        'IT.skip': do_kernel_normal_distribution_init,
+        'IT.conv1': do_kernel_normal_distribution_init,
+        'IT.conv2': do_kernel_normal_distribution_init,
+        'IT.conv3': do_kernel_normal_distribution_init,
+    },
+    'CORnet-S_brain2_IT_full_train': {
+        'layers': ['V1', 'V2', 'V4', 'IT', 'decoder'],
+        'V4.conv_input': do_kernel_normal_distribution_init,
+        'V4.skip': do_kernel_normal_distribution_init,
+        'V4.conv1': do_kernel_normal_distribution_init,
+        'V4.conv2': do_kernel_normal_distribution_init,
+        'V4.conv3': do_kernel_normal_distribution_init,
+        'IT.conv_input': do_kernel_normal_distribution_init,
+        'IT.skip': do_kernel_normal_distribution_init,
+        'IT.conv1': do_kernel_normal_distribution_init,
+        'IT.conv2': do_kernel_normal_distribution_init,
+        'IT.conv3': do_kernel_normal_distribution_init,
+    },
     'CORnet-S_brain2_knall_V4_bi_v2': {
         'layers': ['V4', 'decoder'],
         'V4.conv_input': do_kernel_normal_distribution_init,
@@ -2196,6 +2291,18 @@ v4 = {
     },
     'CORnet-S_cluster11_V4_trconv3_bi': {
         'layers': ['V2.conv3', 'V4.conv3', 'IT', 'decoder'],
+    },
+    'CORnet-S_train_batchnorm_V2': {
+        'layers': ['V4', 'IT', 'decoder'],
+        'all_batchnorm': True
+    },
+    'CORnet-S_train_batchnorm_V4': {
+        'layers': ['IT', 'decoder'],
+        'all_batchnorm': True
+    },
+    'CORnet-S_train_batchnorm': {
+        'layers': ['decoder'],
+        'all_batchnorm': True
     },
 
 }
@@ -2266,6 +2373,10 @@ def get_config(model):
 # g = gabor, n=normal distribution, c=channel, k =kernel, w=weights, m= mixture, l=layer, j = jumbler, bd =best distribution
 def train_model(model, train_func=None, images=0):
     config = get_config(model)
+    train_conf_model(model, config, train_func, images)
+
+
+def train_conf_model(model, config, train_func=None, images=0):
     if 'convergence' in config:
         train_func = conv_train
     if images != 0:
@@ -2273,7 +2384,7 @@ def train_model(model, train_func=None, images=0):
         trainer_images.image_load = images
         print(f'We train with only {images} of images!')
         train_func = image_train
-    net = get_model(model, False, config)
+    net = get_model(model, False, config, train_func == prune_train)
     if global_data.seed != 0:
         model = f'{model}_seed{global_data.seed}'
     run_model_training(model=net, identifier=model, config=config, train_func=train_func)

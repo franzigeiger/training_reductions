@@ -1,5 +1,4 @@
 import glob
-import importlib
 import io
 import logging
 import os
@@ -19,7 +18,10 @@ import torchvision
 import tqdm
 from PIL import Image
 from torch.nn import Module
+from torch.optim import Adagrad
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+from base_models.global_data import restore_model
 
 Image.warnings.simplefilter('ignore')
 logger = logging.getLogger(__name__)
@@ -37,8 +39,13 @@ momentum = .9
 step_size = 20
 lr = .1
 workers = 20
+optimizer = 'SGD'
 if ngpus > 0:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+prev = 0.0
+epsilon = 0.2
+running_diff = []
 
 
 def set_gpus(n=2):
@@ -85,7 +92,16 @@ def train(identifier,
           save_model_secs=60 * 10,  # how often save model (in sec)
           areas=None
           ):
-    print('We run in convergence mode!!')
+    if weight_decay != 1e-4:
+        logger.info(f'Use weight decay {weight_decay}')
+        identifier = f'{identifier}_wd{weight_decay}'
+    if optimizer != 'SGD':
+        identifier = f'{identifier}_op{optimizer}'
+        logger.info(f'Use optimizer {optimizer}')
+    if lr != .1:
+        logger.info(f'Use learning rate {lr}')
+        identifier = f'{identifier}_lr{lr}'
+    print(f'We run in convergence mode with identifier {identifier}!!')
     if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pth.tar'):
         logger.info('Model already trained')
         return
@@ -103,29 +119,24 @@ def train(identifier,
     trainer = ImageNetTrain(model, areas)
     validator = ImageNetVal(model)
 
+    if restore_model is not None:
+        restore_path = output_path + f'{restore_model}.pth.tar'
+        logger.info(f'Restore weights from path {restore_path}')
+        ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
+        model = load_model(model, ckpt_data)
     start_epoch = 0
-    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' is w]
+    stored = [w for w in os.listdir(output_path) if f'{identifier}_latest_checkpoint.pth.tar' == w]
     if len(stored) > 0:
         restore_path = output_path + f'{identifier}_latest_checkpoint.pth.tar'
         ckpt_data = torch.load(restore_path, map_location=torch.device('cpu'))
         if ckpt_data['epoch'] < epochs + 1:
             start_epoch = ckpt_data['epoch']
-        if start_epoch > 20:
+        if start_epoch > 45:
             logger.info(f'Model already trained until epoch {start_epoch}, stop training!')
             return
         logger.info(f'Restore weights from path {restore_path} in epoch {start_epoch}')
 
-        class Wrapper(Module):
-            def __init__(self, model):
-                super(Wrapper, self).__init__()
-                self.module = model
-
-        model = Wrapper(model)
-        try:
-            model.load_state_dict(ckpt_data['state_dict'])
-        except Exception:
-            model.module.load_state_dict(ckpt_data['state_dict'])
-        model = model.module
+        model = load_model(model, ckpt_data)
         trainer.optimizer.load_state_dict(ckpt_data['optimizer'])
 
     records = []
@@ -184,8 +195,14 @@ def train(identifier,
 
                 if save_model_steps is not None:
                     if global_step in save_model_steps:
-                        torch.save(ckpt_data, output_path +
-                                   f'{identifier}_epoch_{epoch:02d}.pth.tar')
+                        e = global_step / len(trainer.data_loader)
+                        if e % 1 == 0:
+                            torch.save(ckpt_data, output_path +
+                                       f'{identifier}_epoch_{int(e):02d}.pth.tar')
+                        else:
+                            torch.save(ckpt_data, output_path +
+                                       f'{identifier}_epoch_{e:.1f}.pth.tar')
+
 
             else:
                 if len(results) > 1:
@@ -213,6 +230,20 @@ def train(identifier,
     if ngpus > 1 and torch.cuda.device_count() > 1:
         return model.module
     return model
+
+
+def load_model(model, ckpt_data):
+    class Wrapper(Module):
+        def __init__(self, model):
+            super(Wrapper, self).__init__()
+            self.module = model
+
+    model = Wrapper(model)
+    try:
+        model.load_state_dict(ckpt_data['state_dict'])
+    except Exception:
+        model.module.load_state_dict(ckpt_data['state_dict'])
+    return model.module
 
 
 def test(layer='decoder', sublayer='avgpool', time_step=0, imsize=224):
@@ -277,10 +308,21 @@ class ImageNetTrain(object):
         self.model = model
         self.data_loader = self.data()
         params = list(filter(lambda p: p.requires_grad, model.parameters()))
-        self.optimizer = torch.optim.SGD(params,
-                                         lr,
-                                         momentum=momentum,
-                                         weight_decay=weight_decay)
+        if optimizer == 'Adagrad':
+            logger.info('User optimizer Adagrad')
+            self.optimizer = Adagrad(filter(lambda p: p.requires_grad, model.parameters()),
+                                     lr,
+                                     weight_decay=weight_decay)
+        elif optimizer == 'Adam':
+            logger.info('User optimizer Adam')
+            self.optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                              lr,
+                                              weight_decay=weight_decay)
+        else:
+            self.optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                                             lr,
+                                             momentum=momentum,
+                                             weight_decay=weight_decay)
         # self.lr = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size)
         self.lr = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=3)
         self.loss = nn.CrossEntropyLoss()
@@ -384,62 +426,3 @@ def accuracy(output, target, topk=(1,)):
         correct = pred.eq(target.view(1, -1).expand_as(pred))
         res = [correct[:k].sum().item() for k in topk]
         return res
-
-
-if __name__ == '__main__':
-    with open(output_path + f'results_CORnet-S_train_IT_random_2_gpus.pkl', 'rb') as f:
-        data = pickle.load(f)
-        # validation = data['val']
-        item = data[-1]
-        print(item)
-        print(data[len(data) - 1])
-    # np.random.seed(0)
-    # torch.manual_seed(0)
-    # layer_based.random_state = RandomState(0)
-    identifier = 'CORnet-S_train_IT_seed_0'
-    mod = importlib.import_module(f'cornet.cornet_s')
-    model_ctr = getattr(mod, f'CORnet_S')
-    model = model_ctr()
-    # model = cornet.cornet_s(True)
-    model3 = cornet.cornet_s(False)
-    model2 = cornet.cornet_s(False)
-    if os.path.exists(output_path + f'{identifier}_epoch_20.pth.tar'):
-        logger.info('Resore weights from stored results')
-        checkpoint = torch.load(output_path + f'{identifier}_epoch_20.pth.tar',
-                                map_location=lambda storage, loc: storage)
-        model2.load_state_dict(checkpoint['state_dict'])
-        checkpoint2 = torch.load(output_path + f'CORnet-S_random.pth.tar',
-                                 map_location=lambda storage, loc: storage)
-
-
-        class Wrapper(Module):
-            def __init__(self, model):
-                super(Wrapper, self).__init__()
-                self.module = model
-
-
-        model = Wrapper(model)
-        model.load_state_dict(checkpoint2['state_dict'])
-        model3 = model.module
-    # if os.path.exists(output_path + f'{identifier}_2_gpus_epoch_00.pth.tar'):
-    #     logger.info('Resore weights from stored results')
-    #     checkpoint = torch.load(output_path + f'{identifier}_epoch_00.pth.tar',
-    #                             map_location=lambda storage, loc: storage)  # map onto cpu
-    # model.load_state_dict(checkpoint['state_dict'])
-    for name, m in model2.module.named_parameters():
-        for name2, m2 in model3.named_parameters():
-            if name == name2:
-                print(name)
-                value1 = m.data.cpu().numpy()
-                value2 = m2.data.cpu().numpy()
-                print((value1 == value2).all())
-
-    # values1 = model.module.V1.conv2.weight.data.cpu().numpy()
-    # values2 = model2.module.V1.conv2.weight.data.cpu().numpy()
-    # values3 = model3.module.V1.conv2.weight.data.cpu().numpy()
-    # diffs = values2 - values3
-    # # print(diffs)
-    # print((values1 == values2).all())
-    #
-    # print((values3 == values1).all())
-    # print(identifier)

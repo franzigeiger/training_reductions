@@ -218,11 +218,11 @@ def do_kernel_convolution_init(weights, previous, **kwargs):
 def do_distribution_gabor_init(weights, config, index, shape, **kwargs):
     if index != 0:
         rel = config[f'file_{index}']
-        file = path.join(path.dirname(__file__), f'..{rel}')
+        file = path.join(path.dirname(__file__), f'../ressources/{rel}')
         params = np.load(file)
     else:
         rel = config["file"]
-        file = path.join(path.dirname(__file__), f'..{rel}')
+        file = path.join(path.dirname(__file__), f'../ressources/{rel}')
         params = np.load(file)
     param, tuples = prepare_gabor_params(params)
     # np.random.seed(0)
@@ -609,8 +609,5 @@ def do_cluster_init(weights, shape, previous, config, index, **kwargs):
             big_kernel = kernel
         random_order = random_state.permutation(shape[1])
         new_weights[i] = big_kernel[random_order]
-    # if dx==0:
-    #     show_kernels(new_weights, 'cluster_kernels')
     return new_weights
 
-# def do_linear_regression_function():

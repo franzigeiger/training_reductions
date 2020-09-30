@@ -44,15 +44,21 @@ param_list = {}
 
 
 def get_params(identifier, hyperparams=True):
+    param, hyper = get_all_params(identifier, hyperparams)
+    return param
+
+
+def get_all_params(identifier, hyperparams=True):
     if 'hmax' in identifier:
-        return 0
+        return 0, 0
     if identifier in param_list:
-        return param_list[identifier]
+        return param_list[identifier], 0
     if identifier.startswith('mobilenet'):
+        # weird code to calculate mobilenet parameter
         if identifier.startswith('mobilenet_v1_1.0'):
             params = get_mobilenet_params()
             print(f'{identifier} has {params} parameter')
-            return params
+            return params, 0
         else:
             model = get_mobilenet(f'{identifier}_random')._model
             mapping = mobilenet_mapping
@@ -83,7 +89,7 @@ def get_params(identifier, hyperparams=True):
         model = apply_generic_other(model, config)
     else:
         config = get_config(identifier)
-        model = get_model(identifier, False, config)
+        model = get_model('CORnet-S', False, {})
     values = 0
     hyper_params = 0
     all = 0
@@ -99,7 +105,7 @@ def get_params(identifier, hyperparams=True):
             if any(value in name for value in config['layers']):
                 values += size
                 print(f'layer {name} is trained, size {size}')
-            elif name in config and hyperparams:
+            if name in config and hyperparams:
                 this_mod = sys.modules[__name__]
                 if identifier.startswith('mobilenet') or identifier.startswith('resnet'):
                     func = getattr(this_mod, config[config[name]].__name__)
@@ -119,11 +125,9 @@ def get_params(identifier, hyperparams=True):
             hyp_w.append(values)
         if type(m) == nn.BatchNorm2d and 'batchnorm' in config:
             size = 1
-            # name = config[name] if identifier.startswith('mobilenet') else name
             if name in conv_to_norm:
                 for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
                 if any(value in conv_to_norm[name] for value in config['layers']):
-                    this_mod = sys.modules[__name__]
                     values += size
                 if conv_to_norm[name] in config and hyperparams:
                     this_mod = sys.modules[__name__]
@@ -132,13 +136,9 @@ def get_params(identifier, hyperparams=True):
                     params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
                     values += params
                     hyper_params += params
-        # if type(m) == nn.Linear and name is not 'decoder' and name is not 'fc':
-        #     size=1
-        #     for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
-        #     values += size
     param_list[identifier] = values
     print(f'{identifier} has {values} parameter')
-    return values
+    return values, hyper_params
 
 
 def get_mobilenet_params():
@@ -207,11 +207,11 @@ def do_kernel_convolution_init(weights, previous, **kwargs):
 def do_distribution_gabor_init(weights, config, index, **kwargs):
     if index != 0:
         rel = config[f'file_{index}']
-        file = path.join(path.dirname(__file__), f'..{rel}')
+        file = path.join(path.dirname(__file__), f'../ressources/{rel}')
         params = np.load(file)
     else:
         rel = config[f'file']
-        file = path.join(path.dirname(__file__), f'..{rel}')
+        file = path.join(path.dirname(__file__), f'../ressources/{rel}')
         params = np.load(file)
     param, tuples = prepare_gabor_params(params)
     # np.random.seed(0)

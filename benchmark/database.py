@@ -64,7 +64,7 @@ def load_model_parameter(conn):
 model_versions = {
     'CORnet-S_cluster2_v2_IT_trconv3_bi': ['CORnet-S_cluster2_v2_IT_trconv3_bi',
                                            'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42',
-                                           'CORnet-S_cluster2_v2_IT_trconv3_bi_seed94'
+                                           # 'CORnet-S_cluster2_v2_IT_trconv3_bi_seed94'
                                            ],
     'CORnet-S_cluster2_v2_V4_trconv3_bi': ['CORnet-S_cluster2_v2_V4_trconv3_bi',
                                            'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42',
@@ -76,7 +76,10 @@ model_versions = {
     'CORnet-S_cluster9_V4_trconv3_bi': ['CORnet-S_cluster9_V4_trconv3_bi', 'CORnet-S_cluster9_V4_trconv3_bi_seed42'],
     'CORnet-S_cluster9_IT_trconv3_bi': ['CORnet-S_cluster9_IT_trconv3_bi', 'CORnet-S_cluster9_IT_trconv3_bi_seed42'],
     'CORnet-S_train_wmk1_cl2_7_7tr_bi': ['CORnet-S_train_wmk1_cl2_7_7tr_bi', 'CORnet-S_train_wmk1_cl2_7_7tr_bi_seed42'],
-    'CORnet-S_full': ['CORnet-S_full', 'CORnet-S_full_seed42', 'CORnet-S_full_seed94'],  # 'CORnet-S_full_seed94'
+    'CORnet-S_full': ['CORnet-S_full',
+                      # 'CORnet-S_full_seed42',
+                      # 'CORnet-S_full_seed94'
+                      ],  # 'CORnet-S_full_seed94'
     'CORnet-S_train_V4': ['CORnet-S_train_V4', 'CORnet-S_train_V4_seed42'],
     'CORnet-S_train_IT_seed_0': ['CORnet-S_train_IT_seed_0', 'CORnet-S_train_IT_seed_0_seed42'],
     'CORnet-S_train_random': ['CORnet-S_train_random', 'CORnet-S_train_random_seed42'],
@@ -89,43 +92,36 @@ def load_error_bared(conn, models, benchmarks, convergence=True, epochs=[]):
     for model in models:
         if model in model_versions.keys():
             for runs in model_versions[model]:
-                if convergence and runs in convergence_epoch:
-                    postfix = f'_epoch_{convergence_epoch[runs]:02d}'
-                    names.append(f'{runs}{postfix}')
-                if convergence and runs in convergence_images:
-                    postfix = f'_epoch_{convergence_images[runs]:02d}'
-                    names.append(f'{runs}{postfix}')
                 for e in epochs:
                     if e % 1 == 0:
                         postfix = f'_epoch_{e:02d}'
                     else:
                         postfix = f'_epoch_{e:.1f}'
                     names.append(f'{runs}{postfix}')
+                if convergence and runs in convergence_epoch:
+                    postfix = f'_epoch_{convergence_epoch[runs]:02d}'
+                    names.append(f'{runs}{postfix}')
+                if convergence and runs in convergence_images:
+                    postfix = f'_epoch_{convergence_images[runs]:02d}'
+                    names.append(f'{runs}{postfix}')
         else:
+            for e in epochs:
+                if e % 1 == 0:
+                    postfix = f'_epoch_{e:02d}'
+                else:
+                    postfix = f'_epoch_{e:.1f}'
+                # postfix = f'_epoch_{e:02d}'
+                names.append(f'{model}{postfix}')
             if convergence and model in convergence_epoch:
                 postfix = f'_epoch_{convergence_epoch[model]:02d}'
                 names.append(f'{model}{postfix}')
             if convergence and model in convergence_images:
                 postfix = f'_epoch_{convergence_images[model]:02d}'
                 names.append(f'{model}{postfix}')
-            for e in epochs:
-                postfix = f'_epoch_{e:02d}'
-                names.append(f'{model}{postfix}')
     model_dict = load_scores(conn, names, benchmarks)
     results = {}
     for model in models:
         if model in model_versions:
-            if convergence:
-                res = np.zeros([len(benchmarks), 0])
-                for runs in model_versions[model]:
-                    if runs in convergence_epoch:
-                        postfix = f'_epoch_{convergence_epoch[runs]:02d}'
-                        name = f'{runs}{postfix}'
-                        if name in model_dict:
-                            val = model_dict[name].reshape(-1, 1)
-                            if np.mean(val > 0):
-                                res = np.concatenate([res, val], axis=1)
-                results[model] = np.concatenate([np.mean(res, axis=1), np.std(res, axis=1)], axis=0)
             for e in epochs:
                 if e % 1 == 0:
                     postfix = f'_epoch_{e:02d}'
@@ -139,19 +135,30 @@ def load_error_bared(conn, models, benchmarks, convergence=True, epochs=[]):
                         if np.mean(val > 0):
                             res = np.concatenate([res, val], axis=1)
                 results[f'{model}{postfix}'] = np.concatenate([np.mean(res, axis=1), np.std(res, axis=1)], axis=0)
+            if convergence:
+                res = np.zeros([len(benchmarks), 0])
+                for runs in model_versions[model]:
+                    if runs in convergence_epoch:
+                        postfix = f'_epoch_{convergence_epoch[runs]:02d}'
+                        name = f'{runs}{postfix}'
+                        if name in model_dict:
+                            val = model_dict[name].reshape(-1, 1)
+                            if np.mean(val > 0):
+                                res = np.concatenate([res, val], axis=1)
+                results[model] = np.concatenate([np.mean(res, axis=1), np.std(res, axis=1)], axis=0)
         else:
-            if convergence and model in convergence_epoch:
-                postfix = f'_epoch_{convergence_epoch[model]:02d}'
-                results[model] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
-            if convergence and model in convergence_images:
-                postfix = f'_epoch_{convergence_images[model]:02d}'
-                results[model] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
             for e in epochs:
                 if e % 1 == 0:
                     postfix = f'_epoch_{e:02d}'
                 else:
                     postfix = f'_epoch_{e:.1f}'
                 results[f'{model}{postfix}'] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
+            if convergence and model in convergence_epoch:
+                postfix = f'_epoch_{convergence_epoch[model]:02d}'
+                results[model] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
+            if convergence and model in convergence_images:
+                postfix = f'_epoch_{convergence_images[model]:02d}'
+                results[model] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
     return results
 
 

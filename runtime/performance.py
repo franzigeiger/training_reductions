@@ -7,7 +7,7 @@ from base_models.global_data import best_brain_avg, layer_random, random_scores,
     convergence_epoch, convergence_images
 from benchmark.database import get_connection, load_scores, load_model_parameter, load_error_bared
 from plot.plot_data import plot_data_double, blue_palette, grey_palette, green_palette
-from runtime.compression import get_params
+from runtime.compression import get_params, get_all_params
 
 
 def plot_performance(imagenet=True, entry_models=[best_brain_avg], all_labels=[], convergence=False, ax=None,
@@ -308,55 +308,112 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
                      x_ticks_2=params2, data_labels=labels, ax=ax, million=True, log=log, annotate_pos=0)
 
 
+def plot_bits_vs_predictivity(imagenet=False, entry_models=[], all_labels=[], ax=None, selection=[], log=False,
+                              layer_random=layer_random, pal=None, percent=True, ylim=None):
+    conn = get_connection()
+    full_score = get_full(conn, True)
+    full = np.mean(full_score[selection])
+    params, hyper = get_all_params('CORnet-S_full', True)
+    data2 = {'Full train': [100]}
+    err2 = {'Full train': [0]}
+    labels = {'Full train': 'Full train'}
+    params = {'Full train': [64 * params]}
+    model_dict = load_error_bared(conn, entry_models, benchmarks, convergence=False, epochs=[0])
+    for model, name in zip(entry_models, all_labels):
+        data2[name] = []
+        params[name] = []
+        err2[name] = []
+        if model == "CORnet-S_random" or model == 'pixels':
+            params[name].append(0)
+        else:
+            parameter, hyper = get_all_params(model, True)
+            params[name].append(hyper * 64)  # for bits multiply by 64
+        epoch_model = f'{model}_epoch_00'
+        if percent:
+            frac = (np.mean(model_dict[epoch_model][selection]) / full) * 100
+            percent_err = (np.mean(model_dict[epoch_model][6:][selection]) / full) * 100
+        else:
+            frac = np.mean(model_dict[epoch_model][selection])
+            percent_err = np.mean(model_dict[epoch_model][6:][selection])
+        print(f'Model {model} has score {frac}')
+        data2[name].append(frac)
+        err2[name].append(percent_err)
+        if '(' in name:
+            short = name.split('(')[1][:-1]
+        else:
+            short = name
+        labels[name] = [short]
+
+    params2 = []
+    for model in layer_random.keys():
+        if model.endswith('BF'):
+            model = model.replace('_BF', '')
+        if model == "CORnet-S_random":
+            params2.append(0)
+        else:
+            params2.append(get_params(model))
+    if imagenet:
+        title = f'Imagenet score vs number of parameter'
+        y = r'\textbf{Imagenet performance}'
+    else:
+        title = f'Brain-Score Benchmark mean(V4, IT, Behavior) vs number of parameter'
+        y = r"\textbf{Brain Predictivity}"
+    if percent:
+        y = f'{y} [\% of standard training]'
+
+    if pal is None:
+        pal = blue_palette
+    plot_data_double(data2, {}, '', err=err2, err2={}, x_name=r'\textbf{Required bits} [Million]',
+                     x_labels=None, scale_fix=ylim,
+                     y_name=y, x_ticks=params, pal=pal, percent=percent,
+                     x_ticks_2=params2, data_labels=labels, ax=ax, million=False, log=log, annotate_pos=0)
+
+
 def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=True, make_trillions=False,
-                      with_weights=True, legend=False, log=True):
-    names = []
+                      with_weights=True, legend=False, log=True,
+                      pal=['#2CB8B8', '#186363', '#818A94', '#818A94', '#818A94', '#36E3E3', '#9AC3C3', '#2B3D3C']):
     conn = get_connection()
     params = {}
     data = {}
+    mods = []
     for model, label in models.items():
         data[label] = []
         params[label] = []
-        if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
-            model1 = model
-        else:
-            model1 = model
+        mods.append(model)
         for img in imgs:
             name = f'{model}_img{img}'
-            for epoch in epochs:
-                if epoch % 1 == 0:
-                    names.append(f'{name}_epoch_{epoch:02d}')
-                else:
-                    names.append(f'{name}_epoch_{epoch:.1f}')
-            if name in convergence_images:
-                names.append(f'{name}_epoch_{convergence_images[name]}')
-        names.append(f'{model1}_epoch_{convergence_epoch[model1]:02d}')
+            mods.append(name)
     if with_weights:
         parameter = get_model_params(models, False)
     else:
         parameter = {x: 1 for x in models}
-    names.append('CORnet-S_full_epoch_43')
-    model_dict = load_scores(conn, names, benchmarks)
-    full = np.mean(model_dict['CORnet-S_full_epoch_43'][selection])
-    high_x = 0
+    mods.append('CORnet-S_full')
+    model_dict = load_error_bared(conn, mods, benchmarks, convergence=True, epochs=epochs)
+    full = np.mean(model_dict['CORnet-S_full'][selection])
     high_y = 0
-    val = 0
-    for model in names:
-        if percent:
+    for model in model_dict.keys():
+        frac = 0.0
+        if percent and model in model_dict:
             frac = (np.mean(model_dict[model][selection]) / full) * 100
-        else:
+        elif model in model_dict:
             frac = np.mean(model_dict[model][selection])
         if frac > 0.0:
             if 'img' not in model:
                 base_model = model.partition('_epoch')[0]
-                epoch = float(model.partition('_epoch_')[2])
+                if 'epoch' in model:
+                    epoch = float(model.partition('_epoch_')[2])
+                else:
+                    epoch = convergence_epoch[model]
                 # data[models[base_model]].append(frac)
                 score = (1280000 * epoch * (parameter[base_model]))  #
-                img = 1280000
+                imgs = 1280000
             else:
                 base_model = model.partition('_img')[0]
                 imgs = int(model.partition('_img')[2].partition('_')[0])
-                epoch = float(model.partition('_img')[2].partition('_epoch_')[2])
+                if 'epoch' in model:
+                    epoch = float(model.partition('_img')[2].partition('_epoch_')[2])
+                else:
+                    epoch = convergence_images[model]
                 score = (imgs * epoch * (parameter[base_model]))  # (parameter[base_model] / 1000000) *
             if not (with_weights and score != 0 and score < pow(10, 11)):
                 data[models[base_model]].append(frac)
@@ -374,7 +431,7 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
             ax_data = data
             xticks = params
             ylabel = y
-            xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * pow(10, 6)
+            xticklabels = np.array([.001, .01, .1, .5, 1, 5, 10, 50, 100, 1000, 10000]) * pow(10, 6)
         else:
             zero_indices = {key: np.array([tick == 0 for tick in xticks]) for key, xticks in params.items()}
             if i == 0:  # axis plotting the x=0 value
@@ -386,7 +443,7 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
                 ax_data = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in data.items()}
                 xticks = {key: np.array(values)[~zero_indices[key]].tolist() for key, values in params.items()}
                 # when make_trillions==True, this should actually be *10^12, but due to downstream hacks we leave it at ^6
-                xticklabels = np.array([.001, .01, .1, 1, 10, 100, 1000]) * pow(10, 6)
+                xticklabels = np.array([.001, .01, .1, .5, 1, 5, 10, 50, 100, 1000, 10000]) * pow(10, 6)
                 ax.spines['left'].set_visible(False)
                 ylabel = ''
         # kwargs = dict(trillion=True) if make_trillions else dict(trillion=True, million_base=True)
@@ -394,7 +451,7 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
                          x_labels=xticklabels, scatter=True, percent=percent,
                          alpha=0.8, scale_fix=[0, 105], legend=legend,
                          y_name=ylabel, x_ticks=xticks,
-                         pal=['#2CB8B8', '#186363', '#818A94', '#818A94', '#818A94', '#2B3D3C', '#36E3E3', '#9AC3C3'],
+                         pal=pal,
                          log=log,
                          x_ticks_2={}, ax=ax, million_base=True,
                          annotate_pos=0)

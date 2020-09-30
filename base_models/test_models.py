@@ -29,9 +29,9 @@ seed = 0
 batch_fix = False
 
 
-def cornet(identifier, init_weights=True, config=None):
+def cornet(identifier, init_weights=True, config=None, prune=False):
     _logger.info('Run normal benchmark')
-    model = get_model(identifier, init_weights, config)
+    model = get_model(identifier, init_weights, config, prune)
     from model_tools.activations.pytorch import load_preprocess_images
     preprocessing = functools.partial(load_preprocess_images, image_size=224)
     wrapper = TemporalPytorchWrapper(identifier=identifier, model=model,
@@ -41,16 +41,20 @@ def cornet(identifier, init_weights=True, config=None):
     return wrapper
 
 
-def get_model(identifier, init_weights=True, config=None):
+def get_model(identifier, init_weights=True, config=None, prune=False):
     if config is None:
         config = {}
     print(f'Configuration: {config}')
     cornet_type = 'S'
     np.random.seed(seed)
     torch.manual_seed(seed)
-    mod = importlib.import_module(f'cornet.cornet_{cornet_type.lower()}')
-    model_ctr = getattr(mod, f'CORnet_{cornet_type.upper()}')
-    model = model_ctr()
+    if prune:
+        from base_models.cornet_s_prunable import CORnet_S
+        model = CORnet_S()
+    else:
+        mod = importlib.import_module(f'cornet.cornet_{cornet_type.lower()}')
+        model_ctr = getattr(mod, f'CORnet_{cornet_type.upper()}')
+        model = model_ctr()
     if init_weights:
         model = load_weights(identifier, model)
     if batch_fix:
@@ -150,7 +154,7 @@ def get_weights(identifier):
     return weights_path
 
 
-def run_model_training(model, identifier, config=None, train_func=None):
+def run_model_training(model, identifier, config=None, train_func=None, prune=False):
     if batch_fix:
         identifier = f'{identifier}_BF'
     if config is None or 'layers' not in config or len(config['layers']) == 0:
@@ -161,6 +165,9 @@ def run_model_training(model, identifier, config=None, train_func=None):
                 m.requires_grad = True
             else:
                 m.requires_grad = False
+            if 'norm' in name and 'all_batchnorm' in config:
+                m.requires_grad = True
+
     if train_func:
         model = train_func(identifier, model)
     else:
@@ -176,7 +183,7 @@ def _build_time_mappings(time_mappings):
         for region, (time_start, time_step_size, timesteps) in time_mappings.items()}
 
 
-def cornet_s_brainmodel_short(identifier='', init_weigths=True, config=None):
+def cornet_s_brainmodel_short(identifier='', init_weigths=True, config=None, prune=False):
     # if not identifier.startswith('CORnet-S'):
     #     identifier = '%s_%s' % ('CORnet-S', identifier)
     # map region -> (time_start, time_step_size, timesteps)
@@ -187,7 +194,7 @@ def cornet_s_brainmodel_short(identifier='', init_weigths=True, config=None):
         'V4': (90, 50, 4),
         'IT': (100, 100, 2),
     }
-    model = cornet(identifier=identifier, init_weights=init_weigths, config=config)
+    model = cornet(identifier=identifier, init_weights=init_weigths, config=config, prune=prune)
     return CORnetCommitment(identifier=model.identifier,
                             activations_model=model,
                             layers=['V1.output-t0'] +
@@ -198,14 +205,14 @@ def cornet_s_brainmodel_short(identifier='', init_weigths=True, config=None):
                             time_mapping=_build_time_mappings(time_mappings))
 
 
-def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer'):
+def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer', prune=False):
     if function and type == 'layer':
         config['layer_func'] = function
     if type == 'model':
         config = config + {'layer_func': function, 'model_func': apply_to_one_layer}
     if type == 'custom':
         config['model_func'] = function
-    return cornet_s_brainmodel_short(identifier, init_weigths, config)
+    return cornet_s_brainmodel_short(identifier, init_weigths, config, prune=prune)
 
 
 def alexnet(identifier, init_weights=True, function=None):

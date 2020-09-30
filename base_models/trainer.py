@@ -36,9 +36,9 @@ momentum = .9
 step_size = 20
 lr = .1
 workers = 20
+optimizer = 'SGD'
 if ngpus > 0:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 def set_gpus(n=2):
     """
@@ -276,10 +276,19 @@ class ImageNetTrain(object):
         self.name = 'train'
         self.model = model
         self.data_loader = self.data()
-        self.optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
-                                         lr,
-                                         momentum=momentum,
-                                         weight_decay=weight_decay)
+        if optimizer == 'Adagrad':
+            self.optimizer = Adagrad(filter(lambda p: p.requires_grad, model.parameters()),
+                                     lr,
+                                     weight_decay=weight_decay)
+        elif optimizer == 'Adam':
+            self.optimizer = torch.optim.adam.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                                   lr,
+                                                   weight_decay=weight_decay)
+        else:
+            self.optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                                             lr,
+                                             momentum=momentum,
+                                             weight_decay=weight_decay)
         self.lr = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size)
         self.loss = nn.CrossEntropyLoss()
         if ngpus > 0:

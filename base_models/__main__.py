@@ -30,9 +30,15 @@ parser.add_argument('--full', type=bool, default=False,
                     help='Number of epochs to train and test for')
 parser.add_argument('--convergence', type=bool, default=False,
                     help='Number of epochs to train and test for')
+parser.add_argument('--convergence_2', type=bool, default=False,
+                    help='Number of epochs to train and test for')
+parser.add_argument('--prune', type=bool, default=False,
+                    help='Number of epochs to train and test for')
 parser.add_argument('--images', type=int, default=0,
                     help='Number of epochs to train and test for')
 parser.add_argument('--lr', type=float, default=0.0, help='Learning rate to start/continue learning with')
+parser.add_argument('--optimizer', type=str, default='', help='Optimizer to train with')
+parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay to train with')
 parser.add_argument('--first', type=bool, default=False,
                     help='Set true to only train the first epoch and evaluate fractions')
 parser.add_argument('--step', type=int, default=0, help='Step size for learning rate scheduler')
@@ -59,15 +65,24 @@ def score_model_console():
     random.seed(args.seed)
     logger.info(f'Run with seed {args.seed}')
     test_models.batch_fix = args.batch_fix
+    if args.convergence_2:
+        global_data.convergence_2 = True
     if args.seed != 0:
         global_data.seed = args.seed
     if args.first:
         train_model(model=args.model, train_func=train_first)
     elif args.full:
         train_model(model=args.model, train_func=full_train)
+    elif args.prune:
+        from base_models.pruner import train as train_prune
+        train_model(model=args.model, train_func=train_prune)
     elif args.convergence:
         if args.lr != 0:
             trainer_convergence.lr = args.lr
+        if args.optimizer != '':
+            trainer_convergence.optimizer = args.optimizer
+        if args.weight_decay != 0:
+            trainer_convergence.weight_decay = args.weight_decay
         if args.step != 0:
             trainer_convergence.step_size = args.step
         if args.epoch != 20:

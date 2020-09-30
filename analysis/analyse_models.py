@@ -445,12 +445,7 @@ def cluster_kernel_weights():
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d:
             weights = m.weight.data.numpy()
-            # if weights.shape[-1] == 1 :
-            if True:
-                weights.squeeze()
-                new = weights.reshape(weights.shape[0], weights.shape[1], -1)
-                new = weights.reshape(new.shape[0], -1)
-
+            if weights.shape[-1] != 1:
                 weights.squeeze()
                 new = weights.reshape(weights.shape[0], weights.shape[1], -1)
                 new = weights.reshape(new.shape[0] * new.shape[1], -1)
@@ -479,12 +474,8 @@ def cluster_kernel_weights():
                 skip_kernel = labels
                 skip = weights.squeeze()
             elif 'input' in name and skip is not None:
-                work_prev = np.concatenate([prev, skip], axis=1)
-                work_prev_kernel = np.concatenate([prev_kernel, skip_kernel], axis=0)
-                # np.random.shuffle(work_prev)
                 kmeans = cluster_data(weights.squeeze(), name=name)
                 labels = kmeans.labels_
-                # predict_next_kernel_typed(work_prev, work_prev_kernel, weights.squeeze(),labels, name )
                 prev = weights.squeeze()
                 prev_kernel = labels
             else:

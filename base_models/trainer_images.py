@@ -21,6 +21,7 @@ from PIL import Image
 from torch.nn import Module
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from base_models import global_data
 from base_models.datasubset import get_dataloader
 
 Image.warnings.simplefilter('ignore')
@@ -91,6 +92,8 @@ def train(identifier,
           ):
     if lr != .1:
         identifier = f'{identifier}_lr{lr}'
+    if global_data.convergence_2:
+        identifier = f'{identifier}_con2'
     print(f'Start training model {identifier} for {epochs} epochs')
     if os.path.exists(output_path + f'{identifier}_epoch_{epochs:02d}.pthh.tar'):
         logger.info('Model already trained')
@@ -206,7 +209,11 @@ def train(identifier,
                         results[trainer.name] = record
 
             data_load_start = time.time()
-        trainer.lr.step(train_loss, epoch=epoch)
+        if global_data.convergence_2:
+            if update_lr_schedule(train_loss):
+                adjust_learning_rate(trainer.optimizer)
+        else:
+            trainer.lr.step(train_loss, epoch=epoch)
         print(f'Learning rate epoch {epoch}: {trainer.optimizer.param_groups[0]["lr"]}, train loss {train_loss}')
         if trainer.optimizer.param_groups[0]["lr"] < 0.0001:
             print('Learning rate too low')
@@ -214,6 +221,31 @@ def train(identifier,
     if ngpus > 1 and torch.cuda.device_count() > 1:
         return model.module
     return model
+
+
+prev = 0.0
+epsilon = 0.2
+running_diff = []
+
+
+def update_lr_schedule(loss):
+    global prev
+    if prev != 0:
+        running_diff.append(prev - loss)
+        prev = loss
+        if len(running_diff) > 3 and np.mean(running_diff[-3:]) < epsilon:
+            return True
+    else:
+        prev = loss
+    return False
+
+
+def adjust_learning_rate(optimizer):
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    global lr
+    lr = lr * 0.1
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
 
 def test(layer='decoder', sublayer='avgpool', time_step=0, imsize=224):

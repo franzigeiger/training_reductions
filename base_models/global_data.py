@@ -13,6 +13,7 @@ benchmarks_public = ['movshon.FreemanZiemba2013public.V1-pls',
                      'fei-fei.Deng2009-top1']
 
 seed = 0
+restore_model = None
 best_models_imagenet = {
     'CORnet-S_full': 'full',
     'CORnet-S_train_gabor_multi_dist': 'V1.conv1',
@@ -35,8 +36,10 @@ best_models_brain = {
     'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12': 'V4.conv2',
 }
 
-base_dir = '/home/franzi/Projects/weight_initialization'
-# dir = '/braintree/home/fgeiger/weight_initialization'
+base_dir = '/home/franzi/Projects/weight_initialization/ressources'
+# base_dir = '/braintree/home/fgeiger/weight_initialization'
+
+convergence_2 = False
 
 best_models_brain_avg_all = {
     # 'CORnet-S_full': 'Full',
@@ -72,6 +75,18 @@ no_init_conv3_train = {
     'CORnet-S_train_conv3_bi': 'IT.conv3_special',
     'CORnet-S_train_conv3_V4_bi': 'V4.conv3_special',
     'CORnet-S_train_conv3_V2_bi': 'V2.conv3_special'
+}
+
+conv1_train = {
+    'CORnet-S_train_conv1_bi': 'IT.conv3_special',
+    'CORnet-S_train_conv1_V4_bi': 'V4.conv3_special',
+    'CORnet-S_train_conv1_V2_bi': 'V2.conv3_special'
+}
+
+batchnorm_train = {
+    'CORnet-S_train_batchnorm': 'IT.conv3_special',
+    'CORnet-S_train_batchnorm_V4': 'V4.conv3_special',
+    'CORnet-S_train_batchnorm_V2': 'V2.conv3_special'
 }
 
 no_gabor_conv3_train = {
@@ -260,6 +275,22 @@ convergence_epoch = {
     'mobilenet_v5_CORnet-S_cluster2_v2_IT_trconv3_bi': 29,
     'mobilenet_v6_CORnet-S_cluster2_v2_IT_trconv3_bi': 34,
     'mobilenet_v7_CORnet-S_cluster2_v2_IT_trconv3_bi': 43,
+    'CORnet-S_brain_IT_full_train': 36,
+    'CORnet-S_brain2_IT_full_train': 32,
+    'CORnet-S_cluster2_IT_full_train': 36,
+    'CORnet-S_dist_IT_full_train': 36,
+    'CORnet-S_train_batchnorm': 30,
+    'CORnet-S_train_batchnorm_V4': 38,
+    'CORnet-S_train_batchnorm_V2': 35,
+    'CORnet-S_train_conv1_V4_bi': 31,
+    'CORnet-S_train_conv1_V2_bi': 31,
+    'CORnet-S_train_conv1_bi': 30,
+    'CORnet-S_full_opAdagrad': 37,
+    'CORnet-S_full_opAdam': 45,
+    'CORnet-S_full_lr1.0': 45,
+    'CORnet-S_full_lr0.01': 29,
+    'CORnet-S_full_wd0.001': 29,
+    'CORnet-S_full_wd1e-05': 29,
 }
 convergence_seed_42 = {
     'CORnet-S_train_V2_seed42': 32,
@@ -328,6 +359,10 @@ convergence_images = {
     'CORnet-S_train_conv3_bi_img100000': 31,
     'CORnet-S_train_conv3_bi_img500000': 32,
     'CORnet-S_train_conv3_bi_img50000': 61,
+    'CORnet-S_full_con2_img100000': 12,
+    'CORnet-S_full_con2_img10000': 8,
+    'CORnet-S_full_con2_img50000': 9,
+    'CORnet-S_full_con2_img1000': 16,
 }
 
 conv_to_norm = {
@@ -378,6 +413,11 @@ conv_to_norm = {
     'V4.conv_input': 'V4.conv_input',
     'IT.conv_input': 'IT.conv_input',
 }
+
+# for key, value in convergence_images.items():
+#     import subprocess
+#     subprocess.call(["./run_one_VV2.sh", key, str(value)])
+
 
 layers = ['V1.conv1', 'V1.conv2',
           'V2.conv_input', 'V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',

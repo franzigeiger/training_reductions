@@ -28,7 +28,7 @@ parser.add_argument('--pool', type=str, default='NET',
                     help='Pool to use: SINGLE|NET|TRAIN')
 parser.add_argument('--seed', type=int, default=0,
                     help='Random seed to change random weights')
-parser.add_argument('--epoch', type=float, default=6,
+parser.add_argument('--epoch', type=float, default=None,
                     help='Number of epoch to test for')
 parser.add_argument('--performance', type=bool, default=False,
                     help='disables all other flags and stored the models performance values in the database')
@@ -58,12 +58,11 @@ def score_model_console():
         model = args.model
         if args.batch_fix:
             model = model + '_BF'
-
-        if args.epoch % 1 == 0:
-            model = model + f'_epoch_{int(args.epoch):02d}'
-        else:
-            model = model + f'_epoch_{args.epoch:.1f}'
-        # model = model + f'_epoch_{args.epoch:02d}'  # if arg
+        if args.epoch is not None:
+            if args.epoch % 1 == 0:
+                model = model + f'_epoch_{int(args.epoch):02d}'
+            else:
+                model = model + f'_epoch_{args.epoch:.1f}'
         score_models_train(model=model, benchmark=args.benchmark)
 
 

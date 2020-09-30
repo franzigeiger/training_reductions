@@ -5,6 +5,7 @@ import sys
 
 from brainscore import score_model
 
+from base_models.pixel_model import get_pixel_model
 from base_models.test_models import cornet_s_brainmodel, resnet_brainmodel, alexnet_brainmodel, mobilenet_brainmodel, \
     hmax_brainmodel
 from benchmark.database import create_connection, store_score
@@ -25,6 +26,8 @@ def run_benchmark(benchmark_identifier, model_name):
 
 
 def get_model(identifier):
+    if 'prune' in identifier:
+        return cornet_s_brainmodel(identifier, True, prune=True)
     if identifier.startswith('CORnet-S'):
         return cornet_s_brainmodel(identifier, True)
     if identifier.startswith('resnet'):
@@ -35,6 +38,8 @@ def get_model(identifier):
         return mobilenet_brainmodel(identifier, init_weights=True)
     if identifier.startswith('hmax'):
         return hmax_brainmodel(identifier, init_weights=True)
+    if identifier.startswith('pixels'):
+        return get_pixel_model(identifier)
 
 
 def score_models(model, benchmark):
