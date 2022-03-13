@@ -36,7 +36,7 @@ best_models_brain = {
     'CORnet-S_brain_kn8_kn9_kn10_wmc11_kn12': 'V4.conv2',
 }
 
-base_dir = '/home/franzi/Projects/weight_initialization/ressources'
+base_dir = '/home/franzi/Projects/weight_initialization'
 # base_dir = '/braintree/home/fgeiger/weight_initialization'
 
 convergence_2 = False
@@ -66,7 +66,7 @@ best_special_brain = {
 }
 best_special_brain_2 = {
     # 'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42': 'IT.conv3_special',
-    'CORnet-S_cluster2_v2_IT_trconv3_bi': 'IT.conv3_special',
+    'CORnet-S_cluster2_v2_IT_bi': 'IT.conv3_special',
     'CORnet-S_cluster2_v2_V4_trconv3_bi': 'V4.conv3_special',
     'CORnet-S_train_gmk1_cl2_7_7tr_bi': 'V2.conv3_special',
 }
@@ -291,6 +291,7 @@ convergence_epoch = {
     'CORnet-S_full_lr0.01': 29,
     'CORnet-S_full_wd0.001': 29,
     'CORnet-S_full_wd1e-05': 29,
+    'CORnet-S_continued_train': 20
 }
 convergence_seed_42 = {
     'CORnet-S_train_V2_seed42': 32,

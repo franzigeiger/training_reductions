@@ -1,15 +1,15 @@
 import argparse
+import fire
 import logging
+import numpy as np
 import random
 import sys
-
-import fire
-import numpy as np
 import torch
 from numpy.random.mtrand import RandomState
 
 import base_models.trainer_images as image_train
-from base_models import train_model, trainer, trainer_convergence, test_models, global_data
+from base_models import train_model, trainer, trainer_convergence, test_models, global_data, store_model, \
+    train_full_on_version
 from base_models.full_trainer import train as full_train
 from base_models.trainer_convergence import train as conv_train
 from base_models.trainer_first_epoch import train as train_first
@@ -32,6 +32,12 @@ parser.add_argument('--convergence', type=bool, default=False,
                     help='Number of epochs to train and test for')
 parser.add_argument('--convergence_2', type=bool, default=False,
                     help='Number of epochs to train and test for')
+parser.add_argument('--save', type=bool, default=False,
+                    help='Save only weights without training')
+parser.add_argument('--full_continued', type=bool, default=False,
+                    help='Save only weights without training')
+parser.add_argument('--source', type=str, default=False,
+                    help='Save only weights without training')
 parser.add_argument('--prune', type=bool, default=False,
                     help='Number of epochs to train and test for')
 parser.add_argument('--images', type=int, default=0,
@@ -73,7 +79,11 @@ def score_model_console():
         train_model(model=args.model, train_func=train_first)
     elif args.full:
         train_model(model=args.model, train_func=full_train)
+    elif args.full_continued:
+        trainer_convergence.epochs = args.epoch
+        train_full_on_version(model=args.model, source=args.source, train_func=conv_train)
     elif args.prune:
+        trainer_convergence.epochs = args.epoch
         from base_models.pruner import train as train_prune
         train_model(model=args.model, train_func=train_prune)
     elif args.convergence:
@@ -88,6 +98,8 @@ def score_model_console():
         if args.epoch != 20:
             trainer_convergence.epochs = args.epoch
         train_model(model=args.model, train_func=conv_train)
+    elif args.save:
+        train_model(model=args.model, train_func=store_model.train)
     elif args.other != '':
         if args.lr != 0:
             trainer_convergence.lr = args.lr

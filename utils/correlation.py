@@ -127,6 +127,13 @@ def kernel_convolution(x, y, stride=2, size=3):
     return filter
 
 
+def run_permutation_test(pooled, sizeZ, sizeY, delta):
+    np.random.shuffle(pooled)
+    starZ = pooled[:sizeZ]
+    starY = pooled[-sizeY:]
+    return np.abs(starZ.mean() - starY.mean())
+
+
 if __name__ == '__main__':
     a = np.random.randint(51, 100, 49).reshape(7, 7)
     b = np.random.randint(51, 100, 49).reshape(7, 7)

@@ -2,9 +2,8 @@ import functools
 import importlib
 import itertools
 import logging
-import os
-
 import numpy as np
+import os
 import torch
 import torchvision
 from brainscore.submission.utils import UniqueKeyDict
@@ -16,7 +15,7 @@ from model_tools.brain_transformation import ModelCommitment
 from model_tools.utils import s3
 from torch.nn import Module
 
-from base_models import hmax
+from base_models import hmax, global_data
 from base_models.mobilenet import get_mobilenet as get_mobilenet_local
 from base_models.trainer import output_path
 from base_models.trainer import train
@@ -46,8 +45,8 @@ def get_model(identifier, init_weights=True, config=None, prune=False):
         config = {}
     print(f'Configuration: {config}')
     cornet_type = 'S'
-    np.random.seed(seed)
-    torch.manual_seed(seed)
+    np.random.seed(global_data.seed)
+    torch.manual_seed(global_data.seed)
     if prune:
         from base_models.cornet_s_prunable import CORnet_S
         model = CORnet_S()
@@ -157,8 +156,8 @@ def get_weights(identifier):
 def run_model_training(model, identifier, config=None, train_func=None, prune=False):
     if batch_fix:
         identifier = f'{identifier}_BF'
-    if config is None or 'layers' not in config or len(config['layers']) == 0:
-        config = {'layers': ['decoder']}
+    # if config is None or 'layers' not in config or len(config['layers']) == 0:
+    #     config = {'layers': ['decoder']}
     if 'full' not in config:
         for name, m in model.named_parameters():
             if any(value in name for value in config['layers']):

@@ -1,8 +1,7 @@
-from math import log10
-
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from math import log10
 from matplotlib import gridspec
 from matplotlib import rc
 from matplotlib.ticker import FuncFormatter
@@ -20,12 +19,24 @@ my_palette = ['#2cb8b8', '#186363', '#1D9FB3', '#995d13']
 my_palette_light = ['#75FF93', '#B3F5FF', '#FFBAAD', '#cfa256']
 red_palette = ['#FF3210', '#803E33', '#CC290C', '#FF7D66', '#99665D', '#424949']
 green_palette = ['#1DB33D', '#75FF93', '#29FF57', '#58BF6E', '#147F2C']
-blue_palette = ['#2cb8b8', '#5D7575', '#10635E', '#9FE0DC', '#709D9A', '#2B3D3C', '#818A94']
+blue_palette = ['#5D7575', '#2cb8b8', '#10635E', '#9FE0DC', '#709D9A', '#2B3D3C', '#818A94']
 grey_palette = ['#ACB9C6', '#ABB2B9', '#7C8287', '#6C7175', '#24303B']
 my_palette_mix = ['#995d13', '#cfa256', '#0c7169', '#58b0a7', '#296e85', '#549ebe', ]
 combi = ['#1D9FB3', '#2cb8b8', '#FF3210', '#B3F5FF', '#1DB31E', '#91FF91', '#995d13', '#cfa256']
 pal_of_pals = [red_palette, blue_palette, green_palette, grey_palette]
 
+linestyle_tuple = [
+    ('solid', (0, ())),
+    ('dashed', (0, (5, 5))),
+    ('dotted', (0, (1, 1))),
+    # ('densely dotted',        (0, (1, 1))),
+    ('densely dashed', (0, (5, 1))),
+    ('dashdotted', (0, (3, 5, 1, 5))),
+    ('densely dashdotted', (0, (3, 1, 1, 1))),
+    ('dashdotdotted', (0, (3, 5, 1, 5, 1, 5))),
+    ('loosely dashdotted', (0, (3, 10, 1, 10))),
+    ('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
+    ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))]
 
 def get_all_perturbations():
     return ['', '_random', '_jumbler', '_kernel_jumbler', '_channel_jumbler', '_norm_dist', '_norm_dist_kernel']
@@ -69,8 +80,8 @@ def formatter(x, pos, percent=False, million=False, million_base=False, trillion
 def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False, number=True, percent_x=False,
                          **formatter_kwargs):
     ax.set_title(title, weight='semibold', size=24)
-    ax.set_xlabel(xlabel, size=22)  # weight='semibold',
-    ax.set_ylabel(ylabel, size=22)  # weight='semibold',
+    ax.set_xlabel(xlabel, size=26)  # weight='semibold',
+    ax.set_ylabel(ylabel, size=26)  # weight='semibold',
     func_percent = lambda x, pos: formatter(x, pos, percent)
     func_mil = lambda x, pos: formatter(x, pos, **formatter_kwargs)
     if percent_x:
@@ -80,7 +91,7 @@ def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False
     ax.yaxis.set_major_formatter(FuncFormatter(func_percent))
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    ax.tick_params(bottom=False, left=False, labelsize=22)
+    ax.tick_params(bottom=False, left=False, labelsize=26)
 
 
 def get_list_all_pert(models):
@@ -150,8 +161,8 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
                     color=palette[index])
             index += 1
             lab = x_values[-1]
-        elif use_xticks and key in ['base', 'base_untrained', 'base_trained', 'Brain Predictivity']:
-            ax.plot(x_values, data[key], label=key, linestyle="solid", marker=".", alpha=1, color=blue_palette[0])
+        elif use_xticks and key in ['base', 'base_untrained', 'base_trained', 'Brain Predictivity', 'Mean Brain Pred.']:
+            ax.plot(x_values, data[key], label=key, linestyle="dashed", marker=".", alpha=1, color=blue_palette[1])
             col = blue_palette[0]
             index += 1
             alpha = 1
@@ -161,21 +172,21 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
                     color='#424949')
             col = '#424949'
             lab = x_values[key]
-        elif key in ['base', 'base_untrained', 'base_trained', 'Brain Predictivity']:
-            ax.plot(x_values, data[key], label=key, linestyle="solid", marker=".", alpha=1,
-                    color=blue_palette[0])
+        elif key in ['base', 'base_untrained', 'base_trained', 'Brain Predictivity', 'Mean Brain Pred.']:
+            ax.plot(x_values, data[key], label=key, linestyle="dashed", marker=".", alpha=1,
+                    color=blue_palette[1])
             col = blue_palette[0]
             alpha = 1
             lab = x_values
         elif special_xaxis:
             labels = x_values[key]
-            ax.plot(labels, data[key], label=key, linestyle="dashed", marker=".", alpha=alpha,
+            ax.plot(labels, data[key], label=key, linestyle=linestyle_tuple[index][1], marker=".", alpha=alpha,
                     color=palette[index])
             col = palette[index]
             lab = labels
             index += 1
         else:
-            ax.plot(x_values, data[key], label=key, linestyle=linestyle, marker="o", alpha=alpha,
+            ax.plot(x_values, data[key], label=key, linestyle=linestyle_tuple[index][1], marker=".", alpha=alpha,
                     color=palette[index])
 
             col = palette[index]
@@ -216,7 +227,7 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
 
 
 def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_name='', y_name='', scale_fix=None,
-                     rotate=False, alpha=1.0,
+                     rotate=False, alpha=1.0, base_line=None,
                      x_ticks=None, log=False, x_ticks_2=None, percent=False, annotate_pos=None, data_labels=None,
                      scatter=False, legend=False,
                      ax=None, percent_x=False, pal=my_palette + my_palette_light, gs=None, **formatter_kwargs):
@@ -235,7 +246,7 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
     if x_ticks is None:
         x_ticks = np.arange(len(list(data.values())[0]))
     if rotate:
-        ax.xticks(rotation='vertical', fontsize=22)
+        ax.xticks(rotation='vertical', fontsize=26)
     if data2 and len(data2['Score']) > 0:
         if err2:
             ax.errorbar(x_ticks_2, data2['Score'], yerr=err2['Score'],
@@ -249,8 +260,8 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
         full_y = data2['Score'][0]
         full_x = x_ticks_2[0]
         if data_labels:
-            ax.annotate(s='Standard Training', xy=(full_x, full_y), color='black', size=22)
-            ax.annotate(s='Downstream Training', xy=(x_ticks_2[-1], data2['Score'][-1]), color='black', size=22)
+            ax.annotate(s='Standard Training', xy=(full_x, full_y), color='black', size=26)
+            ax.annotate(s='Downstream Training', xy=(x_ticks_2[-1], data2['Score'][-1]), color='black', size=26)
     idx = 0
     for key, value in data.items():
         if isinstance(pal[idx], list):
@@ -258,13 +269,15 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
         else:
             cols = pal[idx]
         if err:
-            ax.errorbar(x_ticks[key], data[key], yerr=err[key], label=key, linestyle="--", marker="o", alpha=alpha,
+            ax.errorbar(x_ticks[key], data[key], yerr=err[key], label=key, linestyle=linestyle_tuple[idx][1],
+                        marker="o", alpha=alpha,
                         color=cols)
         elif scatter:
             ax.plot(x_ticks[key], data[key], label=key, linestyle='', scalex=True,
                     marker="o", alpha=0.9, color=cols, )
         else:
-            ax.plot(x_ticks[key], data[key], label=key, scalex=True, linestyle="--", marker="o", alpha=alpha,
+            ax.plot(x_ticks[key], data[key], label=key, scalex=True, linestyle=linestyle_tuple[idx][1], marker="o",
+                    alpha=alpha,
                     color=cols)
         y_val = data[key]
         if data_labels is not None and isinstance(data_labels, dict):
@@ -272,35 +285,33 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
                 ax.annotate(label,  # this is the text
                             (x, y),  # this is the point to label
                             textcoords="offset points",  # how to position the text
-                            xytext=(0, 10), size=22,  # distance from text to points (x,y)
+                            xytext=(0, 10), size=26,  # distance from text to points (x,y)
                             ha='center', color=cols)  # color='#818A94',
         elif annotate_pos is not None:
             label = data_labels[idx] if isinstance(data_labels, list) else key
             if len(x_ticks[key]) > 0:
                 ax.annotate(label,  # this is the text
                             (x_ticks[key][annotate_pos], data[key][annotate_pos]),  # this is the point to label
-                            textcoords="offset points", size=22,  # how to position the text
+                            textcoords="offset points", size=26,  # how to position the text
                             xytext=(-10, 19),  # distance from text to points (x,y)
                             ha='center', color=cols)  # cols[0] if isinstance(cols, list) else cols
         idx += 1
     if log:
-        # if 0 in x_labels:
-        #     ax.set_xscale('symlog', nonposx='clip', subsx=[1, 2, 3, 4, 5, 6, 7, 8, 9], linthreshx=0.1)
-        # else:
         ax.set_xscale('symlog', nonposx='clip', subsx=[1, 2, 3, 4, 5, 6, 7, 8, 9], linthreshx=0.1)
-        # ax.set_xlim(1 * pow(10, 6) , 100 * pow(10, 6))
         ax.grid(True, which='both', linestyle='-', alpha=0.6)
         plt.grid(True, which='both', linestyle='-', alpha=0.6)
-
+    if base_line is not None:
+        ax.axhline(base_line, linewidth=2, color='#ACB9C6', label='Pixels')
+        ax.text(x=2, y=base_line, s='Pixels', color='#ACB9C6')
     if percent:
         ax.set_yticks(range(0, 110, 20))
     if legend:
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=3, prop={'size': 22})
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=3, prop={'size': 26})
     rows = 1
     rows = 2 if len(data) >= 4 else rows
     rows = 3 if len(data) >= 6 else rows
     if annotate_pos is None:  # or isinstance(data_labels, list):
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=int(rows), prop={'size': 22})
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=int(rows), prop={'size': 26})
     if scale_fix:
         ax.set_ylim(scale_fix[0], scale_fix[1])
     output_paper_quality(ax, name, x_name, y_name, percent, percent_x=percent_x, **formatter_kwargs)
@@ -415,7 +426,7 @@ def plot_histogram(data, name, bins=100, labels=[], x_axis='Weight distribution'
     sns.set()
     sns.set_context("paper")
     plt.hist(data, alpha=0.5, bins=bins, range=range, fill=True, histtype='bar', density=True, label=labels)
-    plt.legend(prop={'size': 22})
+    plt.legend(prop={'size': 26})
     plt.gca().set(title=name, xlabel=x_axis)
     plt.tight_layout()
     file_name = name.replace(' ', '_')
@@ -483,11 +494,11 @@ def plot_heatmap(data, col_labels, row_labels, title, ax=None, percent=False, **
     ax.set_yticks(np.arange(len(kwargs['yticklabels'])) + 0.5)
     ax.set_xticks(np.arange(len(kwargs['xticklabels'])) + 0.5)
     ax.set_title(title, size=24)
-    ax.set_xlabel(col_labels, weight='semibold', size=22)
-    ax.set_ylabel(row_labels, weight='semibold', size=22)
-    ax.xaxis.set_tick_params(rotation=45, size=22)
-    ax.yaxis.set_tick_params(rotation=45, size=22)
-    ax.tick_params(labelsize=22)
+    ax.set_xlabel(col_labels, weight='semibold', size=26)
+    ax.set_ylabel(row_labels, weight='semibold', size=26)
+    ax.xaxis.set_tick_params(rotation=45, size=26)
+    ax.yaxis.set_tick_params(rotation=45, size=26)
+    ax.tick_params(labelsize=26)
     if show:
         file_name = title.replace(' ', '_')
         plt.savefig(f'{file_name}.png')
@@ -495,7 +506,7 @@ def plot_heatmap(data, col_labels, row_labels, title, ax=None, percent=False, **
 
 
 def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots', yerr=None, line=None, label=False,
-                        grey=True, percent=False,
+                        grey=True, percent=False, double=False, base_line=None,
                         gs=None, ax=None):
     sns.set()
     sns.set_style("white", {'grid.color': '.95', })
@@ -513,14 +524,14 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
     if bars < 3:
         # step_size = 1.5
         width = step_size / 4
-        font_size = 22
+        font_size = 26
         # bars = 1
     elif bars < 5:
         width = step_size / 6  # the width of the bars
-        font_size = 22
+        font_size = 26
     else:
         width = step_size / 10
-        font_size = 22
+        font_size = 26
     left_edge = ((bars / 2) * width)
 
     idx = 0
@@ -529,7 +540,7 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
         if len(data) > len(combi) + 2:
             pals = ['#818A94'] + sns.color_palette("muted", len(data) - 2) + ['#424949']
         else:
-            pals = ['#424949'] + [blue_palette[1], blue_palette[0]] * 10
+            pals = blue_palette * 2
     else:
         pals = [blue_palette[1], blue_palette[0], blue_palette[0], blue_palette[0], blue_palette[0], blue_palette[0],
                 blue_palette[0]]
@@ -537,22 +548,26 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
     for key, value in data.items():
         if label:
             colors = pals[idx]
-            if yerr is not None:
+            if double:
+                rects = ax.bar(x - left_edge + (0 * width), value, width + 0.5, yerr=yerr[key], label=key,
+                               color=pals, alpha=1 if idx == 1 else 0.2)
+            elif yerr is not None:
                 rects = ax.bar(x - left_edge + (idx * width), value, width - 0.05, yerr=yerr[key], label='',
                                color=colors)
             else:
                 rects = ax.bar(x - left_edge + (idx * width), value, width - 0.05, label='', color=colors)
             axes.append(rects)
-            for rect in rects:
+            for id in range(len(rects)):
+                rect = rects[id]
                 height = rect.get_height()
-                if height < 0.1:
-                    ax.annotate(key,
-                                xy=(rect.get_x() + rect.get_width() / 2, height - 0.02),
-                                xytext=(0, -3),  # 3 points vertical offset
+                if height < 10 and height != 0:
+                    ax.annotate(labels[id],
+                                xy=(rect.get_x() + rect.get_width() / 2, height + 0.08),
+                                xytext=(0, +1),  # 3 points vertical offset
                                 textcoords="offset points", rotation='vertical',
                                 ha='center', va='bottom', size=font_size)
-                else:
-                    ax.annotate(key,
+                elif height < 80 and height != 0:
+                    ax.annotate(labels[id],
                                 xy=(rect.get_x() + rect.get_width() / 2, height - 0.02),
                                 xytext=(0, -3),  # 3 points vertical offset
                                 textcoords="offset points", rotation='vertical',
@@ -567,18 +582,21 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
                     xytext=(0, 2),  # 3 points vertical offset
                     textcoords="offset points", size=font_size,
                     ha='center', va='bottom')
+    if base_line is not None:
+        ax.axhline(base_line, linewidth=2, color='#ACB9C6', label='Pixels')
+        ax.text(x=2, y=base_line, s='Pixels', color='#ACB9C6')
     ax.set_ylabel(y_label, size=font_size)
-
-    ax.set_xticks(x)
+    if labels:
+        ax.set_xticks([])
     # ax.set(ylim=[0.0, 0.45])
     ax.legend(loc='lower left', bbox_to_anchor=(-0.2, 1), frameon=False, ncol=2)
 
-    ax.tick_params(axis='both', which='major', labelsize=font_size)
-    if percent:
-        ax.set_ylim([0, 100])
-        # ax.set_yticks(range(0, 110, 20), size=22)
+    # ax.tick_params(axis='both', which='major', labelsize=font_size)
+    # if percent:
+    # ax.set_ylim([0, 100])
+    # ax.set_yticks(range(0, 110, 20), size=26)
     output_paper_quality(ax, title, xlabel='', ylabel=y_label, percent=percent)
-    ax.set_xticklabels(labels, size=font_size)
+    # ax.set_xticklabels(labels, size=font_size)
     if show:
         plt.tight_layout()
         plt.savefig(f'{file_name}.svg')
@@ -725,7 +743,7 @@ if __name__ == '__main__':
     # sns.palplot(sns.color_palette("PuBuGn_d", 8))
     both = []
     palette0 = sns.color_palette("RdBu_r", 7)
-    palette1 = sns.diverging_palette(220, 20, n=7)
+    palette1 = sns.diverging_palette(260, 20, n=7)
     print(palette1.as_hex())
     print(palette1)
     print(palette0.as_hex())

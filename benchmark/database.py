@@ -1,9 +1,8 @@
 import logging
+import numpy as np
 import os
 import sqlite3
 import statistics
-
-import numpy as np
 
 from base_models.global_data import convergence_epoch, convergence_images
 
@@ -67,7 +66,7 @@ model_versions = {
                                            # 'CORnet-S_cluster2_v2_IT_trconv3_bi_seed94'
                                            ],
     'CORnet-S_cluster2_v2_V4_trconv3_bi': ['CORnet-S_cluster2_v2_V4_trconv3_bi',
-                                           'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42',
+                                           # 'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42',
                                            'CORnet-S_cluster2_v2_V4_trconv3_bi_seed94'],
     'CORnet-S_train_gmk1_cl2_7_7tr_bi': ['CORnet-S_train_gmk1_cl2_7_7tr_bi', 'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42'],
     'CORnet-S_train_conv3_bi': ['CORnet-S_train_conv3_bi', 'CORnet-S_train_conv3_bi_seed42'],
@@ -77,13 +76,14 @@ model_versions = {
     'CORnet-S_cluster9_IT_trconv3_bi': ['CORnet-S_cluster9_IT_trconv3_bi', 'CORnet-S_cluster9_IT_trconv3_bi_seed42'],
     'CORnet-S_train_wmk1_cl2_7_7tr_bi': ['CORnet-S_train_wmk1_cl2_7_7tr_bi', 'CORnet-S_train_wmk1_cl2_7_7tr_bi_seed42'],
     'CORnet-S_full': ['CORnet-S_full',
-                      # 'CORnet-S_full_seed42',
+                      'CORnet-S_full_seed42',
                       # 'CORnet-S_full_seed94'
                       ],  # 'CORnet-S_full_seed94'
     'CORnet-S_train_V4': ['CORnet-S_train_V4', 'CORnet-S_train_V4_seed42'],
     'CORnet-S_train_IT_seed_0': ['CORnet-S_train_IT_seed_0', 'CORnet-S_train_IT_seed_0_seed42'],
     'CORnet-S_train_random': ['CORnet-S_train_random', 'CORnet-S_train_random_seed42'],
     'CORnet-S_cluster2_v2_IT_bi': ['CORnet-S_cluster2_v2_IT_bi_seed42', 'CORnet-S_cluster2_v2_IT_bi'],
+    'CORnet-S_cluster2_IT_full_train': ['CORnet-S_cluster2_IT_full_train', 'CORnet-S_cluster2_IT_full_train_seed32']
 }
 
 
@@ -221,6 +221,7 @@ def load_from_statement(conn, sql, models, benchmarks):
     # score list ordered by benchmark inputs
     scores = {}
     for model in models:
+        print(model)
         array = np.empty((len(benchmarks),), dtype=object)
         scores[model] = array
         for i, v in enumerate(array):

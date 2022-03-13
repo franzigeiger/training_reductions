@@ -1,16 +1,15 @@
+import cornet
 import glob
 import importlib
 import io
 import logging
+import numpy as np
 import os
+import pandas
 import pickle
 import shlex
 import subprocess
 import time
-
-import cornet
-import numpy as np
-import pandas
 import torch
 import torch.nn as nn
 import torch.utils.model_zoo
@@ -287,29 +286,16 @@ def accuracy(output, target, topk=(1,)):
 
 
 if __name__ == '__main__':
-    with open(output_path + f'results_CORnet-S_train_IT_random_2_gpus.pkl', 'rb') as f:
-        data = pickle.load(f)
-        # validation = data['val']
-        item = data[-1]
-        print(item)
-        print(data[len(data) - 1])
-    # np.random.seed(0)
-    # torch.manual_seed(0)
-    # layer_based.random_state = RandomState(0)
-    identifier = 'CORnet-S_train_IT_seed_0'
+    identifier = 'CORnet-S_cluster2_v2_IT_trconv3_bi_epoch_00'
     mod = importlib.import_module(f'cornet.cornet_s')
     model_ctr = getattr(mod, f'CORnet_S')
     model = model_ctr()
-    # model = cornet.cornet_s(True)
     model3 = cornet.cornet_s(False)
-    model2 = cornet.cornet_s(False)
-    if os.path.exists(output_path + f'{identifier}_epoch_20.pth.tar'):
+    model2 = model_ctr()
+    if os.path.exists(output_path + f'{identifier}.pth.tar'):
         logger.info('Resore weights from stored results')
-        checkpoint = torch.load(output_path + f'{identifier}_epoch_20.pth.tar',
+        checkpoint = torch.load(output_path + f'{identifier}.pth.tar',
                                 map_location=lambda storage, loc: storage)
-        model2.load_state_dict(checkpoint['state_dict'])
-        checkpoint2 = torch.load(output_path + f'CORnet-S_random.pth.tar',
-                                 map_location=lambda storage, loc: storage)
 
 
         class Wrapper(Module):
@@ -318,14 +304,14 @@ if __name__ == '__main__':
                 self.module = model
 
 
-        model = Wrapper(model)
-        model.load_state_dict(checkpoint2['state_dict'])
-        model3 = model.module
-    # if os.path.exists(output_path + f'{identifier}_2_gpus_epoch_00.pth.tar'):
-    #     logger.info('Resore weights from stored results')
-    #     checkpoint = torch.load(output_path + f'{identifier}_epoch_00.pth.tar',
-    #                             map_location=lambda storage, loc: storage)  # map onto cpu
-    # model.load_state_dict(checkpoint['state_dict'])
+        model.load_state_dict(checkpoint['state_dict'])
+    if os.path.exists(output_path + f'CORnet-S_cluster2_IT_full_train_epoch_00.pth.tar'):
+        logger.info('Resore weights from stored results')
+        checkpoint2 = torch.load(output_path + f'CORnet-S_cluster2_v2_IT_trconv3_bi_seed31_epoch_00.pth.tar',
+                                 map_location=lambda storage, loc: storage)
+        checkpoint3 = torch.load(output_path + f'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42_epoch_00.pth.tar',
+                                 map_location=lambda storage, loc: storage)  # map onto cpu
+        model2.load_state_dict(checkpoint2['state_dict'])
     for name, m in model2.module.named_parameters():
         for name2, m2 in model3.named_parameters():
             if name == name2:
@@ -333,13 +319,3 @@ if __name__ == '__main__':
                 value1 = m.data.cpu().numpy()
                 value2 = m2.data.cpu().numpy()
                 print((value1 == value2).all())
-
-    # values1 = model.module.V1.conv2.weight.data.cpu().numpy()
-    # values2 = model2.module.V1.conv2.weight.data.cpu().numpy()
-    # values3 = model3.module.V1.conv2.weight.data.cpu().numpy()
-    # diffs = values2 - values3
-    # # print(diffs)
-    # print((values1 == values2).all())
-    #
-    # print((values3 == values1).all())
-    # print(identifier)

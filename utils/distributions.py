@@ -1,11 +1,10 @@
-import pickle
-import warnings
-from os import path
-
 import numpy as np
 import pandas as pd
+import pickle
 import scipy.stats as st
 import torch
+import warnings
+from os import path
 from sklearn import mixture
 
 from base_models import global_data
@@ -102,7 +101,7 @@ def mixture_analysis(pi, mu, cov, name, gs=None):
 
 
 def load_mixture_gaussian(name):
-    pickle_in = open(f'{base_dir}/gm_{name}_dist.pkl', "rb")
+    pickle_in = open(f'{base_dir}/ressources/gm_{name}_dist.pkl', "rb")
     GM = pickle.load(pickle_in)
     # dict = {'comp': components,'weights':best_gmm.weights_,'means': best_gmm.means_, 'cov':best_gmm.covariances_}
     gmm = mixture.GaussianMixture(n_components=GM['comp'],

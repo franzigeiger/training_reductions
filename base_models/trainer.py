@@ -1,17 +1,16 @@
+import cornet
 import glob
 import importlib
 import io
 import logging
+import numpy as np
 import os
+import pandas
 import pickle
 import pprint
 import shlex
 import subprocess
 import time
-
-import cornet
-import numpy as np
-import pandas
 import torch
 import torch.nn as nn
 import torch.utils.model_zoo
@@ -27,8 +26,9 @@ torch.backends.cudnn.benchmark = False
 normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
 ngpus = 2
-epochs = 20
-output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
+epochs = 30
+# output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  #
+output_path = os.path.join(os.path.dirname(__file__), 'model_weights/')
 data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4

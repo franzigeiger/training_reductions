@@ -1,10 +1,9 @@
+import numpy as np
 import pickle
 import random
-from os import path
-
-import numpy as np
 import scipy.stats as st
 import torch
+from os import path
 from scipy.stats import norm
 from skimage.filters import gabor_kernel
 from skimage.transform import resize
@@ -569,7 +568,7 @@ def do_cluster_init(weights, shape, previous, config, index, **kwargs):
     # cluster = {'mean' : mean, 'std': std, 'weight_stds' : weight_stds, 'components' : n_components[name]}
     idx = index
     name = f'cluster_{global_data.layers[index]}'
-    pickle_in = open(f'{base_dir}/{name}.pkl', "rb")
+    pickle_in = open(f'{base_dir}/ressources/{name}.pkl', "rb")
     cluster = pickle.load(pickle_in)
     frac = shape[1] / weights.shape[1]
     means = cluster['mean']

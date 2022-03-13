@@ -1,7 +1,6 @@
-from collections import OrderedDict
-
 import numpy as np
 from PIL import Image
+from collections import OrderedDict
 from model_tools.activations.core import ActivationsExtractorHelper
 from model_tools.brain_transformation import ModelCommitment
 
@@ -18,7 +17,7 @@ def get_pixel_model(name):
     :param name: the name of the model to fetch
     :return: the model instance
     """
-    assert name == 'pixels'
+    # assert name == 'pixels'
     return brain_model
 
 
@@ -61,5 +60,5 @@ def get_layers(name):
     :param name: the name of the model, to return the layers for
     :return: a list of strings containing all layers, that should be considered as brain area.
     """
-    assert name == 'pixels'
+    # assert name == 'pixels'
     return ['pixels']

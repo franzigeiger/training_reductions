@@ -2376,6 +2376,13 @@ def train_model(model, train_func=None, images=0):
     train_conf_model(model, config, train_func, images)
 
 
+def train_full_on_version(model, source, train_func):
+    net = get_model(source, True)
+    if global_data.seed != 0:
+        model = f'{model}_seed{global_data.seed}'
+    run_model_training(model=net, identifier=model, config={'full': True}, train_func=train_func)
+
+
 def train_conf_model(model, config, train_func=None, images=0):
     if 'convergence' in config:
         train_func = conv_train
@@ -2391,9 +2398,6 @@ def train_conf_model(model, config, train_func=None, images=0):
 
 
 if __name__ == '__main__':
-    # model = 'CORnet-S_mix_bd_evd_mi_IT_trconv3_bi'
     model = 'CORnet-S_cluster10_V4_trconv3_bi'
-    # model = 'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_2_gpu'
-    # model = 'CORnet-S_train_gabor_dist_both_kernel'
     model = get_model(model, False, get_config(model))
     assert model is not None

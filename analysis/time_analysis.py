@@ -1,7 +1,6 @@
 import itertools
-from itertools import chain
-
 import numpy as np
+from itertools import chain
 from matplotlib.ticker import FuncFormatter
 
 from base_models.global_data import layer_best_2, random_scores, layers, convergence_epoch, benchmarks, \
@@ -99,7 +98,7 @@ def plot_models_vs(models, file_name, convergence=False, epoch=0, title='', imag
     err = {}
     # We replace the model id, with a more human readable version
     for name, models in models.items():
-        labels.append(name)
+        # labels.append(name)
         for model_name, model in models.items():
             if model_name not in data_set:
                 data_set[model_name] = []
@@ -116,7 +115,7 @@ def plot_models_vs(models, file_name, convergence=False, epoch=0, title='', imag
     else:
         y = r"\textbf{Brain Predictivity} [\% of standard training]"
 
-    plot_bar_benchmarks(data_set, labels, title, y, file_name, yerr=err, percent=True, label=True, grey=True, gs=gs,
+    plot_bar_benchmarks(data_set, labels, title, y, file_name, label=True, yerr=err, percent=True, grey=True, gs=gs,
                         ax=ax)
 
 
@@ -129,6 +128,8 @@ def plot_models_begin_end(models, convergence=False, epochs=[0], title='', ax=No
     full_all = load_error_bared(conn, ['CORnet-S_full'], benchmarks, True, epochs)
     print(full_all)
     full = np.mean(full_all['CORnet-S_full'][selection])
+    base_line = load_error_bared(conn, ['pixels'], benchmarks, convergence=False, epochs=[0])
+    base_line = (np.mean(base_line['pixels_epoch_00'][selection]) / full) * 100
     model_dict = load_error_bared(conn, names, benchmarks, convergence=convergence, epochs=epochs)
     print(model_dict)
     labels = []
@@ -146,8 +147,8 @@ def plot_models_begin_end(models, convergence=False, epochs=[0], title='', ax=No
                 data_set[convergence_name].append((np.mean(model_dict[model][selection]) / full) * 100)
                 err[convergence_name].append((np.mean(model_dict[model][6:][selection]) / full) * 100)
             else:
-                data_set[convergence_name].append(None)
-                err[convergence_name].append(None)
+                data_set[convergence_name].append(0)
+                err[convergence_name].append(0)
         for epoch in epochs:
             key = 'No training' if epoch == 0 else f'Epoch {epoch}'
             if key not in data_set:
@@ -161,9 +162,7 @@ def plot_models_begin_end(models, convergence=False, epochs=[0], title='', ax=No
     else:
         y = r"\textbf{Brain Predictivity} [\% of standard training]"
     plot_bar_benchmarks(data_set, labels, title, y, '', yerr=err, percent=True, label=True, grey=True,
-                        ax=ax)
-    # plot_data_base(data_set, title, '' , y,x_values=np.arange(len(labels)),number=False, rotate=True,x_ticks=np.arange(len(labels)),x_labels=labels,linestyle='', legend=True, percent=True, palette=my_palette,
-    #                     ax=ax)
+                        ax=ax, double=True, base_line=base_line)
 
 
 def plot_model_avg_benchmarks(models, file_name, epoch=6, ax=None):
@@ -211,8 +210,8 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
 
     model_dict = load_error_bared(conn, [model, 'CORnet-S_full'], benchmarks, epochs=epochs, convergence=True)
     full = model_dict['CORnet-S_full']
-
-    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Brain Predictivity']
+    print(model_dict)
+    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Mean Brain Pred.']
     data = {}
     for i in range(len(benchmarks) - 1):
         if i in selection:
@@ -236,12 +235,12 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
     end = (np.mean(model_dict[model][selection]) / np.mean(full[selection])) * 100
     data[benchmarks_labels[-1]].append(end)
     plot_data_base(data, f'', r'\textbf{Training Epochs}', r'\textbf{Score} [\% of standard training]',
-                   epochs + [43],
+                   epochs + [20],
                    x_ticks=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
-                       43],
+                       20],
                    x_labels=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
                        'Conv'],
-                   percent=True, alpha=0.5, log=True, annotate=True, legend=False, annotate_pos=2, ax=ax,
+                   percent=True, alpha=0.5, log=False, annotate=True, legend=False, annotate_pos=2, ax=ax,
                    palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]])
 
 
@@ -497,7 +496,7 @@ def image_scores_single(model, imgs, selection=[], ax=None):
     names.append(model)
     model_dict = load_error_bared(conn, names, benchmarks, convergence=True)
     full = model_dict['CORnet-S_full']
-    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Brain Predictivity']
+    benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Mean Brain Pred.']
     data = {}
     for i in range(len(benchmarks) - 1):
         if i in selection:

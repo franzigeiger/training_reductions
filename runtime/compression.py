@@ -1,13 +1,12 @@
-import os
-import pickle
-import sys
-from os import path
-
 import cornet
 import numpy as np
+import os
+import pickle
 import scipy as st
+import sys
 import tensorflow as tf
 import torch
+from os import path
 from torch import nn
 
 from base_models import get_model, run_model_training, layers, get_config, conv_to_norm, global_data, \
@@ -49,7 +48,7 @@ def get_params(identifier, hyperparams=True):
 
 
 def get_all_params(identifier, hyperparams=True):
-    if 'hmax' in identifier:
+    if 'hmax' in identifier or 'pixels' in identifier:
         return 0, 0
     if identifier in param_list:
         return param_list[identifier], 0
@@ -116,7 +115,7 @@ def get_all_params(identifier, hyperparams=True):
                 values += params
                 hyper_params += params
                 print(
-                    f'layer {name} saves {size} weights and replaces it with {params} so {params / size} params')
+                    f'layer {name} has {size} weights and replaces it with {params} so {params / size} params')
             all += size
             idx += 1
             layer.append(name)
@@ -129,12 +128,16 @@ def get_all_params(identifier, hyperparams=True):
                 for dim in np.shape(m.weight.data.cpu().numpy()): size *= dim
                 if any(value in conv_to_norm[name] for value in config['layers']):
                     values += size
+                    print(f'layer {name} is trained, size {size}')
                 if conv_to_norm[name] in config and hyperparams:
                     this_mod = sys.modules[__name__]
                     str(config['bn_init'])
                     func = getattr(this_mod, config['bn_init'].__name__)
                     params = func(m.weight.data.cpu().numpy(), config=config, index=idx)
                     values += params
+                    print(
+                        f'layer {name} has {size} weights and replaces it with {params}')
+                    print(f'Batchnorm init {params}')
                     hyper_params += params
     param_list[identifier] = values
     print(f'{identifier} has {values} parameter')
@@ -573,7 +576,7 @@ def apply_generic(model, configuration):
 def do_cluster_init(model, config, index, **kwargs):
     # cluster = {'mean' : mean, 'std': std, 'weight_stds' : weight_stds, 'components' : n_components[name]}
     name = f'cluster_{global_data.layers[index]}'
-    pickle_in = open(f'{base_dir}/{name}.pkl', "rb")
+    pickle_in = open(f'{base_dir}/ressources/{name}.pkl', "rb")
     cluster = pickle.load(pickle_in)
     means = cluster['mean']
     stds = cluster['std']

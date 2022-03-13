@@ -1,15 +1,14 @@
 import math
-import pickle
-from heapq import nlargest
-from os import path
-
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
 import seaborn as sns
+from heapq import nlargest
 from matplotlib import pyplot, gridspec
 from matplotlib.lines import Line2D
-from model_tools.brain_transformation import ModelCommitment
+# from model_tools.brain_transformation import ModelCommitment
 from numpy.random.mtrand import RandomState
+from os import path
 from scipy.stats import norm, pearsonr
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import explained_variance_score
@@ -34,11 +33,11 @@ def load_model(model_name, random):
     if model_name == 'alexnet':
         return alexnet('', True)._model
     base = brain_translated_pool[model_name]
-    if isinstance(base.content, ModelCommitment):
-        model = base_model_pool[model_name]
-        model = base.layer_model.activations_model._model
-    else:
-        model = cornet_s_brainmodel('base', (not random)).activations_model._model
+    # if isinstance(base.content, ModelCommitment):
+    #     model = base_model_pool[model_name]
+    #     model = base.layer_model.activations_model._model
+    # else:
+    model = cornet_s_brainmodel('base', (not random)).activations_model._model
     return model
 
 
@@ -759,8 +758,6 @@ def plot_layer_centers(gs=None):
     import torch.nn as nn
     model = get_model('CORnet-S_base', True)
     index = 0
-    # dir = '/home/franzi/Projects/weight_initialization'
-    # dir = '/braintree/home/fgeiger/weight_initialization'
     show = False
     if gs is None:
         plt.figure(figsize=(10, 10), frameon=False)
@@ -777,14 +774,14 @@ def plot_layer_centers(gs=None):
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d:
             if index == 0:
-                if path.exists(f'{base_dir}/gm_gabor_0_samples.pkl'):
+                if path.exists(f'{base_dir}/ressources/gm_gabor_0_samples.pkl'):
                     best_gmm = load_mixture_gaussian('gabor_0')
                     mixture_analysis(best_gmm.weights_, best_gmm.means_, best_gmm.covariances_, name, inner[ax_id])
                     ax_id += 1
             else:
                 if m.weight.data.shape[-1] > 1:
                     name = f'cluster_{global_data.layers[index]}'
-                    pickle_in = open(f'{base_dir}/{name}.pkl', "rb")
+                    pickle_in = open(f'{base_dir}/ressources/{name}.pkl', "rb")
                     cluster = pickle.load(pickle_in)
                     centers = cluster['centers'].squeeze()
                     plot_weights(centers.reshape(1, centers.shape[0], centers.shape[1], centers.shape[2]), name,

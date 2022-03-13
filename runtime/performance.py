@@ -1,5 +1,4 @@
 import itertools
-
 import numpy as np
 
 from analysis.time_analysis import benchmarks
@@ -294,9 +293,9 @@ def plot_num_params(imagenet=False, entry_models=[], all_labels=[], convergence=
     else:
         title = f'Brain-Score Benchmark mean(V4, IT, Behavior) vs number of parameter'
         if len(selection) == 3:
-            y = r"\textbf{Brain Predictivity}"
+            y = r"\textbf{Brain Predictivity} [absolute]"
         else:
-            y = r"\textbf{Brain Predictivity}"
+            y = r"\textbf{Brain Predictivity} [absolute]"
     if percent:
         y = f'{y} [\% of standard training]'
 
@@ -327,6 +326,7 @@ def plot_bits_vs_predictivity(imagenet=False, entry_models=[], all_labels=[], ax
             params[name].append(0)
         else:
             parameter, hyper = get_all_params(model, True)
+            print(f'Parameters are: {parameter} and {hyper}')
             params[name].append(hyper * 64)  # for bits multiply by 64
         epoch_model = f'{model}_epoch_00'
         if percent:
@@ -371,7 +371,8 @@ def plot_bits_vs_predictivity(imagenet=False, entry_models=[], all_labels=[], ax
 
 def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=True, make_trillions=False,
                       with_weights=True, legend=False, log=True,
-                      pal=['#2CB8B8', '#186363', '#818A94', '#818A94', '#818A94', '#36E3E3', '#9AC3C3', '#2B3D3C']):
+                      pal=['#2CB8B8', '#186363', '#818A94', '#818A94', '#818A94', '#818A94', '#36E3E3', '#9AC3C3',
+                           '#2B3D3C']):
     conn = get_connection()
     params = {}
     data = {}
@@ -389,7 +390,9 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
         parameter = {x: 1 for x in models}
     mods.append('CORnet-S_full')
     model_dict = load_error_bared(conn, mods, benchmarks, convergence=True, epochs=epochs)
+    base_line = load_error_bared(conn, ['pixels'], benchmarks, convergence=False, epochs=[0])
     full = np.mean(model_dict['CORnet-S_full'][selection])
+    base_line = (np.mean(base_line['pixels_epoch_00'][selection]) / full) * 100
     high_y = 0
     for model in model_dict.keys():
         frac = 0.0
@@ -451,7 +454,7 @@ def image_epoch_score(models, imgs, epochs, selection=[], axes=None, percent=Tru
                          x_labels=xticklabels, scatter=True, percent=percent,
                          alpha=0.8, scale_fix=[0, 105], legend=legend,
                          y_name=ylabel, x_ticks=xticks,
-                         pal=pal,
+                         pal=pal, base_line=base_line,
                          log=log,
                          x_ticks_2={}, ax=ax, million_base=True,
                          annotate_pos=0)
