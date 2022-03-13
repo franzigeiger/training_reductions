@@ -118,7 +118,7 @@ def hyperparam_gabor():
             return
 
 
-def fit_gabors(version='V1', file='gabor_params_basinhopping'):
+def fit_gabors(version='V1', file='gabor_params_basinhopping', layers=['V1.conv1', 'V2.conv2']):
     model = get_model('CORnet-S_full_epoch_43', True)
     counter = 0
     length = 7 if version is 'V1' else 9
@@ -126,7 +126,7 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping'):
     np.random.seed(1)
     for name, m in model.named_modules():
         if type(m) == nn.Conv2d:
-            if name == 'V2.conv2':
+            if name in layers:
                 weights = m.weight.data.cpu().numpy()
                 gabor_params = np.zeros([weights.shape[0], weights.shape[1], length])
                 for i in range(0, weights.shape[0]):
@@ -170,7 +170,7 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping'):
 
 
 def get_fist_layer_weights():
-    # model = get_model('CORnet-S_full_epoch_43', True)
+    model = get_model('CORnet-S_full_epoch_43', True)
     counter = 0
     plt.figure(figsize=(20, 20))
     gs = gridspec.GridSpec(10, 3, width_ratios=[1] * 3,
@@ -513,4 +513,20 @@ def compare_two_values():
 
 
 if __name__ == '__main__':
+    fit_gabors('V2', "output_file_name")
+    # name = 'gabors_tiago'
+    # rank_errors(name, 'gabors_sklearn')
+    # show_options()
+    # compare_gabors()
+    # name = 'gabors_V2.conv2'
+    # # name = 'gabors_tiago_scaled'
+    # np.random.seed(0)
+    # fit_gabors('V2', name)
+    # compare_gabors('V2', name)
+    # analyze_param_dist(name, True)
+    # gaussian_mixture(name)
+    # gaussian_mixture_channels(name)
+    # kernel_similarity()
+    # get_fist_layer_weights()
+    # mutual_information()
     fit_linear_regression()
