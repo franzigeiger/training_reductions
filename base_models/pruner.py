@@ -49,9 +49,6 @@ def train(identifier, model):
     print('Loading {} dataset.'.format(dataset))
     input_shape, num_classes = load.dimension(dataset)
     prune_loader = get_dataloader()
-    # load.dataloader(dataset, batch_size, True, workers, 10 * num_classes)
-    # train_loader = load.dataloader(dataset, batch_size, True, workers)
-    # test_loader = load.dataloader(dataset, batch_size, False, workers)
 
     ## Model ##
     print('Creating {} model.'.format(model))
@@ -95,7 +92,6 @@ def train(identifier, model):
         possible_params = prune_result['size'].sum()
         total_flops = int((prune_result['sparsity'] * prune_result['flops']).sum())
         possible_flops = prune_result['flops'].sum()
-        # print("Train results:\n", train_result)
         print("Prune results:\n", prune_result)
         print(
             "Parameter Sparsity: {}/{} ({:.4f})".format(total_params, possible_params, total_params / possible_params))

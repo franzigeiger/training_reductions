@@ -1,21 +1,24 @@
-import matplotlib
+import matplotlib.pyplot as plt
+import string
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import string
 from PIL import Image
 from matplotlib import gridspec
 from matplotlib import rc
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from analysis.analyse_models import plot_layer_centers
-from analysis.time_analysis import plot_models_vs, plot_models_benchmarks, plot_benchmarks_over_epochs, \
+from analysis.time_analysis import plot_models_vs, plot_models_benchmarks, \
+    plot_benchmarks_over_epochs, \
     image_scores_single, delta_heatmap, \
     image_epoch_heatmap, plot_models_begin_end
-from base_models.global_data import no_init_conv3_train, conv1_train, batchnorm_train, best_special_brain_2
+from base_models.global_data import no_init_conv3_train, conv1_train, batchnorm_train, \
+    best_special_brain_2
 from benchmark.database import get_connection, load_scores, load_error_bared
 from plot.plot_data import blue_palette
-from runtime.performance import plot_num_params, image_epoch_score, plot_bits_vs_predictivity
+from runtime.performance import plot_num_params, image_epoch_score
 from utils.correlation import run_permutation_test
 
 # matplotlib.rcParams['text.latex.unicode'] = False
@@ -35,8 +38,6 @@ benchmarks = [
 selection = [0, 1, 2, 3, 4]
 
 
-
-
 def plot_figure_1():
     sns.set_style("whitegrid", {'grid.color': '.95', })
     sns.set_context("poster")
@@ -48,7 +49,8 @@ def plot_figure_1():
                                 # [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 7, 10, 15, 20],
                                 [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20],
                                 benchmarks, ax=ax2, selection=[0, 1, 2, 3, 4])
-    image_scores_single('CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000], selection=[0, 1, 2, 3, 4],
+    image_scores_single('CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000],
+                        selection=[0, 1, 2, 3, 4],
                         ax=ax3)
     # image_epoch_score({'CORnet-S_full': 'Standard training'}, [100, 1000, 10000, 50000, 100000, 500000],
     image_epoch_score({'CORnet-S_full': 'Standard training',
@@ -60,10 +62,12 @@ def plot_figure_1():
                        }
                       , [100, 1000, 10000, 50000, 100000, 500000],
                       [0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20], selection, [ax1],
-                      pal=['#2CB8B8', '#186363', '#818A94', '#36E3E3', '#9AC3C3', '#2B3D3C', '#75FF93', '#B3F5FF',
+                      pal=['#2CB8B8', '#186363', '#818A94', '#36E3E3', '#9AC3C3', '#2B3D3C',
+                           '#75FF93', '#B3F5FF',
                            '#FFBAAD', '#cfa256'],
                       with_weights=False, make_trillions=False)
-    fig1.text(0.2, 0, r'\textbf{Supervised updates} (Training Epochs x Labeled Images)', ha='center', size=22)  # xlabel
+    fig1.text(0.2, 0, r'\textbf{Supervised updates} (Training Epochs x Labeled Images)',
+              ha='center', size=22)  # xlabel
     for n, ax in enumerate((ax1, ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
         ax.text(-0.08, 1.04, text, transform=ax.transAxes,
@@ -81,9 +85,6 @@ def plot_figure_2():
     plot_layer_centers(outer[2])
     ax1 = plt.subplot(outer[0, :2])
     ax2 = plt.subplot(outer[0, 2])
-    # plot_models_vs({'': {r'\textbf{Kaiming \\ Normal}': 'CORnet-S_full',
-    #                      r'\textbf{Weight \\ Compression}': 'CORnet-S_cluster2_v2_IT_bi'}, }, '', selection=selection,
-    #                ax=ax2, imagenet=False, convergence=False)
 
     plot_models_begin_end({r'\textbf{Pixels}': 'pixels',
                            r'\textbf{Kaiming\\Normal}': 'CORnet-S_full',
@@ -143,7 +144,8 @@ def plot_figure_4():
     divider = make_axes_locatable(ax1)
     ax1_2 = divider.new_horizontal(size="1800%", pad=0.1)
     fig1.add_axes(ax1_2)
-    delta_heatmap('CORnet-S_cluster2_v2_IT_trconv3_bi', 'CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000],
+    delta_heatmap('CORnet-S_cluster2_v2_IT_trconv3_bi', 'CORnet-S_full',
+                  [100, 1000, 10000, 50000, 100000, 500000],
                   [0, 1, 3, 6, 10, 20], selection=selection,
                   title=r'\textbf{$\Delta$ Brain Predictivity} [percent points]', ax=ax2)
     best = {
@@ -154,9 +156,11 @@ def plot_figure_4():
         'hmax': 'Hmax',
         'pixels': 'Pixels'
     }
-    image_epoch_score(best, [100, 1000, 10000, 50000, 100000, 500000], [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20],
+    image_epoch_score(best, [100, 1000, 10000, 50000, 100000, 500000],
+                      [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20],
                       selection, [ax1, ax1_2], make_trillions=False, legend=True, log=True)
-    ax1_2.text(0.2, 0, r'\textbf{Supervised synaptic updates}\\(training epochs x labeled images x trained synapses)',
+    ax1_2.text(0.2, 0,
+               r'\textbf{Supervised synaptic updates}\\(training epochs x labeled images x trained synapses)',
                ha='center', size=22)
     for n, ax in enumerate((ax1, ax2)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
@@ -182,7 +186,8 @@ def plot_figure_5():
     ax1 = plt.subplot(outer[1])
     plot_models_benchmarks(models, 'first_generation', benchmarks, ax=ax1)
 
-    mobilenets = {'mobilenet_v1_1.0_224': '', 'mobilenet_v6_CORnet-S_cluster2_v2_IT_trconv3_bi': '', }
+    mobilenets = {'mobilenet_v1_1.0_224': '',
+                  'mobilenet_v6_CORnet-S_cluster2_v2_IT_trconv3_bi': '', }
     random_resnet = {'resnet_v1_CORnet-S_full': 'Standard training',
                      'resnet_v3_CORnet-S_cluster2_v2_IT_trconv3_bi': 'layer4.2.conv3_special', }
     plot_num_params(imagenet=False,
@@ -190,7 +195,6 @@ def plot_figure_5():
                     all_labels=['MobileNet', 'Resnet50'],
                     layer_random={}, convergence=True, ylim=[0, 0.6],
                     ax=ax0, selection=selection, percent=False, pal=blue_palette[2:])
-    # ax1 = plt.subplot(outer[0])
     ax = fig.get_axes()[0]
     ax.text(-0.5, 1.6, string.ascii_uppercase[2], transform=ax.transAxes,
             weight='semibold', size=24)
@@ -204,24 +208,13 @@ def plot_figure_5():
 
 
 def plot_response():
-    # fig1= plt.subplots(1, 2, figsize=(16, 8),
-    #                                 gridspec_kw={'left': 0.06, 'right': 0.97, 'bottom': 0.1,
-    #                                              })
     fig1 = plt.figure(figsize=(12, 6))
     spec = gridspec.GridSpec(ncols=2, nrows=1,
                              width_ratios=[1, 2], )
 
     ax1 = fig1.add_subplot(spec[0])
-    # ax0.plot(range(5), range(5, 10))
     ax2 = fig1.add_subplot(spec[1])
-    # ax1.plot(range(5), range(5, 10))
 
-    models = {
-        'CORnet-S_full': 'KN',
-        'CORnet-S_cluster2_v2_IT_bi': 'WC',
-        'CORnet-S_train_norm_dist': 'Gaussian per layer',
-        'CORnet-S_train_norm_dist_kernel': 'Gaussian per kernel',
-    }
     models_reverse = {
         'Pixels': 'pixels',
         'KN': 'CORnet-S_full',
@@ -239,12 +232,14 @@ def plot_response():
                        'CORnet-S_full_wd0.001': 'wd 1e-3'}, [],
                       [1, 5, 7, 9, 15], selection, [ax2], pal=blue_palette, with_weights=False,
                       make_trillions=False)
-    fig1.text(0.75, 0, r'\textbf{Supervised updates} (Training Epochs x Labeled Images)', fontsize=22, ha='center',
+    fig1.text(0.75, 0, r'\textbf{Supervised updates} (Training Epochs x Labeled Images)',
+              fontsize=22, ha='center',
               size=20, wrap=True)  # xlabel
     fig1.text(0.75, -0.1,
               r'\textbf{R1B} After epoch 1 different hyper-parameters do not substantially\\ increase learning speed',
               fontsize=20, ha='center', size=20, wrap=True)  # xlabel
-    fig1.text(0.125, 0, r'\textbf{R1A} Both initializations significantly\\ increase over baseline', fontsize=20,
+    fig1.text(0.125, 0, r'\textbf{R1A} Both initializations significantly\\ increase over baseline',
+              fontsize=20,
               ha='center', size=20, wrap=True)  # xlabel
 
     for n, ax in enumerate((ax1, ax2)):
@@ -261,10 +256,13 @@ def supp_4():
     sns.set_context("talk")
     fig1, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(30, 10), )
     image_epoch_heatmap('CORnet-S_full', [100, 1000, 10000, 50000, 100000, 500000],
-                        [0, 1, 2, 3, 5, 6, 10, 20], title=r'\textbf{Standard training epochs/images scores}',
+                        [0, 1, 2, 3, 5, 6, 10, 20],
+                        title=r'\textbf{Standard training epochs/images scores}',
                         selection=selection, ax=ax3)
-    image_epoch_heatmap('CORnet-S_cluster2_v2_IT_trconv3_bi', [100, 1000, 10000, 50000, 100000, 500000],
-                        [0, 1, 2, 3, 5, 6, 10, 20], title=r'\textbf{WC + CT epochs/images scores}', selection=selection,
+    image_epoch_heatmap('CORnet-S_cluster2_v2_IT_trconv3_bi',
+                        [100, 1000, 10000, 50000, 100000, 500000],
+                        [0, 1, 2, 3, 5, 6, 10, 20], title=r'\textbf{WC + CT epochs/images scores}',
+                        selection=selection,
                         ax=ax2)
     divider = make_axes_locatable(ax1)
     ax1_2 = divider.new_horizontal(size="1800%", pad=0.1)
@@ -278,17 +276,16 @@ def supp_4():
         'CORnet-S_train_conv3_bi': '+ CT',
         # 'CORnet-S_cluster2_v2_IT_bi_seed42': 'WC + DT',
     }
-    image_epoch_score(best, [100, 1000, 10000, 50000, 100000, 500000], [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20],
+    image_epoch_score(best, [100, 1000, 10000, 50000, 100000, 500000],
+                      [0, 0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20],
                       selection, (ax1, ax1_2), legend=True)
-    # for n, ax in enumerate((ax1)):
-    text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[0])
-    fig1.text(0.2, 0, r'\textbf{Supervised synaptic updates}\\(training epochs x labeled images x trained synapses)',
+    fig1.text(0.2, 0,
+              r'\textbf{Supervised synaptic updates}\\(training epochs x labeled images x trained synapses)',
               ha='center', size=22)  # xlabel
     for n, ax in enumerate((ax1, ax2, ax3)):
         text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
         ax.text(-0.08, 1.04, text, transform=ax.transAxes,
                 weight='semibold', size=24)
-    # plt.tight_layout()
     plt.savefig(f'supp_4.svg')
     plt.show()
 
@@ -320,9 +317,11 @@ def supp_6():
     sns.set_context("talk")
     fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8), )
     plot_benchmarks_over_epochs('CORnet-S_cluster2_v2_IT_trconv3_bi',
-                                [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 10, 20],
+                                [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 10,
+                                 20],
                                 benchmarks, selection=[0, 1, 2, 3, 4, 5], ax=ax1)
-    image_scores_single('CORnet-S_cluster2_v2_IT_trconv3_bi', [100, 1000, 10000, 50000, 100000, 500000],
+    image_scores_single('CORnet-S_cluster2_v2_IT_trconv3_bi',
+                        [100, 1000, 10000, 50000, 100000, 500000],
                         selection=[0, 1, 2, 3, 4],
                         ax=ax2)
 
@@ -341,12 +340,15 @@ def supp_7():
                        # 'CORnet-S_cluster2_v2_IT_trconv3_bi': '+ WC+CT'
                        'CORnet-S_full_con2': 'Scheduler alternative',
                        # 'CORnet-S_opAdam' : 'Optimizer Adam', 'CORnet-S_opAdagrad' : 'Optimizer Adam',
-                       'CORnet-S_full_lr1.0': 'Learning rate 1.0', 'CORnet-S_full_lr0.01': 'Learning rate 0.1',
-                       'CORnet-S_full_wd1e-05': 'Weight decay 1e-5', 'CORnet-S_full_wd0.001': 'Weight decay 0.001'
+                       'CORnet-S_full_lr1.0': 'Learning rate 1.0',
+                       'CORnet-S_full_lr0.01': 'Learning rate 0.1',
+                       'CORnet-S_full_wd1e-05': 'Weight decay 1e-5',
+                       'CORnet-S_full_wd0.001': 'Weight decay 0.001'
                           , }
                       , [100, 1000, 10000, 50000, 100000, 500000],
                       [0.2, 0.5, 0.8, 1, 3, 5, 6, 10, 20], selection,
-                      pal=['#2CB8B8', '#186363', '#818A94', '#36E3E3', '#9AC3C3', '#2B3D3C', '#75FF93', '#B3F5FF',
+                      pal=['#2CB8B8', '#186363', '#818A94', '#36E3E3', '#9AC3C3', '#2B3D3C',
+                           '#75FF93', '#B3F5FF',
                            '#FFBAAD', '#cfa256'], axes=[ax3],
                       with_weights=False, make_trillions=False)
     plt.tight_layout()
@@ -357,30 +359,16 @@ def supp_7():
 def figure_2_new():
     sns.set_style("whitegrid", {'grid.color': '.95', })
     sns.set_context("talk")
-    fig = plt.figure(figsize=(8, 8), frameon=False)
     outer = gridspec.GridSpec(1, 2, left=0.06, right=0.9, bottom=0.18)
-    # plot_layer_centers(outer[2])
     ax1 = plt.subplot(outer[0, 0])
     ax2 = plt.subplot(outer[0, 1])
     plot_models_begin_end({
-        # r'\textbf{Pixels}': 'pixels',
         r'\textbf{Kaiming\\Normal}': 'CORnet-S_full',
         r'\textbf{Weight\\Compression}': 'CORnet-S_cluster2_IT_full_train',
         # r'\textbf{Best distribution}': 'CORnet-S_dist_IT_full_train',
         # r'\textbf{Mixture gaussian}': 'CORnet-S_brain_IT_full_train',
         # r'\textbf{Normal distributed}': 'CORnet-S_brain2_IT_full_train',
     }, selection=selection, convergence=True, epochs=[0], ax=ax2)
-    # plot_bits_vs_predictivity(entry_models=
-    #                           ['CORnet-S_brain2_knall_IT_bi_v2','CORnet-S_brain3_knall_IT_bi' ,'CORnet-S_brain_wmc15_IT_bi', 'CORnet-S_cluster2_v2_IT_trconv3_bi']
-
-    # [
-    # 'pixels', 'CORnet-S_full',
-    # 'CORnet-S_cluster2_IT_full_train', 'CORnet-S_dist_IT_full_train',
-    #                                      'CORnet-S_brain_IT_full_train', 'CORnet-S_brain2_IT_full_train',]
-    #                    , all_labels=[
-    # r'\textbf{Pixels}', r'\textbf{Kaiming \\ Normal}',
-    # r'\textbf{Weight \\ Compression}', r'\textbf{Best distribution}',  r'\textbf{Mixture gaussian}', r'\textbf{Normal distributed}'],
-    #                       log=True, selection=selection, ax=ax1)
     im = Image.open('./plot_output/gc.png')
     ax1.imshow(im)
     ax1.set_axis_off()
@@ -410,12 +398,11 @@ def calc_significance():
                 results[model].append(np.mean(values[selection]))
     z = np.array(results['CORnet-S_full'])
     y = np.array(results['CORnet-S_cluster2_v2_IT_trconv3_bi'])
-    # z = np.random.normal(0,0.5, 10)
-    # y = np.random.normal(0.1,0.5, 10)
     pooled = np.hstack([z, y])
     delta = np.abs(z.mean() - y.mean())
     numSamples = 100000
-    estimates = np.array([run_permutation_test(pooled, z.size, y.size, delta) for i in range(numSamples)])
+    estimates = np.array(
+        [run_permutation_test(pooled, z.size, y.size, delta) for i in range(numSamples)])
     diffCount = len(np.where(estimates <= delta)[0])
     hat_asl_perm = 1.0 - (float(diffCount) / float(numSamples))
     from scipy.stats import ttest_ind
@@ -424,7 +411,7 @@ def calc_significance():
     full = np.mean(full['CORnet-S_full'][selection])
     z = z / full
     y = y / full
-    print(hat_asl_perm)
+    print(hat_asl_perm, p, z, y)
 
 
 def wc_training():
@@ -432,13 +419,9 @@ def wc_training():
     sns.set_context("talk")
     fig1, (ax1) = plt.subplots(1, 1, figsize=(20, 8), )
     plot_benchmarks_over_epochs('CORnet-S_cluster2_IT_full_train',
-                                [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 10, 20],
+                                [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5, 10,
+                                 20],
                                 benchmarks, selection=[0, 1, 2, 3, 4], ax=ax1)
-
-    # for n, ax in enumerate((ax1, ax2)):
-    #     text = r'\textbf{{{letter}}}'.format(letter=string.ascii_uppercase[n])
-    #     ax.text(-0.08, 1.04, text, transform=ax.transAxes,
-    #             weight='semibold', size=24)
     plt.tight_layout()
     plt.savefig(f'wc_training.svg', bbox_inches='tight', pad_inches=0)
     plt.show()
@@ -457,18 +440,18 @@ def training_continued():
 
 
 if __name__ == '__main__':
-    # calc_significance()
-    # plot_figure_1()
-    # plot_figure_2()
+    calc_significance()
+    plot_figure_1()
+    plot_figure_2()
+    figure_2_new()
     plot_figure_3()
-    # plot_figure_4()
-    # plot_figure_5()
-    # supp_4()
-    # supp_5()
-    # supp_6()
-    # wc_training()
-    # supp_7()
-    # plot_response()
-    # figure_2_new()
-    # plot_figure_3()
-    # training_continued()
+    plot_figure_4()
+    plot_figure_5()
+    supp_4()
+    supp_5()
+    supp_6()
+    supp_7()
+    plot_response()
+    plot_figure_3()
+    wc_training()
+    training_continued()

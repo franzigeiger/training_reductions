@@ -50,7 +50,6 @@ def score_models(model, benchmark):
     else:
         path = f'{dir_path}/../scores.sqlite'
     db = create_connection(path)
-    # os.environ["RESULTCACHING_DISABLE"] = "model_tools,candidate_models,brainscore.score_model"
     base_model = model.split('_')[0]
     try:
         d = datetime.datetime.now()

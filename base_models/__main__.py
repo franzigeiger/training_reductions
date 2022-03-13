@@ -23,35 +23,39 @@ parser.add_argument('--log_level', type=str, default='INFO')
 parser.add_argument('--model', type=str,
                     help='A model name')
 parser.add_argument('--seed', type=int, default=0,
-                    help='Random seed to change random weights')
+                    help='Random seed to change random weights.')
 parser.add_argument('--epoch', type=int, default=20,
-                    help='Number of epochs to train and test for')
+                    help='Number of epochs to train and test for.')
 parser.add_argument('--full', type=bool, default=False,
-                    help='Number of epochs to train and test for')
+                    help='Train all weights regardless of the configurations.')
 parser.add_argument('--convergence', type=bool, default=False,
-                    help='Number of epochs to train and test for')
+                    help='Run training until convergence, disables number of epochs.')
 parser.add_argument('--convergence_2', type=bool, default=False,
-                    help='Number of epochs to train and test for')
+                    help='Train until convergence with a more patient setting. Can be used when '
+                         'training on less images and --images > 0.')
 parser.add_argument('--save', type=bool, default=False,
                     help='Save only weights without training')
 parser.add_argument('--full_continued', type=bool, default=False,
-                    help='Save only weights without training')
+                    help='Continue full training on a certain checkpoint')
 parser.add_argument('--source', type=str, default=False,
-                    help='Save only weights without training')
+                    help='The checkpoint weight file name for continued training.')
 parser.add_argument('--prune', type=bool, default=False,
-                    help='Number of epochs to train and test for')
+                    help='Prune weights of the input model.')
 parser.add_argument('--images', type=int, default=0,
-                    help='Number of epochs to train and test for')
+                    help='Number of images to train on.')
 parser.add_argument('--lr', type=float, default=0.0, help='Learning rate to start/continue learning with')
 parser.add_argument('--optimizer', type=str, default='', help='Optimizer to train with')
 parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay to train with')
 parser.add_argument('--first', type=bool, default=False,
-                    help='Set true to only train the first epoch and evaluate fractions')
+                    help='Set true to only train the first epoch and store weights on epoch '
+                         'fractions.')
 parser.add_argument('--step', type=int, default=0, help='Step size for learning rate scheduler')
 parser.add_argument('--batch_fix', type=bool, default=False,
-                    help='disables all other flags and stored the models performance values in the database')
+                    help='Disables all other flags and stored the models performance values in '
+                         'the database')
 parser.add_argument('--other', type=str, default='',
-                    help='Run another model with the given id')
+                    help='Train a model that is not CORnet-S but initialize it from the '
+                         'configurations of the CORnet-S model under --name.')
 parser.add_argument('--version', type=str, default='version',
                     help='Run another model with a mapping of of the specified version')
 

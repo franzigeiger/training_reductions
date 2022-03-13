@@ -148,30 +148,19 @@ layer_best_2 = {
     'decoder': 0,
     'V2.conv3_special': 12,
     'mobilenet': 27
-    # 'CORnet-S_brain2_kn8_kn9_kn10_kn11_bi' : 7,
-    # 'CORnet-S_brain2_kn8_kn9_kn10_kn11_kn12_bi' : 6,
-    # 'CORnet-S_full': 'Full',
 }
 
 layer_best = {
     'CORnet-S_train_kn1_kn2_bi_v2': 16,
     'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_bi_v2': 12,
-    # 'CORnet-S_train_kn1_kn2_kn3_kn4_kn5_kn6_kn7_bi' : 10,
-    # 'CORnet-S_brain2_kn8_kn9_kn10_kn11_bi' : 6,
-    # 'CORnet-S_brain2_kn8_kn9_kn10_kn11_kn12_bi' : 5,
-    # 'CORnet-S_brain2_knall_IT_bi': 1,
-    # 'CORnet-S_brain2_t7_kn8_kn9_kn10_kn11_bi' : 6,
     'CORnet-S_brain2_t7_t12_knall_IT_bi_v2': 4,
-    # 'CORnet-S_random' : 0
 }
 
 layer_random = {
     'CORnet-S_full': 17,
-    # 'CORnet-S_train_V2': 16,
     'CORnet-S_train_V4': 12,
     'CORnet-S_train_IT_seed_0': 6,
     'CORnet-S_train_random': 1,
-    # 'CORnet-S_random': 0
 }
 
 layer_random_small = {

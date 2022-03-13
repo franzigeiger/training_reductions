@@ -27,19 +27,7 @@ def score_models(model, benchmark, filename):
     path = f'{dir_path}/../scores.sqlite'
     db = create_connection(path)
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    d = datetime.datetime.today()
     base_model = model.split('_')[0]
-    models = {
-        f'{base_model}_jumbler': True,
-        f'{base_model}_norm_dist': False,
-        # f'{name}_uniform_dist': False,
-        f'{base_model}_random': False,
-        f'{base_model}_kernel_jumbler': True,
-        f'{base_model}_channel_jumbler': True,
-        f'{base_model}_norm_dist_kernel': False,
-        f'{base_model}': False
-    }
-    score = 0
     raw_scores = []
     try:
         repeat = False
@@ -56,7 +44,6 @@ def score_models(model, benchmark, filename):
         logging.error(e, exc_info=True)
         with open(f'error_{model}_{benchmark}.txt', 'w') as f:
             traceback.print_exc(file=f)
-
     finally:
         file = open(filename, 'a')
         file.write(benchmark)

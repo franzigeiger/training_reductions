@@ -21,7 +21,7 @@ parser.add_argument('--model', type=str,
 parser.add_argument('--benchmark', type=str,
                     help='A benchmark name to execute')
 parser.add_argument('--file_name', type=str,
-                    help='A file to store results')
+                    help='The file to store results in')
 parser.add_argument('--batchnorm', type=bool,
                     help='Set if we apply changes also to batchnorm')
 parser.add_argument('--pool', type=str, default='NET',
@@ -29,11 +29,12 @@ parser.add_argument('--pool', type=str, default='NET',
 parser.add_argument('--seed', type=int, default=0,
                     help='Random seed to change random weights')
 parser.add_argument('--epoch', type=float, default=None,
-                    help='Number of epoch to test for')
+                    help='The epoch number of the model to benchmark.')
 parser.add_argument('--performance', type=bool, default=False,
-                    help='disables all other flags and stored the models performance values in the database')
+                    help='Disables all other flags and stored the models performance values in '
+                         'the database')
 parser.add_argument('--batch_fix', type=bool, default=False,
-                    help='disables all other flags and stored the models performance values in the database')
+                    help='Use the batchnorm fixed model.')
 args, remaining_args = parser.parse_known_args()
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level),
                     format='%(asctime)-15s %(levelname)s:%(name)s:%(message)s')
