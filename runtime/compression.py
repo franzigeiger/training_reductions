@@ -1,15 +1,17 @@
-import cornet
-import numpy as np
 import os
 import pickle
-import scipy as st
 import sys
+from os import path
+
+import cornet
+import numpy as np
+import scipy as st
 import tensorflow as tf
 import torch
-from os import path
 from torch import nn
 
-from base_models import get_model, run_model_training, layers, get_config, conv_to_norm, global_data, \
+from base_models import get_model, run_model_training, layers, get_config, conv_to_norm, \
+    global_data, \
     apply_generic_other
 from base_models.global_data import base_dir
 from base_models.test_models import get_mobilenet, get_resnet50
@@ -74,7 +76,8 @@ def get_all_params(identifier, hyperparams=True):
                 mapping = mobilenet_mapping_6
             config = create_config(mapping, config, model)
             if 'v5' in identifier or 'v6' in identifier:
-                add_layers = ['model.2.0', 'model.2.1', 'model.6.0', 'model.6.1', 'model.12.0', 'model.12.1', 'fc',
+                add_layers = ['model.2.0', 'model.2.1', 'model.6.0', 'model.6.1', 'model.12.0',
+                              'model.12.1', 'fc',
                               'decoder']
                 config['layers'] = config['layers'] + add_layers
             del config['bn_init']
@@ -220,7 +223,8 @@ def do_distribution_gabor_init(weights, config, index, **kwargs):
     # np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
     if components != 0:
-        return components + components * param.shape[1] + components * param.shape[1] * param.shape[1]
+        return components + components * param.shape[1] + components * param.shape[1] * param.shape[
+            1]
     best_gmm = mixture_gaussian(param, weights.shape[0], components, f'gabor_{index}', analyze=True)
     return (best_gmm.weights_.size + best_gmm.means_.size + best_gmm.covariances_.size)
 
@@ -234,9 +238,11 @@ def do_distribution_gabor_init_channel(weights, config, index, **kwargs):
     # np.random.seed(0)
     components = config[f'comp_{index}'] if f'comp_{index}' in config else 0
     if components != 0:
-        return components + components * param.shape[1], components * param.shape[1] * param.shape[1]
+        return components + components * param.shape[1], components * param.shape[1] * param.shape[
+            1]
     best_gmm = mixture_gaussian(param, weights.shape[0], components, f'gabor_{index}', analyze=True)
-    return len(best_gmm.weights_.flatten()) + len(best_gmm.means_.flatten()) + len(best_gmm.covariances_.flatten())
+    return len(best_gmm.weights_.flatten()) + len(best_gmm.means_.flatten()) + len(
+        best_gmm.covariances_.flatten())
 
 
 def do_distribution_weight_init(weights, config, index, **kwargs):
@@ -255,10 +261,13 @@ def do_distribution_weight_init(weights, config, index, **kwargs):
         params = weights.reshape(-1, weights.shape[2], weights.shape[3])
         params = params.reshape(params.shape[0], -1)
     if components != 0:
-        return components + components * params.shape[1] + components * params.shape[1] * params.shape[1]
+        return components + components * params.shape[1] + components * params.shape[1] * \
+               params.shape[1]
 
-    best_gmm = mixture_gaussian(params, params.shape[0], components, f'weight_dim{dim}_{index}', analyze=True)
-    return len(best_gmm.weights_.flatten()) + len(best_gmm.means_.flatten()) + len(best_gmm.covariances_.flatten())
+    best_gmm = mixture_gaussian(params, params.shape[0], components, f'weight_dim{dim}_{index}',
+                                analyze=True)
+    return len(best_gmm.weights_.flatten()) + len(best_gmm.means_.flatten()) + len(
+        best_gmm.covariances_.flatten())
 
 
 def prepare_gabor_params(params, **kwargs):
@@ -272,7 +281,8 @@ def prepare_gabor_params(params, **kwargs):
         for s, e in tuples:
             p = param[i, int(s * 8 / 10):int(e * 8 / 10)]
             new_param[i, s:e] = (
-                p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
+                p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]),
+                p[5], p[6], p[7])
     return new_param, tuples
 
 
@@ -284,7 +294,8 @@ def prepare_gabor_params_channel(params, **kwargs):
     for i in range(param.shape[0]):
         p = param[i]
         new_param[i] = (
-            p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
+            p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5],
+            p[6], p[7])
     return new_param, tuples
 
 
@@ -525,7 +536,8 @@ def apply_gabors_dist(model, configuration):
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
             if idx == 0:
-                m.weight.data = torch.Tensor(do_distribution_gabor_init(weights, configuration, idx))
+                m.weight.data = torch.Tensor(
+                    do_distribution_gabor_init(weights, configuration, idx))
             idx += 1
     return model
 
@@ -566,7 +578,8 @@ def apply_generic(model, configuration):
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
             if layers[idx] in configuration:
-                previous_weights = configuration[layers[idx]](weights, config=configuration, previous=previous_weights,
+                previous_weights = configuration[layers[idx]](weights, config=configuration,
+                                                              previous=previous_weights,
                                                               index=idx)
                 m.weight.data = torch.Tensor(previous_weights)
             idx += 1

@@ -13,10 +13,14 @@ def plot_single_layer_perturbation():
         fixed_models.append(f'CORnet-S_fixed_value_L{i}')
         fixed_small_models.append(f'CORnet-S_fixed_value_small_L{i}')
     conn = get_connection()
-    result_norm = load_scores(conn, norm_dist_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_jumbler = load_scores(conn, jumbler_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_fixed = load_scores(conn, fixed_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_base = load_scores(conn, ['CORnet-S'], ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_norm = load_scores(conn, norm_dist_models,
+                              ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_jumbler = load_scores(conn, jumbler_models,
+                                 ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_fixed = load_scores(conn, fixed_models,
+                               ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_base = load_scores(conn, ['CORnet-S'],
+                              ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_fixed_small = load_scores(conn, fixed_small_models,
                                      ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
 
@@ -39,15 +43,18 @@ def plot_single_layer_perturbation():
         it_data['jumbler'].append(result_jumbler[f'CORnet-S_jumbler_L{i}'][0])
         it_data['fixed_value'].append(result_fixed[f'CORnet-S_fixed_value_L{i}'][0])
         it_data['base'].append(result_base[f'CORnet-S'][0])
-        it_data['fixed_small_value'].append(result_fixed_small[f'CORnet-S_fixed_value_small_L{i}'][0])
+        it_data['fixed_small_value'].append(
+            result_fixed_small[f'CORnet-S_fixed_value_small_L{i}'][0])
         behavior_data['norm_dist'].append(result_norm[f'CORnet-S_norm_dist_L{i}'][1])
         behavior_data['jumbler'].append(result_jumbler[f'CORnet-S_jumbler_L{i}'][1])
         behavior_data['fixed_value'].append(result_fixed[f'CORnet-S_fixed_value_L{i}'][1])
         behavior_data['base'].append(result_base[f'CORnet-S'][1])
-        behavior_data['fixed_small_value'].append(result_fixed_small[f'CORnet-S_fixed_value_small_L{i}'][1])
+        behavior_data['fixed_small_value'].append(
+            result_fixed_small[f'CORnet-S_fixed_value_small_L{i}'][1])
 
     plot_data_base(it_data, 'IT Benchmark single layer', labels, 'Conv Layers', 'Score', [0.0, 0.6])
-    plot_data_base(behavior_data, 'Behavior Benchmark single layer', labels, 'Conv Layers', 'Score', [0.0, 0.6])
+    plot_data_base(behavior_data, 'Behavior Benchmark single layer', labels, 'Conv Layers', 'Score',
+                   [0.0, 0.6])
 
 
 def plot_overflow():
@@ -57,10 +64,12 @@ def plot_overflow():
         overflow_models.append(f'CORnet-S_overflow_{i}')
     conn = get_connection('scores_openmind')
     result_overflow_models = load_scores(conn, overflow_models,
-                                         ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                         ['dicarlo.Majaj2015.IT-pls',
+                                          'dicarlo.Rajalingham2018-i2n'])
     result_base_random = load_scores(conn, ['CORnet-S_random'],
                                      ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_base = load_scores(conn, ['CORnet-S'], ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_base = load_scores(conn, ['CORnet-S'],
+                              ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
 
     it_data = {}
     it_data['overflow_init'] = []
@@ -82,9 +91,11 @@ def plot_overflow():
 
     print(it_data)
     print(behavior_data)
-    plot_data_base(it_data, 'IT benchmark overflow_initialization', labels, 'Overflow initialization in %', 'Score',
+    plot_data_base(it_data, 'IT benchmark overflow_initialization', labels,
+                   'Overflow initialization in %', 'Score',
                    [0.0, 0.6])
-    plot_data_base(behavior_data, 'Behavior benchmark overflow initialization', labels, 'Overflow initialization in %',
+    plot_data_base(behavior_data, 'Behavior benchmark overflow initialization', labels,
+                   'Overflow initialization in %',
                    'Score',
                    [0.0, 0.6])
 
@@ -100,15 +111,20 @@ def plot_high_low_variance():
         low_var_models.append(f'CORnet-S_low_variance_{i}')
         low_var_trained_models.append(f'CORnet-S_trained_low_variance_{i}')
     conn = get_connection()
-    result_high_var = load_scores(conn, high_var_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_high_var = load_scores(conn, high_var_models,
+                                  ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_high_var_trained = load_scores(conn, high_var_trained_models,
-                                          ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_low_var = load_scores(conn, low_var_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                          ['dicarlo.Majaj2015.IT-pls',
+                                           'dicarlo.Rajalingham2018-i2n'])
+    result_low_var = load_scores(conn, low_var_models,
+                                 ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_low_var_trained = load_scores(conn, low_var_trained_models,
-                                         ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                         ['dicarlo.Majaj2015.IT-pls',
+                                          'dicarlo.Rajalingham2018-i2n'])
     result_base_random = load_scores(conn, ['CORnet-S_random'],
                                      ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_base = load_scores(conn, ['CORnet-S'], ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_base = load_scores(conn, ['CORnet-S'],
+                              ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
 
     it_data = {}
     it_data['high_variance_untrained'] = []
@@ -127,21 +143,29 @@ def plot_high_low_variance():
     labels = []
     for i in (0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95):
         labels.append(i)
-        it_data['high_variance_trained'].append(result_high_var_trained[f'CORnet-S_trained_high_variance_{i}'][0])
+        it_data['high_variance_trained'].append(
+            result_high_var_trained[f'CORnet-S_trained_high_variance_{i}'][0])
         it_data['high_variance_untrained'].append(result_high_var[f'CORnet-S_high_variance_{i}'][0])
         it_data['low_variance_untrained'].append(result_low_var[f'CORnet-S_low_variance_{i}'][0])
-        it_data['low_variance_trained'].append(result_low_var_trained[f'CORnet-S_trained_low_variance_{i}'][0])
+        it_data['low_variance_trained'].append(
+            result_low_var_trained[f'CORnet-S_trained_low_variance_{i}'][0])
         it_data['base_untrained'].append(result_base_random[f'CORnet-S_random'][0])
         it_data['base_trained'].append(result_base[f'CORnet-S'][0])
-        behavior_data['high_variance_untrained'].append(result_high_var[f'CORnet-S_high_variance_{i}'][1])
-        behavior_data['high_variance_trained'].append(result_high_var_trained[f'CORnet-S_trained_high_variance_{i}'][1])
-        behavior_data['low_variance_untrained'].append(result_low_var[f'CORnet-S_low_variance_{i}'][1])
-        behavior_data['low_variance_trained'].append(result_low_var_trained[f'CORnet-S_trained_low_variance_{i}'][1])
+        behavior_data['high_variance_untrained'].append(
+            result_high_var[f'CORnet-S_high_variance_{i}'][1])
+        behavior_data['high_variance_trained'].append(
+            result_high_var_trained[f'CORnet-S_trained_high_variance_{i}'][1])
+        behavior_data['low_variance_untrained'].append(
+            result_low_var[f'CORnet-S_low_variance_{i}'][1])
+        behavior_data['low_variance_trained'].append(
+            result_low_var_trained[f'CORnet-S_trained_low_variance_{i}'][1])
         behavior_data['base_untrained'].append(result_base_random[f'CORnet-S_random'][1])
         behavior_data['base_trained'].append(result_base[f'CORnet-S'][1])
 
-    plot_data_base(it_data, 'it_benchmark_variance', labels, 'Zero values in %', 'Score', [0.0, 0.6])
-    plot_data_base(behavior_data, 'behavior_benchmark_variance', labels, 'Zero values in %', 'Score', [0.0, 0.6])
+    plot_data_base(it_data, 'it_benchmark_variance', labels, 'Zero values in %', 'Score',
+                   [0.0, 0.6])
+    plot_data_base(behavior_data, 'behavior_benchmark_variance', labels, 'Zero values in %',
+                   'Score', [0.0, 0.6])
 
 
 def plot_high_low_variance_separate():
@@ -155,15 +179,20 @@ def plot_high_low_variance_separate():
         low_var_models.append(f'CORnet-S_low_variance_{i}')
         low_var_trained_models.append(f'CORnet-S_trained_low_variance_{i}')
     conn = get_connection()
-    result_high_var = load_scores(conn, high_var_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_high_var = load_scores(conn, high_var_models,
+                                  ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_high_var_trained = load_scores(conn, high_var_trained_models,
-                                          ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_low_var = load_scores(conn, low_var_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                          ['dicarlo.Majaj2015.IT-pls',
+                                           'dicarlo.Rajalingham2018-i2n'])
+    result_low_var = load_scores(conn, low_var_models,
+                                 ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_low_var_trained = load_scores(conn, low_var_trained_models,
-                                         ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                         ['dicarlo.Majaj2015.IT-pls',
+                                          'dicarlo.Rajalingham2018-i2n'])
     result_base_random = load_scores(conn, ['CORnet-S_random'],
                                      ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_base = load_scores(conn, ['CORnet-S'], ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_base = load_scores(conn, ['CORnet-S'],
+                              ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
 
     it_data = {}
     it_data['high_variance'] = []
@@ -176,15 +205,21 @@ def plot_high_low_variance_separate():
     labels = []
     for i in (0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95):
         labels.append(i)
-        it_data['high_variance'].append(result_high_var_trained[f'CORnet-S_trained_high_variance_{i}'][0])
-        it_data['low_variance'].append(result_low_var_trained[f'CORnet-S_trained_low_variance_{i}'][0])
+        it_data['high_variance'].append(
+            result_high_var_trained[f'CORnet-S_trained_high_variance_{i}'][0])
+        it_data['low_variance'].append(
+            result_low_var_trained[f'CORnet-S_trained_low_variance_{i}'][0])
         it_data['base'].append(result_base[f'CORnet-S'][0])
-        behavior_data['high_variance'].append(result_high_var_trained[f'CORnet-S_trained_high_variance_{i}'][1])
-        behavior_data['low_variance'].append(result_low_var_trained[f'CORnet-S_trained_low_variance_{i}'][1])
+        behavior_data['high_variance'].append(
+            result_high_var_trained[f'CORnet-S_trained_high_variance_{i}'][1])
+        behavior_data['low_variance'].append(
+            result_low_var_trained[f'CORnet-S_trained_low_variance_{i}'][1])
         behavior_data['base'].append(result_base[f'CORnet-S'][1])
 
-    plot_data_base(it_data, 'IT Benchmark Variance Trained', labels, 'Zero kernels in %', 'Score', [0.0, 0.6])
-    plot_data_base(behavior_data, 'Behavior Benchmark Variance Trained', labels, 'Zero kernels in %', 'Score',
+    plot_data_base(it_data, 'IT Benchmark Variance Trained', labels, 'Zero kernels in %', 'Score',
+                   [0.0, 0.6])
+    plot_data_base(behavior_data, 'Behavior Benchmark Variance Trained', labels,
+                   'Zero kernels in %', 'Score',
                    [0.0, 0.6])
 
 
@@ -199,17 +234,23 @@ def plot_high_low_nullify():
         low_var_models.append(f'CORnet-S_low_zero_{i}')
         low_var_trained_models.append(f'CORnet-S_trained_low_zero_{i}')
     conn = get_connection('scores_openmind')
-    result_high_var = load_scores(conn, high_var_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_high_var = load_scores(conn, high_var_models,
+                                  ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_high_var_trained = load_scores(conn, high_var_trained_models,
-                                          ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_low_var = load_scores(conn, low_var_models, ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                          ['dicarlo.Majaj2015.IT-pls',
+                                           'dicarlo.Rajalingham2018-i2n'])
+    result_low_var = load_scores(conn, low_var_models,
+                                 ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
     result_low_var_trained = load_scores(conn, low_var_trained_models,
-                                         ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                         ['dicarlo.Majaj2015.IT-pls',
+                                          'dicarlo.Rajalingham2018-i2n'])
     result_base_random = load_scores(conn, ['CORnet-S_random'],
                                      ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_base = load_scores(conn, ['CORnet-S'], ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+    result_base = load_scores(conn, ['CORnet-S'],
+                              ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
 
-    it_data = {'high_zero_untrained': [], 'low_zero_untrained': [], 'high_zero_trained': [], 'low_zero_trained': [],
+    it_data = {'high_zero_untrained': [], 'low_zero_untrained': [], 'high_zero_trained': [],
+               'low_zero_trained': [],
                'base_untrained': [], 'base_trained': []}
     behavior_data = {'high_zero_untrained': [], 'low_zero_untrained': [], 'high_zero_trained': [],
                      'low_zero_trained': [], 'base_untrained': [], 'base_trained': []}
@@ -217,20 +258,25 @@ def plot_high_low_nullify():
     for i in (0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95):
         labels.append(i)
         it_data['high_zero_untrained'].append(result_high_var[f'CORnet-S_high_zero_{i}'][0])
-        it_data['high_zero_trained'].append(result_high_var_trained[f'CORnet-S_trained_high_zero_{i}'][0])
+        it_data['high_zero_trained'].append(
+            result_high_var_trained[f'CORnet-S_trained_high_zero_{i}'][0])
         it_data['low_zero_untrained'].append(result_low_var[f'CORnet-S_low_zero_{i}'][0])
-        it_data['low_zero_trained'].append(result_low_var_trained[f'CORnet-S_trained_low_zero_{i}'][0])
+        it_data['low_zero_trained'].append(
+            result_low_var_trained[f'CORnet-S_trained_low_zero_{i}'][0])
         it_data['base_untrained'].append(result_base_random[f'CORnet-S_random'][0])
         it_data['base_trained'].append(result_base[f'CORnet-S'][0])
         behavior_data['high_zero_untrained'].append(result_high_var[f'CORnet-S_high_zero_{i}'][1])
-        behavior_data['high_zero_trained'].append(result_high_var_trained[f'CORnet-S_trained_high_zero_{i}'][1])
+        behavior_data['high_zero_trained'].append(
+            result_high_var_trained[f'CORnet-S_trained_high_zero_{i}'][1])
         behavior_data['low_zero_untrained'].append(result_low_var[f'CORnet-S_low_zero_{i}'][1])
-        behavior_data['low_zero_trained'].append(result_low_var_trained[f'CORnet-S_trained_low_zero_{i}'][1])
+        behavior_data['low_zero_trained'].append(
+            result_low_var_trained[f'CORnet-S_trained_low_zero_{i}'][1])
         behavior_data['base_untrained'].append(result_base_random[f'CORnet-S_random'][1])
         behavior_data['base_trained'].append(result_base[f'CORnet-S'][1])
 
     plot_data_base(it_data, 'it_benchmark_zero', labels, 'Zero values in %', 'Score', [0.0, 0.6])
-    plot_data_base(behavior_data, 'behavior_benchmark_zero', labels, 'Zero values in %', 'Score', [0.0, 0.6])
+    plot_data_base(behavior_data, 'behavior_benchmark_zero', labels, 'Zero values in %', 'Score',
+                   [0.0, 0.6])
 
 
 def plot_high_low_nullify_separate():
@@ -245,10 +291,13 @@ def plot_high_low_nullify_separate():
         low_var_trained_models.append(f'CORnet-S_trained_low_zero_{i}')
     conn = get_connection()
     result_high_var_trained = load_scores(conn, high_var_trained_models,
-                                          ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                          ['dicarlo.Majaj2015.IT-pls',
+                                           'dicarlo.Rajalingham2018-i2n'])
     result_low_var_trained = load_scores(conn, low_var_trained_models,
-                                         ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
-    result_base = load_scores(conn, ['CORnet-S'], ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
+                                         ['dicarlo.Majaj2015.IT-pls',
+                                          'dicarlo.Rajalingham2018-i2n'])
+    result_base = load_scores(conn, ['CORnet-S'],
+                              ['dicarlo.Majaj2015.IT-pls', 'dicarlo.Rajalingham2018-i2n'])
 
     it_data = {}
     it_data['high_zero'] = []
@@ -264,13 +313,17 @@ def plot_high_low_nullify_separate():
         it_data['high_zero'].append(result_high_var_trained[f'CORnet-S_trained_high_zero_{i}'][0])
         it_data['low_zero'].append(result_low_var_trained[f'CORnet-S_trained_low_zero_{i}'][0])
         it_data['base'].append(result_base[f'CORnet-S'][0])
-        behavior_data['high_zero'].append(result_high_var_trained[f'CORnet-S_trained_high_zero_{i}'][1])
-        behavior_data['low_zero'].append(result_low_var_trained[f'CORnet-S_trained_low_zero_{i}'][1])
+        behavior_data['high_zero'].append(
+            result_high_var_trained[f'CORnet-S_trained_high_zero_{i}'][1])
+        behavior_data['low_zero'].append(
+            result_low_var_trained[f'CORnet-S_trained_low_zero_{i}'][1])
         behavior_data['base'].append(result_base[f'CORnet-S'][1])
 
-    plot_data_base(it_data, 'IT Benchmark Zero Trained', labels, 'Zero values in %', 'Score', [0.0, 0.6],
+    plot_data_base(it_data, 'IT Benchmark Zero Trained', labels, 'Zero values in %', 'Score',
+                   [0.0, 0.6],
                    base_line=result_base[f'CORnet-S'][0])
-    plot_data_base(behavior_data, 'Behavior Benchmark Zero Trained', labels, 'Zero values in %', 'Score', [0.0, 0.6],
+    plot_data_base(behavior_data, 'Behavior Benchmark Zero Trained', labels, 'Zero values in %',
+                   'Score', [0.0, 0.6],
                    base_line=result_base[f'CORnet-S'][1])
 
 

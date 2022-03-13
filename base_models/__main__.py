@@ -1,14 +1,16 @@
 import argparse
-import fire
 import logging
-import numpy as np
 import random
 import sys
+
+import fire
+import numpy as np
 import torch
 from numpy.random.mtrand import RandomState
 
 import base_models.trainer_images as image_train
-from base_models import train_model, trainer, trainer_convergence, test_models, global_data, store_model, \
+from base_models import train_model, trainer, trainer_convergence, test_models, global_data, \
+    store_model, \
     train_full_on_version
 from base_models.full_trainer import train as full_train
 from base_models.trainer_convergence import train as conv_train
@@ -43,7 +45,8 @@ parser.add_argument('--prune', type=bool, default=False,
                     help='Prune weights of the input model.')
 parser.add_argument('--images', type=int, default=0,
                     help='Number of images to train on.')
-parser.add_argument('--lr', type=float, default=0.0, help='Learning rate to start/continue learning with')
+parser.add_argument('--lr', type=float, default=0.0,
+                    help='Learning rate to start/continue learning with')
 parser.add_argument('--optimizer', type=str, default='', help='Optimizer to train with')
 parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay to train with')
 parser.add_argument('--first', type=bool, default=False,
@@ -112,7 +115,8 @@ def score_model_console():
         if args.epoch != 20:
             trainer_convergence.epochs = args.epoch
         trainer.epochs = args.epoch
-        train_other(net=args.other, template=args.model, version=args.version, train_func=conv_train)
+        train_other(net=args.other, template=args.model, version=args.version,
+                    train_func=conv_train)
     else:
         if args.step != 0:
             trainer.step_size = args.step

@@ -236,7 +236,8 @@ alexnet_mapping_2 = {
 
 mobilenet_mapping = {
     'model.0.0': 'V1.conv1',
-    'model.1.0': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.0': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
     'model.1.3': 'V2.input',
     'model.2.0': 'V1.conv2',
     'model.2.3': 'V2.input',
@@ -266,7 +267,8 @@ mobilenet_mapping = {
 
 mobilenet_mapping_2 = {
     'model.0.0': 'V1.conv1',
-    'model.1.0': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.0': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
     'model.1.3': 'V2.conv1',
     'model.2.0': 'V2.conv2',
     'model.2.3': 'V2.conv1',
@@ -296,7 +298,8 @@ mobilenet_mapping_2 = {
 
 mobilenet_mapping_3 = {
     'model.0.0': 'V1.conv1',
-    'model.1.0': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.0': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
     'model.1.3': 'V2.conv1',
     'model.2.0': 'V2.conv3',
     'model.2.3': 'V2.conv1',
@@ -327,8 +330,10 @@ mobilenet_mapping_3 = {
 mobilenet_mapping_4 = {
     'model.0.0': 'V1.conv1',
     'model.0.1': 'V1.conv1',
-    'model.1.0': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
-    'model.1.1': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.0': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.1': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
     'model.1.3': 'V2.conv1',
     'model.1.4': 'V2.conv1',
     'model.2.0': 'V2.conv3',
@@ -384,8 +389,10 @@ mobilenet_mapping_4 = {
 mobilenet_mapping_5 = {
     'model.0.0': 'V1.conv1',
     'model.0.1': 'V1.conv1',
-    'model.1.0': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
-    'model.1.1': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.0': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.1': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
     'model.1.3': 'V2.conv1',
     'model.1.4': 'V2.conv1',
     'model.2.0': 'V2.conv2',
@@ -441,8 +448,10 @@ mobilenet_mapping_5 = {
 mobilenet_mapping_6 = {
     'model.0.0': 'V1.conv1',
     'model.0.1': 'V1.conv1',
-    'model.1.0': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
-    'model.1.1': 'V1.conv2',  # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.0': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
+    'model.1.1': 'V1.conv2',
+    # for i in range(1,14)]+[f'model.{i}.3' for i in range(1,14)] + ['model.14']
     'model.1.3': 'V2.conv_input',
     'model.1.4': 'V2.conv_input',
     'model.2.0': 'V2.conv2',

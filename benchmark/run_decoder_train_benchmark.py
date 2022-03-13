@@ -6,7 +6,8 @@ import sys
 from brainscore import score_model
 
 from base_models.pixel_model import get_pixel_model
-from base_models.test_models import cornet_s_brainmodel, resnet_brainmodel, alexnet_brainmodel, mobilenet_brainmodel, \
+from base_models.test_models import cornet_s_brainmodel, resnet_brainmodel, alexnet_brainmodel, \
+    mobilenet_brainmodel, \
     hmax_brainmodel
 from benchmark.database import create_connection, store_score
 
@@ -21,7 +22,8 @@ def run_benchmark(benchmark_identifier, model_name):
     print(f'>>>>>Start running model {model_name} on benchmark {benchmark_identifier}')
     # model = brain_translated_pool[model_name]
     model = get_model(model_name)
-    score = score_model(model_identifier=model.identifier, model=model, benchmark_identifier=benchmark_identifier)
+    score = score_model(model_identifier=model.identifier, model=model,
+                        benchmark_identifier=benchmark_identifier)
     return score, model.identifier
 
 

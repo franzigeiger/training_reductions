@@ -5,9 +5,12 @@ from base_models.trainer_convergence import train as conv_train
 from base_models.trainer_images import train as image_train
 from transformations.layer_based import apply_norm_dist, apply_norm_dist_kernel
 from transformations.model_based import *
-from transformations.transformation_utils import do_distribution_weight_init, do_distribution_gabor_init_channel, \
-    do_kernel_normal_distribution_init, do_layer_normal_distribution_init, do_channel_normal_distribution_init, \
-    do_poisson_kernel, do_dist_in_kernel, do_best_dist_init_kernel, prev_std_init_single, do_mutual_information, \
+from transformations.transformation_utils import do_distribution_weight_init, \
+    do_distribution_gabor_init_channel, \
+    do_kernel_normal_distribution_init, do_layer_normal_distribution_init, \
+    do_channel_normal_distribution_init, \
+    do_poisson_kernel, do_dist_in_kernel, do_best_dist_init_kernel, prev_std_init_single, \
+    do_mutual_information, \
     do_eigenvalue_channel, do_eigenvalue_channel_dist, do_cluster_init
 
 trained_models = {
@@ -24,7 +27,8 @@ trained_models = {
                           'layers': ['V2', 'V4', 'IT', "decoder"]},
     'CORnet-S_train_decoder': {'model_func': apply_generic, 'layers': ["decoder"]},
     'CORnet-S_train_gabor_scrumble': {'model_func': apply_gabors_scrumble,
-                                      'layers': ['V1.conv2', 'V1.norm2', 'V2', 'V4', 'IT', "decoder"],
+                                      'layers': ['V1.conv2', 'V1.norm2', 'V2', 'V4', 'IT',
+                                                 "decoder"],
                                       'file': '/gabors_tiago_scaled_cornet_2.npy'},
     'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_conv': {'model_func': apply_generic,
                                                       'layers': ['V2.conv3', 'V4', 'IT', "decoder"],
@@ -61,7 +65,8 @@ trained_models = {
                                                     'V2.conv2': do_distribution_weight_init,
                                                     'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                     'file_1': '/gabors_conv2.npy',
-                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                    'comp_1': 8,
                                                     'batchnorm': True
                                                     },
     # CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_batchnorm_init
@@ -75,12 +80,14 @@ trained_models = {
                                                     'V2.conv2': do_distribution_weight_init,
                                                     'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                     'file_1': '/gabors_conv2.npy',
-                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                    'comp_1': 8,
                                                     'batchnorm': True,
                                                     'bn_init': do_layer_normal_distribution_init
                                                     },
     'CORnet-S_train_gmk1_wmc2_kn3_kn4_bi': {'model_func': apply_generic,
-                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                                       'IT',
                                                        "decoder"],
                                             'V1.conv1': do_distribution_gabor_init,
                                             'V1.conv2': do_distribution_weight_init,
@@ -90,7 +97,8 @@ trained_models = {
                                             'dim_1': 1, 'comp_1': 8, 'batchnorm': True,
                                             'bn_init': do_layer_normal_distribution_init},
     'CORnet-S_train_gmk1_wmc2_kn3_kn4_ra': {'model_func': apply_generic,
-                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                                       'IT',
                                                        "decoder"],
                                             'V1.conv1': do_distribution_gabor_init,
                                             'V1.conv2': do_distribution_weight_init,
@@ -106,7 +114,8 @@ trained_models = {
                                                          'dim': 1, 'batchnorm': True,
                                                          'bn_init': do_layer_normal_distribution_init},
     'CORnet-S_train_gmk1_wmc2_kn3_bi': {'model_func': apply_generic,
-                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                   'V4',
                                                    'IT', "decoder"],
                                         'V1.conv1': do_distribution_gabor_init,
                                         'V1.conv2': do_distribution_weight_init,
@@ -121,7 +130,8 @@ trained_models = {
                                                          'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                          'dim': 1, 'batchnorm': True},
     'CORnet-S_train_gmk1_wmc2_kn3_ra': {'model_func': apply_generic,
-                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                   'V4',
                                                    'IT', "decoder"],
                                         'V1.conv1': do_distribution_gabor_init,
                                         'V1.conv2': do_distribution_weight_init,
@@ -130,7 +140,8 @@ trained_models = {
                                         'dim_1': 1, 'comp_1': 8, 'batchnorm': True,
                                         },
     'CORnet-S_train_gmk1_wmc2_ln3_bi': {'model_func': apply_generic,
-                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                   'V4',
                                                    'IT', "decoder"],
                                         'V1.conv1': do_distribution_gabor_init,
                                         'V1.conv2': do_distribution_weight_init,
@@ -139,7 +150,8 @@ trained_models = {
                                         'dim_1': 1, 'comp_1': 8, 'batchnorm': True,
                                         'bn_init': do_layer_normal_distribution_init},
     'CORnet-S_train_gmk1_wmc2_ln3_ra': {'model_func': apply_generic,
-                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                   'V4',
                                                    'IT', "decoder"],
                                         'V1.conv1': do_distribution_gabor_init,
                                         'V1.conv2': do_distribution_weight_init,
@@ -165,7 +177,8 @@ trained_models = {
                                                  'bn_init': do_layer_normal_distribution_init
                                                  },
     'CORnet-S_train_gabor_dist_kernel_gabor_dist_channel_ra': {'model_func': apply_generic,
-                                                               'layers': ['V2', 'V4', 'IT', "decoder"],
+                                                               'layers': ['V2', 'V4', 'IT',
+                                                                          "decoder"],
                                                                'V1.conv1': do_distribution_gabor_init,
                                                                'V1.conv2': do_distribution_gabor_init_channel,
                                                                'file': '/gabors_tiago_scaled_cornet_2.npy',
@@ -173,7 +186,8 @@ trained_models = {
                                                                'batchnorm': True,
                                                                },
     'CORnet-S_train_gabor_dist_kernel_gabor_dist_channel_bi': {'model_func': apply_generic,
-                                                               'layers': ['V2', 'V4', 'IT', "decoder"],
+                                                               'layers': ['V2', 'V4', 'IT',
+                                                                          "decoder"],
                                                                'V1.conv1': do_distribution_gabor_init,
                                                                'V1.conv2': do_distribution_gabor_init_channel,
                                                                'file': '/gabors_tiago_scaled_cornet_2.npy',
@@ -182,7 +196,8 @@ trained_models = {
                                                                'bn_init': do_layer_normal_distribution_init
                                                                },
     'CORnet-S_train_gmk1_gmk2_kn3_bi': {'model_func': apply_generic,
-                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                   'V4', 'IT',
                                                    "decoder"],
                                         'V1.conv1': do_distribution_gabor_init,
                                         'V1.conv2': do_distribution_gabor_init,
@@ -193,7 +208,8 @@ trained_models = {
                                         'bn_init': do_layer_normal_distribution_init
                                         },
     'CORnet-S_train_gmk1_gmk2_kn3_ra': {'model_func': apply_generic,
-                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                   'V4', 'IT',
                                                    "decoder"],
                                         'V1.conv1': do_distribution_gabor_init,
                                         'V1.conv2': do_distribution_gabor_init,
@@ -203,7 +219,8 @@ trained_models = {
                                         'batchnorm': True,
                                         },
     'CORnet-S_train_gmk1_gmk2_ln3_bi': {'model_func': apply_generic,
-                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                   'V4', 'IT',
                                                    "decoder"],
                                         'V1.conv1': do_distribution_gabor_init,
                                         'V1.conv2': do_distribution_gabor_init,
@@ -214,7 +231,8 @@ trained_models = {
                                         'bn_init': do_layer_normal_distribution_init
                                         },
     'CORnet-S_train_gmk1_gmk2_ln3_ra': {'model_func': apply_generic,
-                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                        'layers': ['V2.skip', 'V2.conv1', 'V2.conv2', 'V2.conv3',
+                                                   'V4', 'IT',
                                                    "decoder"],
                                         'V1.conv1': do_distribution_gabor_init,
                                         'V1.conv2': do_distribution_gabor_init,
@@ -224,7 +242,8 @@ trained_models = {
                                         'batchnorm': True,
                                         },
     'CORnet-S_train_gmk1_gmk2_kn3_kn4_ra': {'model_func': apply_generic,
-                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                                       'IT',
                                                        "decoder"],
                                             'V1.conv1': do_distribution_gabor_init,
                                             'V1.conv2': do_distribution_gabor_init,
@@ -235,7 +254,8 @@ trained_models = {
                                             'batchnorm': True,
                                             },
     'CORnet-S_train_gmk1_gmk2_kn3_kn4_bi': {'model_func': apply_generic,
-                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                                       'IT',
                                                        "decoder"],
                                             'V1.conv1': do_distribution_gabor_init,
                                             'V1.conv2': do_distribution_gabor_init,
@@ -247,7 +267,8 @@ trained_models = {
                                             'bn_init': do_layer_normal_distribution_init
                                             },
     'CORnet-S_train_gmk1_gmk2_kn3_ln4_ra': {'model_func': apply_generic,
-                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                                       'IT',
                                                        "decoder"],
                                             'V1.conv1': do_distribution_gabor_init,
                                             'V1.conv2': do_distribution_gabor_init,
@@ -258,7 +279,8 @@ trained_models = {
                                             'batchnorm': True,
                                             },
     'CORnet-S_train_gmk1_gmk2_kn3_ln4_bi': {'model_func': apply_generic,
-                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                                       'IT',
                                                        "decoder"],
                                             'V1.conv1': do_distribution_gabor_init,
                                             'V1.conv2': do_distribution_gabor_init,
@@ -270,7 +292,8 @@ trained_models = {
                                             'bn_init': do_layer_normal_distribution_init
                                             },
     'CORnet-S_train_gmk1_gmk2_ln3_ln4_bi': {'model_func': apply_generic,
-                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                                       'IT',
                                                        "decoder"],
                                             'V1.conv1': do_distribution_gabor_init,
                                             'V1.conv2': do_distribution_gabor_init,
@@ -282,7 +305,8 @@ trained_models = {
                                             'bn_init': do_layer_normal_distribution_init
                                             },
     'CORnet-S_train_gmk1_gmk2_ln3_kn4_bi': {'model_func': apply_generic,
-                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4', 'IT',
+                                            'layers': ['V2.conv1', 'V2.conv2', 'V2.conv3', 'V4',
+                                                       'IT',
                                                        "decoder"],
                                             'V1.conv1': do_distribution_gabor_init,
                                             'V1.conv2': do_distribution_gabor_init,
@@ -399,7 +423,8 @@ trained_models = {
                                                     'V2.conv2': do_distribution_weight_init,
                                                     'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                     'file_1': '/gabors_conv2.npy',
-                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                    'comp_1': 8,
                                                     'batchnorm': True
                                                     },
     'CORnet-S_train_gmk1_gmk2_kn3_kn4_ln5_wm6_bi': {'model_func': apply_generic,
@@ -412,7 +437,8 @@ trained_models = {
                                                     'V2.conv2': do_distribution_weight_init,
                                                     'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                     'file_1': '/gabors_conv2.npy',
-                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                    'comp_1': 8,
                                                     'batchnorm': True,
                                                     'bn_init': do_layer_normal_distribution_init
                                                     },
@@ -426,7 +452,8 @@ trained_models = {
                                                     'V2.conv2': do_distribution_weight_init,
                                                     'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                     'file_1': '/gabors_conv2.npy',
-                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                    'comp_1': 8,
                                                     'batchnorm': True,
                                                     'bn_init': do_layer_normal_distribution_init
                                                     },
@@ -440,7 +467,8 @@ trained_models = {
                                                     'V2.conv2': do_distribution_weight_init,
                                                     'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                     'file_1': '/gabors_conv2.npy',
-                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                    'comp_1': 8,
                                                     'batchnorm': True,
                                                     },
     'CORnet-S_train_gmk1_gmk2_ln3_ln4_ln5_wm6_ra': {'model_func': apply_generic,
@@ -453,7 +481,8 @@ trained_models = {
                                                     'V2.conv2': do_distribution_weight_init,
                                                     'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                     'file_1': '/gabors_conv2.npy',
-                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                    'comp_1': 8,
                                                     'batchnorm': True
                                                     },
     'CORnet-S_train_gmk1_gmk2_ln3_ln4_ln5_wm6_bi': {'model_func': apply_generic,
@@ -466,7 +495,8 @@ trained_models = {
                                                     'V2.conv2': do_distribution_weight_init,
                                                     'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                     'file_1': '/gabors_conv2.npy',
-                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                    'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                    'comp_1': 8,
                                                     'batchnorm': True,
                                                     'bn_init': do_layer_normal_distribution_init
                                                     },
@@ -481,7 +511,8 @@ trained_models = {
                                                      'V2.conv2': do_distribution_weight_init,
                                                      'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                      'file_1': '/gabors_conv2.npy',
-                                                     'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                     'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                     'comp_1': 8,
                                                      'batchnorm': True,
                                                      'bn_init': do_layer_normal_distribution_init
                                                      },
@@ -496,7 +527,8 @@ trained_models = {
                                                      'V2.conv2': do_distribution_weight_init,
                                                      'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                      'file_1': '/gabors_conv2.npy',
-                                                     'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                     'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                     'comp_1': 8,
                                                      'batchnorm': True,
                                                      'bn_init': do_layer_normal_distribution_init
                                                      },
@@ -511,7 +543,8 @@ trained_models = {
                                                      'V2.conv2': do_distribution_weight_init,
                                                      'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                      'file_1': '/gabors_conv2.npy',
-                                                     'dim_5': 1, 'comp_5': 5, 'dim_1': 0, 'comp_1': 8,
+                                                     'dim_5': 1, 'comp_5': 5, 'dim_1': 0,
+                                                     'comp_1': 8,
                                                      'batchnorm': True,
                                                      'bn_init': do_layer_normal_distribution_init
                                                      },
@@ -545,7 +578,8 @@ trained_models = {
                                                          'bn_init': do_layer_normal_distribution_init
                                                          },
     'CORnet-S_train_gmk1_gmk2_kn3_kn4_ln5_wm6_bi_mom': {'model_func': apply_generic,
-                                                        'layers': ['V2.conv3', 'V4', 'IT', "decoder"],
+                                                        'layers': ['V2.conv3', 'V4', 'IT',
+                                                                   "decoder"],
                                                         'V1.conv1': do_distribution_gabor_init,
                                                         'V1.conv2': do_distribution_gabor_init,
                                                         'V2.conv_input': do_kernel_normal_distribution_init,
@@ -554,7 +588,8 @@ trained_models = {
                                                         'V2.conv2': do_distribution_weight_init,
                                                         'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                         'file_1': '/gabors_conv2.npy',
-                                                        'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                        'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                        'comp_1': 8,
                                                         'batchnorm': True,
                                                         'bn_init': do_layer_normal_distribution_init,
                                                         'momentum': True
@@ -618,7 +653,8 @@ trained_models = {
                                                          'bn_init': do_layer_normal_distribution_init
                                                          },
     'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wmc6_kn7_tr_bi': {'model_func': apply_generic,
-                                                            'layers': ['V2.conv3', 'V4', 'IT', "decoder"],
+                                                            'layers': ['V2.conv3', 'V4', 'IT',
+                                                                       "decoder"],
                                                             'V1.conv1': do_distribution_gabor_init,
                                                             'V1.conv2': do_distribution_gabor_init,
                                                             'V2.conv_input': do_kernel_normal_distribution_init,
@@ -628,7 +664,8 @@ trained_models = {
                                                             'V2.conv3': do_kernel_normal_distribution_init,
                                                             'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                             'file_1': '/gabors_conv2.npy',
-                                                            'dim_5': 1, 'comp_5': 5, 'batchnorm': True,
+                                                            'dim_5': 1, 'comp_5': 5,
+                                                            'batchnorm': True,
                                                             'bn_init': do_layer_normal_distribution_init
                                                             },
     'CORnet-S_train_gmk1_gmk2_ln3_kn4_ln5_wmc6_ln7_bi': {'model_func': apply_generic,
@@ -688,7 +725,8 @@ trained_models = {
                                                         'bn_init': do_layer_normal_distribution_init
                                                         },
     'CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_kn6_kn7train_bi': {'model_func': apply_generic,
-                                                             'layers': ['V2.conv3', 'V4', 'IT', "decoder"],
+                                                             'layers': ['V2.conv3', 'V4', 'IT',
+                                                                        "decoder"],
                                                              'V1.conv1': do_distribution_gabor_init,
                                                              'V1.conv2': do_distribution_gabor_init,
                                                              'V2.conv_input': do_kernel_normal_distribution_init,
@@ -787,7 +825,8 @@ trained_models = {
                                                      'V2.conv1': do_layer_normal_distribution_init,
                                                      'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                      'file_1': '/gabors_conv2.npy',
-                                                     'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                     'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                     'comp_1': 8,
                                                      'batchnorm': True, 'full': True,
                                                      'bn_init': do_layer_normal_distribution_init
                                                      },
@@ -802,7 +841,8 @@ trained_models = {
                                                           'V2.conv2': do_distribution_weight_init,
                                                           'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                           'file_1': '/gabors_conv2.npy',
-                                                          'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                          'dim_5': 1, 'comp_5': 5, 'dim_1': 1,
+                                                          'comp_1': 8,
                                                           'batchnorm': True, 'full': True,
                                                           'bn_init': do_layer_normal_distribution_init
                                                           },
@@ -839,7 +879,8 @@ trained_models = {
                                                      'V2.skip': do_layer_normal_distribution_init,
                                                      'V2.conv1': do_layer_normal_distribution_init,
                                                      'V2.conv2': do_distribution_weight_init,
-                                                     'dim_0': 1, 'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                     'dim_0': 1, 'dim_5': 1, 'comp_5': 5,
+                                                     'dim_1': 1, 'comp_1': 8,
                                                      'batchnorm': True,
                                                      'bn_init': do_layer_normal_distribution_init
                                                      },
@@ -852,7 +893,8 @@ trained_models = {
                                                      'V2.skip': do_layer_normal_distribution_init,
                                                      'V2.conv1': do_layer_normal_distribution_init,
                                                      'V2.conv2': do_distribution_weight_init,
-                                                     'dim_0': 0, 'dim_5': 1, 'comp_5': 5, 'dim_1': 1, 'comp_1': 8,
+                                                     'dim_0': 0, 'dim_5': 1, 'comp_5': 5,
+                                                     'dim_1': 1, 'comp_1': 8,
                                                      'batchnorm': True,
                                                      'bn_init': do_layer_normal_distribution_init
                                                      },
@@ -1179,7 +1221,8 @@ trained_models = {
                                                 'V2.conv3': do_distribution_weight_init,
                                                 'file': '/gabors_tiago_scaled_cornet_2.npy',
                                                 'file_1': '/gabors_conv2.npy',
-                                                'dim_2': 0, 'dim_3': 0, 'dim_4': 0, 'dim_5': 1, 'dim_6': 0,
+                                                'dim_2': 0, 'dim_3': 0, 'dim_4': 0, 'dim_5': 1,
+                                                'dim_6': 0,
                                                 'batchnorm': True,
                                                 'bn_init': do_layer_normal_distribution_init
                                                 },

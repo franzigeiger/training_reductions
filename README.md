@@ -3,7 +3,6 @@
 This repository contains all sources for work published
 in [Wiring Up Vision: Minimizing Supervised Synaptic Updates Needed to Produce a Primate Ventral Stream](https://www.biorxiv.org/content/10.1101/2020.06.08.140111v1)
 
-
 ## Installation
 
 Run `pip install .` to install all required dependencies.
@@ -12,11 +11,9 @@ Run `pip install .` to install all required dependencies.
 
 To create the plots shown in the paper (and some further analysis for rebuttals) run `analysis/paper_plots.py`.
 
-This will create the 
+This will create the
 
 ## Weight compression
-
-
 
 ## Training a model
 
@@ -32,12 +29,13 @@ initialization and the layers to train.
 
 ### Benchmark
 
-To evaluate performance of the various model versions we have a benchmarking suite, which can run the various brainscore benchmarks.
-
+To evaluate performance of the various model versions we have a benchmarking suite, which can run the various brainscore
+benchmarks.
 
 ```python benchmark --model <model_name> --benchmark <>```
 
-The name is also the identifier for the weight file. The benchmark name must be a benchmark that brainscore offers. For the analysis here we used those benchmarks:
+The name is also the identifier for the weight file. The benchmark name must be a benchmark that brainscore offers. For
+the analysis here we used those benchmarks:
 
 ```    
         'movshon.FreemanZiemba2013.V1-pls',
@@ -48,10 +46,10 @@ The name is also the identifier for the weight file. The benchmark name must be 
         'fei-fei.Deng2009-top1'
 ```
 
-Benchmark results are stored in the sqlLite database `scores.sqlite` and `scores_public.sqlite` for public benchmark runs.
+Benchmark results are stored in the sqlLite database `scores.sqlite` and `scores_public.sqlite` for public benchmark
+runs.
 
 Scores are stored in the table called `raw_scores`.
-
 
 ## Pretrained weights
 

@@ -17,7 +17,8 @@ def apply_nullify_small(m, config):
         if np.abs(cell) <= pivot:
             cell[...] = 0.0
             counter += 1
-    logger.info(f'Values set to zero: {counter} from total weights {ordered.size}, configuration:{percent}')
+    logger.info(
+        f'Values set to zero: {counter} from total weights {ordered.size}, configuration:{percent}')
     m.weight.data = torch.Tensor(weights)
 
 
@@ -32,7 +33,8 @@ def apply_nullify_high(m, config):
         if np.abs(cell) >= pivot:
             cell[...] = 0.0
             counter += 1
-    logger.info(f'Values set to zero: {counter} from total weights {ordered.size}, configuration:{percent}')
+    logger.info(
+        f'Values set to zero: {counter} from total weights {ordered.size}, configuration:{percent}')
     m.weight.data = torch.Tensor(weights)
 
 
@@ -85,7 +87,8 @@ def apply_overflow_weights(m, configs=None):
     weights = m.weight.data.cpu().numpy()
     init_number = weights.shape[0] + int(weights.shape[0] * overflow) + 1
     big_weights = torch.nn.init.xavier_normal(
-        torch.empty(init_number, weights.shape[1], weights.shape[2], weights.shape[3])).data.cpu().numpy()
+        torch.empty(init_number, weights.shape[1], weights.shape[2],
+                    weights.shape[3])).data.cpu().numpy()
     _, stds = calculate_variances(big_weights, 0.3)
     sorted_stds = np.sort(stds)
     pivot = sorted_stds[weights.shape[0]]

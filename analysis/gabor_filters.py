@@ -72,7 +72,8 @@ def plot_gabor_filters():
                 for stds in (2, 3):
                     for offset in (0, 1, -1):
                         kernel = np.real(gabor_kernel(frequency, theta=theta,
-                                                      sigma_x=sigma, sigma_y=sigma, n_stds=stds, offset=offset))
+                                                      sigma_x=sigma, sigma_y=sigma, n_stds=stds,
+                                                      offset=offset))
                         if kernel.shape[0] > 7:
                             overlap = int((kernel.shape[0] - 7) / 2)
                             length = kernel.shape[0]
@@ -162,7 +163,8 @@ def wavelets():
     L = 32
     filters_set = filter_bank(M, M, J, L=L)
     fig, axs = plt.subplots(J, L, sharex=True, sharey=True,
-                            gridspec_kw={'width_ratios': [1] * L, 'wspace': 0.5, 'hspace': 0.5, 'top': 0.95,
+                            gridspec_kw={'width_ratios': [1] * L, 'wspace': 0.5, 'hspace': 0.5,
+                                         'top': 0.95,
                                          'bottom': 0.05, 'left': 0.1, 'right': 0.95})
     fig.set_figheight(5)
     fig.set_figwidth(60)
@@ -185,7 +187,8 @@ def wavelets():
 
 def plot_wavelets(J, L, elems, it):
     fig, axs = plt.subplots(J, L, sharex=True, sharey=True,
-                            gridspec_kw={'width_ratios': [1] * L, 'wspace': 0.5, 'hspace': 0.5, 'top': 0.95,
+                            gridspec_kw={'width_ratios': [1] * L, 'wspace': 0.5, 'hspace': 0.5,
+                                         'top': 0.95,
                                          'bottom': 0.05, 'left': 0.1, 'right': 0.95})
     fig.set_figheight(5)
     fig.set_figwidth(60)

@@ -1,14 +1,15 @@
 import math
+import pickle
+from heapq import nlargest
+from os import path
+
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
 import seaborn as sns
-from heapq import nlargest
 from matplotlib import pyplot, gridspec
 from matplotlib.lines import Line2D
 # from model_tools.brain_transformation import ModelCommitment
 from numpy.random.mtrand import RandomState
-from os import path
 from scipy.stats import norm, pearsonr
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import explained_variance_score
@@ -17,14 +18,16 @@ from torch import nn
 
 from base_models import global_data, layers
 from base_models.global_data import base_dir
-from base_models.pool import brain_translated_pool, base_model_pool
+from base_models.pool import brain_translated_pool
 from base_models.test_models import alexnet, cornet_s_brainmodel, get_model
-from plot.plot_data import plot_data_map, plot_data_base, plot_two_scales, plot_pie, my_palette_light, plot_heatmap
+from plot.plot_data import plot_data_map, plot_data_base, plot_two_scales, plot_pie, \
+    my_palette_light, plot_heatmap
 from utils.cluster import cluster_data
 from utils.distributions import load_mixture_gaussian, mixture_analysis
 from utils.gabors import plot_weights
 
-weights = [9408, 36864, 8192, 16384, 65536, 2359296, 32768, 65536, 262144, 9437184, 262144, 131072, 262144, 1048576,
+weights = [9408, 36864, 8192, 16384, 65536, 2359296, 32768, 65536, 262144, 9437184, 262144, 131072,
+           262144, 1048576,
            37748736, 1048576, 512000]
 sum_conv3 = 53372096 - 32768 - 131072 - 1048576 - 512000
 
@@ -84,7 +87,8 @@ def weight_mean_std(model_name, random=False):
             norm_dists['std'].append(std)
             print(f'Norm dist mean: {mu} and std: {std}')
             # plot_histogram(flat, name, model_name)
-    plot_two_scales(norm_dists, model_name, x_labels=layers, x_name='layers', y_name='Mean', y_name2='Std',
+    plot_two_scales(norm_dists, model_name, x_labels=layers, x_name='layers', y_name='Mean',
+                    y_name2='Std',
                     scale_fix=[-0.01, 0.15], rotate=True)
     # model.apply(plot_distribution)
 
@@ -170,7 +174,8 @@ def kernel_weight_dist(model_name):
             all_kernels['name'].append(name)
             all_kernels['max'].append(np.mean(kernel_values['min']))
             all_kernels['min'].append(np.mean(kernel_values['max']))
-    plot_data_map(all_kernels, f'{model_name}.kernel.dist', 'name', 'Layer number', 'value', scale_fix=[-0.75, 1.0])
+    plot_data_map(all_kernels, f'{model_name}.kernel.dist', 'name', 'Layer number', 'value',
+                  scale_fix=[-0.75, 1.0])
 
 
 def mean_var_overview(model_name, random):
@@ -193,7 +198,8 @@ def mean_var_overview(model_name, random):
             means.append(np.mean(kernel_means))
             stds.append(np.mean(kernel_stds))
     plot_data_base({'means': means, 'stds': stds},
-                   f'Mean and Variance of kernels ' + ('Trained' if not random else 'Untrained'), layers,
+                   f'Mean and Variance of kernels ' + ('Trained' if not random else 'Untrained'),
+                   layers,
                    x_name='Layer number',
                    y_name='value', scale_fix=[-0.05, 0.2])
 
@@ -225,7 +231,8 @@ def mean_compared(model_name, random):
                 kernel_weights = kernel.flatten()
                 kernel_means.append(np.mean(np.abs(kernel_weights)))
             means_trained.append(np.mean(kernel_means))
-    plot_data_base({'means_untrained': means_untrained, 'means_trained': means_trained}, f'Mean trained and untrained',
+    plot_data_base({'means_untrained': means_untrained, 'means_trained': means_trained},
+                   f'Mean trained and untrained',
                    layers, x_name='Layer number',
                    y_name='value', rotate=True)
 
@@ -287,7 +294,8 @@ def visualize_second_layer(model_name):
         if type(m) == nn.Conv2d and counter >= 1:
             weights = m.weight.data
             # filter_weights = np.zeros((weights.shape[0], weights.shape[2], weights.shape[3]))
-            weights = weights.reshape(weights.shape[0], weights.shape[1] * weights.shape[2], weights.shape[3])
+            weights = weights.reshape(weights.shape[0], weights.shape[1] * weights.shape[2],
+                                      weights.shape[3])
             weights = weights.reshape(weights.shape[0] * weights.shape[2], weights.shape[1])
             # for i in range(weights.shape[0]):
             #     # do for all kernels
@@ -357,7 +365,8 @@ def analyze_filter_delta(model_name):
                     diff = np.average(np.true_divide(np.abs(filter1 - filter2), avg_range))
                     differences.append(diff)
                     all_differences.append(diff)
-                print(f'difference in kernel {kernel}: differences: {differences}, filter means and avgs: {mean_avgs}')
+                print(
+                    f'difference in kernel {kernel}: differences: {differences}, filter means and avgs: {mean_avgs}')
             print(
                 f'Filter range average {sum(ranges) / len(ranges)}, filter min average: {sum(mines) / len(maxes)}, max avg: {sum(maxes) / len(maxes)}, avg diff: {sum(all_differences) / len(all_differences)}')
             return
@@ -453,7 +462,8 @@ def cluster_kernel_weights():
                 kmeans = cluster_data(labels_channel, name=name)
                 centers = kmeans.cluster_centers_
                 centers = centers.reshape(centers.shape[0], weights.shape[1], -1)
-                centers = centers.reshape(centers.shape[0], weights.shape[1], centers.shape[2], centers.shape[2])
+                centers = centers.reshape(centers.shape[0], weights.shape[1], centers.shape[2],
+                                          centers.shape[2])
                 labels = kmeans.labels_
                 # plot_histogram(labels.flatten(), name, bins=kmeans.n_clusters)
                 mean, std = calc_mean_std(labels_channel)
@@ -658,13 +668,15 @@ def predict_next_kernel_2(prev, next, name):
         random_state = RandomState(rand)
         prev = prev[np.random.permutation(prev.shape[0])]
         next = next[np.random.permutation(next.shape[0])]
-        train, test, y_train, y_test = train_test_split(prev[:min], next[:min], test_size=0.5, random_state=rand)
+        train, test, y_train, y_test = train_test_split(prev[:min], next[:min], test_size=0.5,
+                                                        random_state=rand)
         reg.fit(train, y_train)
         y_pred = reg.predict(test)
         score1 = reg.score(train, y_train)
         score = explained_variance_score(y_test, y_pred)
         # print(f'layer {name} has regression score {score1} and explained variance {score}' )
-    print(f'Found a good score for layer{name}: regression score {score1} and explained variance {score}')
+    print(
+        f'Found a good score for layer{name}: regression score {score1} and explained variance {score}')
 
 
 def get_kernel_type(type, kernel, channel):
@@ -687,7 +699,8 @@ def predict_next_kernel_typed(prev, prev_kernel, next, next_kernel, name):
             if prev_comp.shape[0] > 1 and next_comp.shape[0] > 1:
                 reg = LinearRegression()
                 samples = np.min([prev_comp.shape[0], next_comp.shape[0]])
-                train, test, y_train, y_test = train_test_split(prev_comp[:samples], next_comp[:samples], test_size=0.1,
+                train, test, y_train, y_test = train_test_split(prev_comp[:samples],
+                                                                next_comp[:samples], test_size=0.1,
                                                                 random_state=42)
                 reg.fit(train, y_train)
                 score = reg.score(prev_comp[:samples], next_comp[:samples])
@@ -706,7 +719,8 @@ def predict_next_full(prev, next, name):
         next = np.transpose(next, [1, 0, 2])
         train, test, y_train, y_test = train_test_split(prev, next, test_size=0.5, random_state=42)
     else:
-        train, test, y_train, y_test = train_test_split(prev, next.T, test_size=0.5, random_state=42)
+        train, test, y_train, y_test = train_test_split(prev, next.T, test_size=0.5,
+                                                        random_state=42)
     # train, test, y_train, y_test = train, test, y_train, y_test
     reg.fit(train.reshape(1, -1), y_train.reshape(1, -1))
     y_pred = reg.predict(test.reshape(1, -1))
@@ -776,7 +790,8 @@ def plot_layer_centers(gs=None):
             if index == 0:
                 if path.exists(f'{base_dir}/ressources/gm_gabor_0_samples.pkl'):
                     best_gmm = load_mixture_gaussian('gabor_0')
-                    mixture_analysis(best_gmm.weights_, best_gmm.means_, best_gmm.covariances_, name, inner[ax_id])
+                    mixture_analysis(best_gmm.weights_, best_gmm.means_, best_gmm.covariances_,
+                                     name, inner[ax_id])
                     ax_id += 1
             else:
                 if m.weight.data.shape[-1] > 1:
@@ -784,8 +799,10 @@ def plot_layer_centers(gs=None):
                     pickle_in = open(f'{base_dir}/ressources/{name}.pkl', "rb")
                     cluster = pickle.load(pickle_in)
                     centers = cluster['centers'].squeeze()
-                    plot_weights(centers.reshape(1, centers.shape[0], centers.shape[1], centers.shape[2]), name,
-                                 inner[ax_id], layers[index])
+                    plot_weights(
+                        centers.reshape(1, centers.shape[0], centers.shape[1], centers.shape[2]),
+                        name,
+                        inner[ax_id], layers[index])
                     ax_id += 1
             index += 1
     if show:

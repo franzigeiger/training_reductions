@@ -1,9 +1,10 @@
-import numpy as np
 import pickle
 import random
+from os import path
+
+import numpy as np
 import scipy.stats as st
 import torch
-from os import path
 from scipy.stats import norm
 from skimage.filters import gabor_kernel
 from skimage.transform import resize
@@ -29,7 +30,8 @@ def do_fit_gabor_dist(weights, config, **kwargs):
     for k in range(weights.shape[0]):
         for f in range(weights.shape[1]):
             kernel = gabor_kernel_3(samples[0][k], theta=samples[1][k],
-                                    sigma_x=samples[2][k], sigma_y=samples[3][k], offset=samples[4][k],
+                                    sigma_x=samples[2][k], sigma_y=samples[3][k],
+                                    offset=samples[4][k],
                                     x_c=samples[5][k], y_c=samples[6][k], ks=weights.shape[2])
             if config['reshape']:
                 kernel = reshape_with_project(kernel)
@@ -44,7 +46,8 @@ def do_fit_gabor_init(weights, config, **kwargs):
     for kernels in gabor_params:
         for beta in kernels:
             kernel = gabor_kernel_3(beta[0], theta=beta[1],
-                                    sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5], y_c=beta[6], ks=7)
+                                    sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5],
+                                    y_c=beta[6], ks=7)
             if config['reshape']:
                 kernel = reshape_with_project(kernel)
             weights[int(idx / 3), idx % 3] = kernel
@@ -119,7 +122,8 @@ def do_scrumble_gabor_init(weights, config, **kwargs):
         for s, e in ((0, 10), (10, 20), (20, 30)):
             beta = filter_params[s:e]
             filter = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
-                                    sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
+                                    sigma_x=beta[3], sigma_y=beta[4],
+                                    offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                     y_c=beta[8],
                                     scale=beta[9], ks=7)
             weights[idx, int(s / 10)] = filter
@@ -146,7 +150,8 @@ def do_gabors(weights, config, **kwargs):
             configs = random.sample(range(12), int(num_frequ))
             for config in configs:
                 kernel = np.real(gabor_kernel(frequency, theta=theta,
-                                              sigma_x=choices[config][0], sigma_y=choices[config][0],
+                                              sigma_x=choices[config][0],
+                                              sigma_y=choices[config][0],
                                               n_stds=choices[config][1], offset=choices[config][2]))
                 if kernel.shape[0] > 7:
                     overlap = int((kernel.shape[0] - 7) / 2)
@@ -232,7 +237,8 @@ def do_distribution_gabor_init(weights, config, index, shape, **kwargs):
         for s, e in tuples:
             beta = samples[i, s:e]
             filter = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
-                                    sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
+                                    sigma_x=beta[3], sigma_y=beta[4],
+                                    offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                     y_c=beta[8],
                                     scale=beta[9], ks=shape[-1])
             new_weights[i, int(s / 10)] = filter
@@ -255,7 +261,8 @@ def do_distribution_gabor_init_channel(weights, config, index, shape, **kwargs):
     for i in range(shape[0]):
         beta = samples[i]
         filter = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]) / 2,
-                                sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
+                                sigma_x=beta[3], sigma_y=beta[4],
+                                offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                 y_c=beta[8],
                                 scale=beta[9], ks=shape[-1])
         weights[int(i / shape[0]), int(i % shape[0])] = filter
@@ -314,7 +321,8 @@ def prepare_gabor_params(params, **kwargs):
         for s, e in tuples:
             p = param[i, int(s * 8 / 10):int(e * 8 / 10)]
             new_param[i, s:e] = (
-                p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
+                p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]),
+                p[5], p[6], p[7])
     return new_param, tuples
 
 
@@ -326,7 +334,8 @@ def prepare_gabor_params_channel(params, **kwargs):
     for i in range(param.shape[0]):
         p = param[i]
         new_param[i] = (
-            p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
+            p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5],
+            p[6], p[7])
     return new_param, tuples
 
 
@@ -495,8 +504,9 @@ def do_mutual_information(weights, previous, config, **kwargs):
     for i in range(kernels):
         for j in range(kernels):
             # print(f'Score kernel {i} and {j}')
-            weights[i, j] = feature_selection.mutual_info_regression(previous[i].flatten().reshape(-1, 1),
-                                                                     previous[j].flatten())
+            weights[i, j] = feature_selection.mutual_info_regression(
+                previous[i].flatten().reshape(-1, 1),
+                previous[j].flatten())
     print(f'Kernel mean mutual information {np.mean(weights)}')
     return weights
 
@@ -609,4 +619,3 @@ def do_cluster_init(weights, shape, previous, config, index, **kwargs):
         random_order = random_state.permutation(shape[1])
         new_weights[i] = big_kernel[random_order]
     return new_weights
-

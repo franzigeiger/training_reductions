@@ -1,15 +1,15 @@
-import cornet
 import glob
 import importlib
 import io
 import logging
-import numpy as np
 import os
-import pandas
-import pickle
 import shlex
 import subprocess
 import time
+
+import cornet
+import numpy as np
+import pandas
 import torch
 import torch.nn as nn
 import torch.utils.model_zoo
@@ -27,7 +27,8 @@ normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
 ngpus = 2
 epochs = 1
 output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
-data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
+data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else \
+os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9
@@ -56,7 +57,8 @@ def set_gpus(n=2):
         gpus = gpus[gpus['index'].isin(visible)]
     print(f'GPUs {gpus}')
     gpus = gpus.sort_values(by='memory.free [MiB]', ascending=False)
-    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
+    os.environ[
+        'CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(
         [str(i) for i in gpus['index'].iloc[:n]])
 
@@ -307,10 +309,12 @@ if __name__ == '__main__':
         model.load_state_dict(checkpoint['state_dict'])
     if os.path.exists(output_path + f'CORnet-S_cluster2_IT_full_train_epoch_00.pth.tar'):
         logger.info('Resore weights from stored results')
-        checkpoint2 = torch.load(output_path + f'CORnet-S_cluster2_v2_IT_trconv3_bi_seed31_epoch_00.pth.tar',
-                                 map_location=lambda storage, loc: storage)
-        checkpoint3 = torch.load(output_path + f'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42_epoch_00.pth.tar',
-                                 map_location=lambda storage, loc: storage)  # map onto cpu
+        checkpoint2 = torch.load(
+            output_path + f'CORnet-S_cluster2_v2_IT_trconv3_bi_seed31_epoch_00.pth.tar',
+            map_location=lambda storage, loc: storage)
+        checkpoint3 = torch.load(
+            output_path + f'CORnet-S_cluster2_v2_IT_trconv3_bi_seed42_epoch_00.pth.tar',
+            map_location=lambda storage, loc: storage)  # map onto cpu
         model2.load_state_dict(checkpoint2['state_dict'])
     for name, m in model2.module.named_parameters():
         for name2, m2 in model3.named_parameters():

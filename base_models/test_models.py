@@ -2,8 +2,9 @@ import functools
 import importlib
 import itertools
 import logging
-import numpy as np
 import os
+
+import numpy as np
 import torch
 import torchvision
 from brainscore.submission.utils import UniqueKeyDict
@@ -75,7 +76,8 @@ def load_weights(identifier, model):
             super(Wrapper, self).__init__()
             self.module = model
 
-    model = Wrapper(model)  # model was wrapped with DataParallel, so weights require `module.` prefix
+    model = Wrapper(
+        model)  # model was wrapped with DataParallel, so weights require `module.` prefix
     weights_path = get_weights(identifier)
     _logger.info(f'Initialize weights from path {weights_path}')
     checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
@@ -142,12 +144,14 @@ def get_weights(identifier):
         }
         cornet_type = 'S'
         framework_home = os.path.expanduser(os.getenv('CM_HOME', '~/.candidate_models'))
-        weightsdir_path = os.getenv('CM_TSLIM_WEIGHTS_DIR', os.path.join(framework_home, 'model-weights', 'cornet'))
+        weightsdir_path = os.getenv('CM_TSLIM_WEIGHTS_DIR',
+                                    os.path.join(framework_home, 'model-weights', 'cornet'))
         weights_path = os.path.join(weightsdir_path, WEIGHT_MAPPING[cornet_type.upper()])
         if not os.path.isfile(weights_path):
             _logger.debug(f"Downloading weights for {identifier} to {weights_path}")
             os.makedirs(weightsdir_path, exist_ok=True)
-            s3.download_file(WEIGHT_MAPPING[cornet_type.upper()], weights_path, bucket='cornet-models')
+            s3.download_file(WEIGHT_MAPPING[cornet_type.upper()], weights_path,
+                             bucket='cornet-models')
     else:
         weights_path = output_path + f'{identifier}.pth.tar'
     return weights_path
@@ -198,13 +202,15 @@ def cornet_s_brainmodel_short(identifier='', init_weigths=True, config=None, pru
                             activations_model=model,
                             layers=['V1.output-t0'] +
                                    [f'{area}.output-t{timestep}'
-                                    for area, timesteps in [('V2', range(2)), ('V4', range(4)), ('IT', range(2))]
+                                    for area, timesteps in
+                                    [('V2', range(2)), ('V4', range(4)), ('IT', range(2))]
                                     for timestep in timesteps] +
                                    ['decoder.avgpool-t0'],
                             time_mapping=_build_time_mappings(time_mappings))
 
 
-def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer', prune=False):
+def cornet_s_brainmodel(identifier='', init_weigths=True, function=None, config=None, type='layer',
+                        prune=False):
     if function and type == 'layer':
         config['layer_func'] = function
     if type == 'model':
@@ -219,7 +225,8 @@ def alexnet(identifier, init_weights=True, function=None):
 
 
 def densenet169(identifier, init_weights=True, function=None):
-    return pytorch_model('densenet169', '%s_%s' % ('densenet', identifier), 224, init_weights, function)
+    return pytorch_model('densenet169', '%s_%s' % ('densenet', identifier), 224, init_weights,
+                         function)
 
 
 def resnet101(identifier, init_weights=True, function=None):
@@ -276,7 +283,8 @@ def resnet_michael(identifier, init_weights=True, function=None):
     if epoch == 0:
         model = load_model.ResNet50(weights='random_weights', batch_size=None, trainable=False)
     else:
-        model = load_model.ResNet50(weights='imagenet', epoch=epoch, batch_size=None, trainable=False)
+        model = load_model.ResNet50(weights='imagenet', epoch=epoch, batch_size=None,
+                                    trainable=False)
     return TFKerasWrapper(model,
                           preprocessing=resnet_preprocessing,
                           identifier=identifier)
@@ -321,11 +329,14 @@ layers = {
     'densenet169':
         ['features.conv0'] + ['features.pool0'] +
         [f'features.denseblock1.denselayer{i + 1}.conv1' for i in range(6)] +
-        [f'features.denseblock1.denselayer{i + 1}.conv2' for i in range(6)] + ['features.transition1'] +
+        [f'features.denseblock1.denselayer{i + 1}.conv2' for i in range(6)] + [
+            'features.transition1'] +
         [f'features.denseblock2.denselayer{i + 1}.conv1' for i in range(12)] +
-        [f'features.denseblock2.denselayer{i + 1}.conv2' for i in range(12)] + ['features.transition2'] +
+        [f'features.denseblock2.denselayer{i + 1}.conv2' for i in range(12)] + [
+            'features.transition2'] +
         [f'features.denseblock3.denselayer{i + 1}.conv1' for i in range(24)] +
-        [f'features.denseblock3.denselayer{i + 1}.conv2' for i in range(24)] + ['features.transition3'] +
+        [f'features.denseblock3.denselayer{i + 1}.conv2' for i in range(24)] + [
+            'features.transition3'] +
         [f'features.denseblock3.denselayer{i + 1}.conv2' for i in range(16)] +
         [f'features.denseblock3.denselayer{i + 1}.conv2' for i in range(16)] + ['features.norm5'],
     'resnet101': resnext101_layers(),
@@ -345,9 +356,12 @@ layers = {
     'hmax': ['s1_out', 'c1_out', 'c2_out'],
     'hmax_2': [f's2_{i}' for i in range(4)],
     'hmax_3': [f's2_{i}' for i in range(4, 8)],
-    'mobilenet_pytorch': ['model.0.0'] + [f'model.{i}.0' for i in range(1, 14)] + [f'model.{i}.3' for i in
-                                                                                   range(1, 14)] + ['model.14']
+    'mobilenet_pytorch': ['model.0.0'] + [f'model.{i}.0' for i in range(1, 14)] + [f'model.{i}.3'
+                                                                                   for i in
+                                                                                   range(1, 14)] + [
+                             'model.14']
 }
+
 
 class ModelLayers(UniqueKeyDict):
     def __init__(self, layers):

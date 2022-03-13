@@ -1,22 +1,15 @@
-import cornet
-import glob
-import importlib
 import io
 import logging
-import numpy as np
 import os
-import pandas
-import pickle
 import shlex
 import subprocess
-import time
+
+import cornet
+import pandas
 import torch
-import torch.nn as nn
 import torch.utils.model_zoo
 import torchvision
-import tqdm
 from PIL import Image
-from torch.nn import Module
 
 Image.warnings.simplefilter('ignore')
 logger = logging.getLogger(__name__)
@@ -27,7 +20,8 @@ normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
 ngpus = 2
 epochs = 1
 output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
-data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
+data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else \
+os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9
@@ -56,7 +50,8 @@ def set_gpus(n=2):
         gpus = gpus[gpus['index'].isin(visible)]
     print(f'GPUs {gpus}')
     gpus = gpus.sort_values(by='memory.free [MiB]', ascending=False)
-    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
+    os.environ[
+        'CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(
         [str(i) for i in gpus['index'].iloc[:n]])
 

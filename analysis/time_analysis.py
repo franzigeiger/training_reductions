@@ -1,12 +1,15 @@
 import itertools
-import numpy as np
 from itertools import chain
+
+import numpy as np
 from matplotlib.ticker import FuncFormatter
 
-from base_models.global_data import layer_best_2, random_scores, layers, convergence_epoch, benchmarks, \
+from base_models.global_data import layer_best_2, random_scores, layers, convergence_epoch, \
+    benchmarks, \
     benchmarks_public, convergence_images
 from benchmark.database import load_scores, get_connection, load_error_bared
-from plot.plot_data import plot_data_base, plot_bar_benchmarks, scatter_plot, plot_data_double, red_palette, my_palette, \
+from plot.plot_data import plot_data_base, plot_bar_benchmarks, scatter_plot, plot_data_double, \
+    red_palette, my_palette, \
     plot_heatmap, blue_palette, grey_palette
 
 
@@ -34,13 +37,15 @@ def plot_over_epoch(models):
             for epoch in epochs:
                 data[model].append(model_dict[model][f'{model}_epoch_{epoch:02d}'][i])
         # data['CORnet-S'] = [0] * 3 + [model_dict['CORnet-S']['CORnet-S'][i]]
-        plot_data_base(data, f'{benchmarks_labels[i]} Benchmark over epochs', epochs, 'Score over epochs', 'Score')
+        plot_data_base(data, f'{benchmarks_labels[i]} Benchmark over epochs', epochs,
+                       'Score over epochs', 'Score')
 
 
 def plot_models_benchmarks(models, file_name, benchmarks, epoch=None, gs=None, ax=None):
     conn = get_connection()
     if epoch is not None:
-        model_dict = load_error_bared(conn, models.keys(), benchmarks, convergence=False, epochs=[epoch])
+        model_dict = load_error_bared(conn, models.keys(), benchmarks, convergence=False,
+                                      epochs=[epoch])
     else:
         model_dict = load_error_bared(conn, models.keys(), benchmarks)
     if len(benchmarks) < 6:
@@ -57,7 +62,8 @@ def plot_models_benchmarks(models, file_name, benchmarks, epoch=None, gs=None, a
         else:
             data_set[desc] = model_dict[id][:5]
             err[desc] = model_dict[id][6:-1]
-    plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, yerr=err, gs=gs, ax=ax)
+    plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, yerr=err,
+                        gs=gs, ax=ax)
 
 
 def plot_models_no_epoch(models, fixed, file_name, benchmarks, convergence=True, gs=None, ax=None):
@@ -77,10 +83,12 @@ def plot_models_no_epoch(models, fixed, file_name, benchmarks, convergence=True,
             err[desc] = model_dict[id][6:-1]
         else:
             err[desc] = 0
-    plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, yerr=err, gs=gs, ax=ax)
+    plot_bar_benchmarks(data_set, benchmarks_labels, '', r'\textbf{Scores}', file_name, yerr=err,
+                        gs=gs, ax=ax)
 
 
-def plot_models_vs(models, file_name, convergence=False, epoch=0, title='', imagenet=False, gs=None, ax=None,
+def plot_models_vs(models, file_name, convergence=False, epoch=0, title='', imagenet=False, gs=None,
+                   ax=None,
                    selection=[]):
     model_dict = {}
     conn = get_connection()
@@ -107,15 +115,18 @@ def plot_models_vs(models, file_name, convergence=False, epoch=0, title='', imag
                 data_set[model_name].append((np.mean(model_dict[model][selection]) / full) * 100)
                 err[model_name].append((np.mean(model_dict[model][6:][selection]) / full) * 100)
             else:
-                data_set[model_name].append((np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]) / full) * 100)
-                err[model_name].append((np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][6:][selection]) / full) * 100)
+                data_set[model_name].append(
+                    (np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]) / full) * 100)
+                err[model_name].append(
+                    (np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][6:][selection]) / full) * 100)
     print(data_set)
     if len(selection) == 3:
         y = r"\textbf{Brain Predictivity} [\% of standard training]"
     else:
         y = r"\textbf{Brain Predictivity} [\% of standard training]"
 
-    plot_bar_benchmarks(data_set, labels, title, y, file_name, label=True, yerr=err, percent=True, grey=True, gs=gs,
+    plot_bar_benchmarks(data_set, labels, title, y, file_name, label=True, yerr=err, percent=True,
+                        grey=True, gs=gs,
                         ax=ax)
 
 
@@ -144,8 +155,10 @@ def plot_models_begin_end(models, convergence=False, epochs=[0], title='', ax=No
         labels.append(name)
         if convergence:
             if model in model_dict:
-                data_set[convergence_name].append((np.mean(model_dict[model][selection]) / full) * 100)
-                err[convergence_name].append((np.mean(model_dict[model][6:][selection]) / full) * 100)
+                data_set[convergence_name].append(
+                    (np.mean(model_dict[model][selection]) / full) * 100)
+                err[convergence_name].append(
+                    (np.mean(model_dict[model][6:][selection]) / full) * 100)
             else:
                 data_set[convergence_name].append(0)
                 err[convergence_name].append(0)
@@ -154,14 +167,17 @@ def plot_models_begin_end(models, convergence=False, epochs=[0], title='', ax=No
             if key not in data_set:
                 data_set[key] = []
                 err[key] = []
-            data_set[key].append((np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]) / full) * 100)
-            err[key].append((np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][6:][selection]) / full) * 100)
+            data_set[key].append(
+                (np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]) / full) * 100)
+            err[key].append(
+                (np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][6:][selection]) / full) * 100)
     print(data_set)
     if len(selection) == 3:
         y = r"\textbf{Brain Predictivity} [\% of standard training]"
     else:
         y = r"\textbf{Brain Predictivity} [\% of standard training]"
-    plot_bar_benchmarks(data_set, labels, title, y, '', yerr=err, percent=True, label=True, grey=True,
+    plot_bar_benchmarks(data_set, labels, title, y, '', yerr=err, percent=True, label=True,
+                        grey=True,
                         ax=ax, double=True, base_line=base_line)
 
 
@@ -199,16 +215,19 @@ def plot_models_benchmark_vs_public(models, file_name):
         data_set[desc] = model_dict[f'{id}_epoch_{epoch:02d}']
         data_set[f'{desc} public'] = model_dict_pub[f'{id}_epoch_{epoch:02d}']
         print(f'Mean of brain benchmark model {desc}, {np.mean(data_set[desc][2:5])}')
-    plot_bar_benchmarks(data_set, benchmarks_labels, 'Model scores in epoch 6', 'Score [% of standard training]',
+    plot_bar_benchmarks(data_set, benchmarks_labels, 'Model scores in epoch 6',
+                        'Score [% of standard training]',
                         file_name, grey=True)
 
 
-def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selection=[2, 3, 4], ax=None):
+def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selection=[2, 3, 4],
+                                ax=None):
     conn = get_connection()
     if epochs is None:
         epochs = (0, 5, 10, 15, 20)
 
-    model_dict = load_error_bared(conn, [model, 'CORnet-S_full'], benchmarks, epochs=epochs, convergence=True)
+    model_dict = load_error_bared(conn, [model, 'CORnet-S_full'], benchmarks, epochs=epochs,
+                                  convergence=True)
     full = model_dict['CORnet-S_full']
     print(model_dict)
     benchmarks_labels = ['V1', 'V2', 'V4', 'IT', 'Behavior', 'Mean Brain Pred.']
@@ -228,19 +247,25 @@ def plot_benchmarks_over_epochs(model, epochs=None, benchmarks=benchmarks, selec
     data[benchmarks_labels[-1]] = []
     for epoch in epochs:
         if epoch % 1 == 0:
-            frac = (np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]) / np.mean(full[selection])) * 100
+            frac = (np.mean(model_dict[f'{model}_epoch_{epoch:02d}'][selection]) / np.mean(
+                full[selection])) * 100
         else:
-            frac = (np.mean(model_dict[f'{model}_epoch_{epoch:.1f}'][selection]) / np.mean(full[selection])) * 100
+            frac = (np.mean(model_dict[f'{model}_epoch_{epoch:.1f}'][selection]) / np.mean(
+                full[selection])) * 100
         data[benchmarks_labels[-1]].append(frac)
     end = (np.mean(model_dict[model][selection]) / np.mean(full[selection])) * 100
     data[benchmarks_labels[-1]].append(end)
-    plot_data_base(data, f'', r'\textbf{Training Epochs}', r'\textbf{Score} [\% of standard training]',
+    plot_data_base(data, f'', r'\textbf{Training Epochs}',
+                   r'\textbf{Score} [\% of standard training]',
                    epochs + [20],
-                   x_ticks=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
-                       20],
-                   x_labels=[value for value in epochs if value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
-                       'Conv'],
-                   percent=True, alpha=0.5, log=False, annotate=True, legend=False, annotate_pos=2, ax=ax,
+                   x_ticks=[value for value in epochs if
+                            value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
+                               20],
+                   x_labels=[value for value in epochs if
+                             value not in [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 15]] + [
+                                'Conv'],
+                   percent=True, alpha=0.5, log=False, annotate=True, legend=False, annotate_pos=2,
+                   ax=ax,
                    palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]])
 
 
@@ -252,10 +277,13 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None
     data = {}
     x_values = {}
     if convergence and 'CORnet-S_full' in convergence_epoch:
-        full_tr = load_scores(conn, [f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}'], benchmarks)[
+        full_tr = \
+        load_scores(conn, [f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}'],
+                    benchmarks)[
             f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}']
     else:
-        full_tr = load_scores(conn, ['CORnet-S_full_epoch_06'], benchmarks)['CORnet-S_full_epoch_06']
+        full_tr = load_scores(conn, ['CORnet-S_full_epoch_06'], benchmarks)[
+            'CORnet-S_full_epoch_06']
     for model, name in models.items():
         names = []
         for epoch in epochs:
@@ -271,10 +299,12 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None
             if brain:
                 full = np.mean(full_tr[selection])
                 if epoch % 1 == 0:
-                    frac = (np.mean(model_dict[f'{model}_epoch_{int(epoch):02d}'][selection]) / full) * 100
+                    frac = (np.mean(
+                        model_dict[f'{model}_epoch_{int(epoch):02d}'][selection]) / full) * 100
                     scores.append(frac)
                 else:
-                    frac = (np.mean(model_dict[f'{model}_epoch_{epoch:.1f}'][selection]) / full) * 100
+                    frac = (np.mean(
+                        model_dict[f'{model}_epoch_{epoch:.1f}'][selection]) / full) * 100
                     scores.append(frac)
             else:
                 full = np.mean(full_tr[5])
@@ -286,10 +316,12 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None
                     scores.append(frac)
         if convergence and model in convergence_epoch:
             if brain:
-                frac = (np.mean(model_dict[f'{model}_epoch_{convergence_epoch[model]:02d}'][selection]) / full) * 100
+                frac = (np.mean(model_dict[f'{model}_epoch_{convergence_epoch[model]:02d}'][
+                                    selection]) / full) * 100
                 scores.append(frac)
             else:
-                frac = (np.mean(model_dict[f'{model}_epoch_{convergence_epoch[model]:02d}'][5]) / full) * 100
+                frac = (np.mean(
+                    model_dict[f'{model}_epoch_{convergence_epoch[model]:02d}'][5]) / full) * 100
                 scores.append(frac)
             x_values[name] = epochs + [convergence_epoch[model]]
         else:
@@ -297,9 +329,11 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True, ax=None
         data[name] = scores
 
     title = f'Brain scores mean vs epochs' if brain else 'Imagenet score vs epochs'
-    plot_data_base(data, 'First epochs', 'Epochs', 'Brain Predictivity [% of standard training]', x_values,
+    plot_data_base(data, 'First epochs', 'Epochs', 'Brain Predictivity [% of standard training]',
+                   x_values,
                    x_ticks=epochs + [30, 40, 50], log=True, x_labels=x_values,
-                   percent=True, special_xaxis=True, legend=False, only_blue=False, palette=red_palette, annotate=True,
+                   percent=True, special_xaxis=True, legend=False, only_blue=False,
+                   palette=red_palette, annotate=True,
                    annotate_pos=1, ax=ax)
 
 
@@ -332,7 +366,8 @@ def plot_single_benchmarks(models, epochs=None, compare_batchfix=False, run_mean
                     scores.append(model_dict[name][f'{model}_epoch_{epoch:.1f}'][i])
 
             if run_mean:
-                data[name] = [scores[0]] + np.convolve(scores, np.ones((3,)) / 3, mode='valid') + [scores[-1]]
+                data[name] = [scores[0]] + np.convolve(scores, np.ones((3,)) / 3, mode='valid') + [
+                    scores[-1]]
             else:
                 data[name] = scores
 
@@ -354,11 +389,15 @@ def score_over_layers(models, random, labels, bench, convergence=True, ax=None):
         benchmarks = bench
     conn = get_connection()
     if convergence and 'CORnet-S_full' in convergence_epoch:
-        full_tr = load_scores(conn, [f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}'], benchmarks)[
+        full_tr = \
+        load_scores(conn, [f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}'],
+                    benchmarks)[
             f'CORnet-S_full_epoch_{convergence_epoch["CORnet-S_full"]:02d}']
     else:
-        full_tr = load_scores(conn, ['CORnet-S_full_epoch_06'], benchmarks)['CORnet-S_full_epoch_06']
-    model_dict = load_error_bared(conn, list(chain(models.keys(), random.keys())), benchmarks, convergence=convergence)
+        full_tr = load_scores(conn, ['CORnet-S_full_epoch_06'], benchmarks)[
+            'CORnet-S_full_epoch_06']
+    model_dict = load_error_bared(conn, list(chain(models.keys(), random.keys())), benchmarks,
+                                  convergence=convergence)
     if len(benchmarks) < 6:
         benchmarks_labels = ['V4', 'IT', 'Behavior', 'Imagenet']
     else:
@@ -381,10 +420,12 @@ def score_over_layers(models, random, labels, bench, convergence=True, ax=None):
     plot_data_double(data, data2=None, err=err, name=f'Artificial Genome + Critical Training',
                      x_name='Number of trained layers',
                      y_name=r'Benchmark Score [% of standard training]',
-                     x_ticks=x_ticks, x_ticks_2=[], percent=True, ax=ax, pal=red_palette, annotate_pos=1)
+                     x_ticks=x_ticks, x_ticks_2=[], percent=True, ax=ax, pal=red_palette,
+                     annotate_pos=1)
 
 
-def score_over_layers_avg(all_models, random, all_labels=[], imagenet=False, convergence=False, ax=None, selection=[]):
+def score_over_layers_avg(all_models, random, all_labels=[], imagenet=False, convergence=False,
+                          ax=None, selection=[]):
     conn = get_connection()
     data = {}
     err2 = {}
@@ -467,11 +508,13 @@ def image_scores(models, imgs, labels, ax=None, selection=[]):
         for model, name in zip(models, labels):
             data2[name] = []
             name1 = f'{model}_img{i}'
-            frac = (np.mean(model_dict[f'{name1}_epoch_{convergence_images[name1]}'][selection]) / full) * 100
+            frac = (np.mean(
+                model_dict[f'{name1}_epoch_{convergence_images[name1]}'][selection]) / full) * 100
             data2[name].append(frac)
             if model == 'CORnet-S_cluster2_v2_IT_trconv3_bi':
                 model = f'{model}_seed42'
-            frac = (np.mean(model_dict[f'{model}_epoch_{convergence_epoch[model]}'][selection]) / full) * 100
+            frac = (np.mean(
+                model_dict[f'{model}_epoch_{convergence_epoch[model]}'][selection]) / full) * 100
             data2[name].append(frac)
 
     if len(selection) == 1:
@@ -515,14 +558,18 @@ def image_scores_single(model, imgs, selection=[], ax=None):
     frac = (np.mean(model_dict[model][selection]) / np.mean(full[selection])) * 100
     data[benchmarks_labels[-1]].append(frac)
     imgs.append(1280000)
-    plot_data_base(data, '', r'\textbf{Labeled Images}', r'\textbf{Score} [\% of standard training]', x_values=imgs,
-                   x_ticks=[100, 1000, 10000, 100000, 1280000], x_labels=['100', '1k', '10k', '100k', '1.3M'],
-                   million_base=True, palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]], alpha=0.5,
+    plot_data_base(data, '', r'\textbf{Labeled Images}',
+                   r'\textbf{Score} [\% of standard training]', x_values=imgs,
+                   x_ticks=[100, 1000, 10000, 100000, 1280000],
+                   x_labels=['100', '1k', '10k', '100k', '1.3M'],
+                   million_base=True,
+                   palette=grey_palette[:len(benchmarks_labels) - 1] + [blue_palette[0]], alpha=0.5,
                    use_xticks=True,
                    percent=True, log=True, annotate=True, legend=False, annotate_pos=3, ax=ax)
 
 
-def image_epoch_heatmap(model, imgs, epochs, selection=[], title=r'\textbf{Standard training epochs/images trade-off}',
+def image_epoch_heatmap(model, imgs, epochs, selection=[],
+                        title=r'\textbf{Standard training epochs/images trade-off}',
                         ax=None):
     names = []
     conn = get_connection()
@@ -550,10 +597,13 @@ def image_epoch_heatmap(model, imgs, epochs, selection=[], title=r'\textbf{Stand
     frac = (np.mean(model_dict[model][selection]) / full)
     matrix[-1, -1] = frac
     mt = lambda x, pos: '{:.0%}'.format(x)
-    plot_heatmap(matrix, r'\textbf{Training Epochs}', r'\textbf{Labeled Images}', title=title, annot=True, ax=ax,
+    plot_heatmap(matrix, r'\textbf{Training Epochs}', r'\textbf{Labeled Images}', title=title,
+                 annot=True, ax=ax,
                  cbar=False, cmap='RdYlGn', percent=True, square=True,
-                 fmt='.0%', vmin=0, vmax=1, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'], alpha=0.8)
+                 fmt='.0%', vmin=0, vmax=1, yticklabels=imgs + ['All'],
+                 xticklabels=epochs + ['Convergence'], alpha=0.8)
     for t in ax.texts: t.set_text(t.get_text() + " \%")
+
 
 def delta_heatmap(model1, model2, imgs, epochs, selection=[], title='', ax=None):
     names = []
@@ -599,7 +649,8 @@ def delta_heatmap(model1, model2, imgs, epochs, selection=[], title='', ax=None)
                  title=title, annot=True, ax=ax, square=True,
                  cbar=True, cmap='RdYlGn', percent=False, alpha=0.6,
                  cbar_kws={'format': FuncFormatter(mt), 'ticks': [-0.30, 0, 0.30]},
-                 fmt='.0%', vmin=-0.30, vmax=0.30, yticklabels=imgs + ['All'], xticklabels=epochs + ['Convergence'])
+                 fmt='.0%', vmin=-0.30, vmax=0.30, yticklabels=imgs + ['All'],
+                 xticklabels=epochs + ['Convergence'])
 
 
 def calc_dif(name1, name2, model_dict, full, selection):
@@ -625,7 +676,8 @@ def score_layer_depth(values, brain=True):
                               'dicarlo.Majaj2015.IT-pls',
                               'dicarlo.Rajalingham2018-i2n',
                               'fei-fei.Deng2009-top1'])
-    weight_num = [9408, 36864, 8192, 16384, 65536, 2359296, 65536, 32768, 65536, 262144, 9437184, 262144, 131072,
+    weight_num = [9408, 36864, 8192, 16384, 65536, 2359296, 65536, 32768, 65536, 262144, 9437184,
+                  262144, 131072,
                   262144, 1048576, 37748736, 1048576, 512000]
     acc = [52860096 + 512000]
     for i in weight_num:
@@ -655,7 +707,8 @@ def score_layer_depth(values, brain=True):
             results.append(res[5])
         rand_names.append(f'Random {l}')
     title = f'Brain scores mean vs number of weights' if brain else 'Imagenet score vs number of weights'
-    scatter_plot(weights, results, x_label='Num of weights', y_label='Score', labels=list(values.values()) + rand_names,
+    scatter_plot(weights, results, x_label='Num of weights', y_label='Score',
+                 labels=list(values.values()) + rand_names,
                  title=title)
 
 

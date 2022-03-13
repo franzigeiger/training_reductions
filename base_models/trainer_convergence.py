@@ -33,7 +33,7 @@ ngpus = 2
 epochs = 45
 output_path = os.path.join(os.path.dirname(__file__), 'model_weights/')
 data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else \
-os.environ['IMAGENET']
+    os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9

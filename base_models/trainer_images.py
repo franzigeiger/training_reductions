@@ -32,7 +32,8 @@ normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
 ngpus = 2
 epochs = 20
-data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
+data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else \
+os.environ['IMAGENET']
 output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
 batch_size = 256
 weight_decay = 1e-4
@@ -64,7 +65,8 @@ def set_gpus(n=2):
         gpus = gpus[gpus['index'].isin(visible)]
     print(f'GPUs {gpus}')
     gpus = gpus.sort_values(by='memory.free [MiB]', ascending=False)
-    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
+    os.environ[
+        'CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(
         [str(i) for i in gpus['index'].iloc[:n]])
 
@@ -136,11 +138,13 @@ def train(identifier,
     nsteps = len(trainer.data_loader)
 
     save_train_steps = (np.arange(0, epochs + 1,
-                                  save_train_epochs) * nsteps).astype(int) if save_train_epochs else None
+                                  save_train_epochs) * nsteps).astype(
+        int) if save_train_epochs else None
     save_val_steps = (np.arange(0, epochs + 1,
                                 save_val_epochs) * nsteps).astype(int) if save_val_epochs else None
     save_model_steps = (np.arange(0, epochs + 1,
-                                  save_model_epochs) * nsteps).astype(int) if save_model_epochs else None
+                                  save_model_epochs) * nsteps).astype(
+        int) if save_model_epochs else None
     add = [0, int(nsteps * 0.1), int(nsteps * 0.2), int(nsteps * 0.3), int(nsteps * 0.4),
            int(nsteps * 0.5), int(nsteps * 0.6), int(nsteps * 0.7), int(nsteps * 0.8),
            int(nsteps * 0.9)]
@@ -214,7 +218,8 @@ def train(identifier,
                 adjust_learning_rate(trainer.optimizer)
         else:
             trainer.lr.step(train_loss, epoch=epoch)
-        print(f'Learning rate epoch {epoch}: {trainer.optimizer.param_groups[0]["lr"]}, train loss {train_loss}')
+        print(
+            f'Learning rate epoch {epoch}: {trainer.optimizer.param_groups[0]["lr"]}, train loss {train_loss}')
         if trainer.optimizer.param_groups[0]["lr"] < 0.0001:
             print('Learning rate too low')
             break

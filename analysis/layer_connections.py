@@ -3,7 +3,8 @@ from scipy.stats import norm
 from torch import nn
 
 from base_models.test_models import cornet_s_brainmodel
-from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap, plot_histogram, scatter_plot
+from plot.plot_data import plot_1_dim_data, plot_data_base, plot_heatmap, plot_histogram, \
+    scatter_plot
 
 
 def get_layer_weigh_list(random=True):
@@ -46,11 +47,11 @@ def connections_mean(plot=False):
             print(layer)
             if i - 1 in scales_mean:
                 plot_1_dim_data(influence_overall,
-                                f'Cummulated influence per kernel from previous layer L{layer[i-1]} to L{layer[i]}',
+                                f'Cummulated influence per kernel from previous layer L{layer[i - 1]} to L{layer[i]}',
                                 scale_fix=scales_mean[i - 1])
             else:
                 plot_1_dim_data(influence_overall,
-                                f'Cummulated influence per kernel from previous layer L{layer[i-1]} to L{layer[i]}')
+                                f'Cummulated influence per kernel from previous layer L{layer[i - 1]} to L{layer[i]}')
         influences.append(influence_overall)
     return influences, layer
 
@@ -83,11 +84,11 @@ def connections(random, plot=False, normalize=False):
             print(layer)
             if i - 1 in scales_sum:
                 plot_1_dim_data(influence_overall,
-                                f'Cummulated influence per kernel from previous layer L{layer[i-1]} to L{layer[i]}',
+                                f'Cummulated influence per kernel from previous layer L{layer[i - 1]} to L{layer[i]}',
                                 scale_fix=scales_sum[i - 1])
             else:
                 plot_1_dim_data(influence_overall,
-                                f'Cummulated influence per kernel from previous layer L{layer[i-1]} to L{layer[i]}')
+                                f'Cummulated influence per kernel from previous layer L{layer[i - 1]} to L{layer[i]}')
         influences.append(influence_overall)
     return influences, layer
 
@@ -134,7 +135,8 @@ def kernel_weight_size(random=True):
             label.append(f'{layer[i]}_kernel{j}')
     plot_data_base({'trained': layer_sum, 'untrained': layer_sum_2}, f'Sum of weights per layer',
                    layer[0:(len(layer) - 1)], rotate=True, scale_fix=(-100, 82))
-    plot_data_base({'trained': layer_sum, 'untrained': layer_sum_2}, f'Absolute sum of weights per layer',
+    plot_data_base({'trained': layer_sum, 'untrained': layer_sum_2},
+                   f'Absolute sum of weights per layer',
                    layer[0:(len(layer) - 1)], rotate=True, scale_fix=(0, 2000))
 
 
@@ -155,11 +157,12 @@ def impact_mean(random=True, print_plot=True, normalize=False):
                 value = np.mean(to_analyze[k])
                 kernel_impact = kernel_impact + (previous_mean * value)
             impact.append(kernel_impact)
-        name = f'Mean impact L{i-1} to L{i}, ' + ('untrained' if random else 'trained')
+        name = f'Mean impact L{i - 1} to L{i}, ' + ('untrained' if random else 'trained')
         if print_plot:
             if i - 1 in scales_mean:
                 plot_1_dim_data(impact, name=name,
-                                x_name=f'Kernel number', y_name='Impact', scale_fix=scales_mean[i - 1])
+                                x_name=f'Kernel number', y_name='Impact',
+                                scale_fix=scales_mean[i - 1])
             else:
                 plot_1_dim_data(impact, name=name,
                                 x_name=f'Kernel number', y_name='Impact')
@@ -176,7 +179,7 @@ def impact_heatmap():
         previous_kernel = []
         y_axis = []
         for n in range(previous.shape[0]):
-            y_axis.append(f'L{i-1}, K{n}')
+            y_axis.append(f'L{i - 1}, K{n}')
             previous_kernel.append(np.mean(np.abs(previous[n])))
         impact = []
         data = np.zeros((sizes[i], previous.shape[0]))
@@ -216,8 +219,9 @@ def mean():
         mu, std = norm.fit(impact)
         mean_std['mean'].append(mu)
         mean_std['std'].append(std)
-        labels.append(f'L{i-1}({previous.shape[0]})_to_L{i}({sizes[i]})')
-    plot_data_base(mean_std, name=f'Mean+Std_with_prev_layer', x_labels=labels, x_name=f'Kernel impact mean + std',
+        labels.append(f'L{i - 1}({previous.shape[0]})_to_L{i}({sizes[i]})')
+    plot_data_base(mean_std, name=f'Mean+Std_with_prev_layer', x_labels=labels,
+                   x_name=f'Kernel impact mean + std',
                    y_name='', rotate=True)
 
 
@@ -241,11 +245,13 @@ def conv2_conv3():
         values['mean'].append(np.mean(i))
         values['std'].append(np.std(i))
         values['sum'].append(np.sum(i))
-    scatter_plot(values['std_prev'], values['std'], x_label='Std layer 6', y_label="Std layer 7", scale_fix=[0, 0.07])
+    scatter_plot(values['std_prev'], values['std'], x_label='Std layer 6', y_label="Std layer 7",
+                 scale_fix=[0, 0.07])
     z = np.polyfit(values['std_prev'], values['std'], 1)
     p = np.poly1d(z)
     res = p(values['std_prev'])
-    scatter_plot(values['std_prev'], res, x_label='Std layer 6', y_label="Std layer 7", scale_fix=[0, 0.07])
+    scatter_plot(values['std_prev'], res, x_label='Std layer 6', y_label="Std layer 7",
+                 scale_fix=[0, 0.07])
     print(z)
 
 
@@ -265,8 +271,10 @@ def conv2_conv3_2():
     sum_corr = []
     for j in range(len(l)):
         i = l[j]
-        std_corr.append(scatter_plot(i, values['std_prev'], x_label=f'Kernel {j} layer 7', y_label="Std layer 6"))
-        sum_corr.append(scatter_plot(i, values['sum_prev'], x_label=f'Kernel {j} layer 7', y_label="Sum layer 6"))
+        std_corr.append(scatter_plot(i, values['std_prev'], x_label=f'Kernel {j} layer 7',
+                                     y_label="Std layer 6"))
+        sum_corr.append(scatter_plot(i, values['sum_prev'], x_label=f'Kernel {j} layer 7',
+                                     y_label="Sum layer 6"))
     plot_data_base({'Sum/Avg': sum_corr, 'Std': std_corr}, 'Correlations')
 
 
@@ -279,6 +287,7 @@ def conv2():
         for ch in i:
             values['sum_prev'].append(np.sum(ch))
     plot_data_base(values, 'Properties')
+
 
 if __name__ == '__main__':
     conv2_conv3()

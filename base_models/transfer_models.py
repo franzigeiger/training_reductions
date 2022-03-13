@@ -3,13 +3,16 @@ from torch import nn
 from base_models import get_config, apply_generic_other, conv_to_norm, global_data
 from base_models.mobilenet import get_mobilenet
 from base_models.test_models import get_resnet50, run_model_training, get_alexnet
-from utils.models import mapping_1, mapping_2, alexnet_mapping, alexnet_mapping_2, mobilenet_mapping, \
-    mobilenet_mapping_2, mobilenet_mapping_3, mobilenet_mapping_4, mobilenet_mapping_5, mobilenet_mapping_6
+from utils.models import mapping_1, mapping_2, alexnet_mapping, alexnet_mapping_2, \
+    mobilenet_mapping, \
+    mobilenet_mapping_2, mobilenet_mapping_3, mobilenet_mapping_4, mobilenet_mapping_5, \
+    mobilenet_mapping_6
 
 to_train = []
 
 
-def train_other(template='CORnet-S_brain2_t7_t12_knall_IT_bi', net='resnet', version='v1', train_func=None):
+def train_other(template='CORnet-S_brain2_t7_t12_knall_IT_bi', net='resnet', version='v1',
+                train_func=None):
     config = get_config(template)
     add_layers = []
     if net == 'resnet':
@@ -54,11 +57,13 @@ def train_other(template='CORnet-S_brain2_t7_t12_knall_IT_bi', net='resnet', ver
             mapping = mobilenet_mapping_4
         elif version == 'v5':
             mapping = mobilenet_mapping_5
-            add_layers = ['model.2.0', 'model.2.1', 'model.6.0', 'model.6.1', 'model.12.0', 'model.12.1', 'fc',
+            add_layers = ['model.2.0', 'model.2.1', 'model.6.0', 'model.6.1', 'model.12.0',
+                          'model.12.1', 'fc',
                           'decoder']
         elif version == 'v6':
             mapping = mobilenet_mapping_6
-            add_layers = ['model.2.0', 'model.2.1', 'model.6.0', 'model.6.1', 'model.12.0', 'model.12.1', 'fc',
+            add_layers = ['model.2.0', 'model.2.1', 'model.6.0', 'model.6.1', 'model.12.0',
+                          'model.12.1', 'fc',
                           'decoder']
         elif version == 'v7':
             mapping = mobilenet_mapping_6
@@ -72,7 +77,8 @@ def train_other(template='CORnet-S_brain2_t7_t12_knall_IT_bi', net='resnet', ver
     print(f'Run model {identifier}')
     model = apply_generic_other(model, other_config)
     other_config['layers'] = other_config['layers'] + add_layers
-    run_model_training(model=model, identifier=identifier, config=other_config, train_func=train_func)
+    run_model_training(model=model, identifier=identifier, config=other_config,
+                       train_func=train_func)
 
 
 def create_config(mapping, config, model):

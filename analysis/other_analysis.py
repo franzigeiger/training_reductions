@@ -82,7 +82,8 @@ def score_over_layers_avg(models_resnet, random, imagenet=False,
     conn = get_connection()
     full = 0
     model_dict = load_error_bared(conn, list(
-        chain(models_resnet.keys(), models_mobilenet.keys(), random.keys(), random_mobilenet.keys())), benchmarks,
+        chain(models_resnet.keys(), models_mobilenet.keys(), random.keys(),
+              random_mobilenet.keys())), benchmarks,
                                   convergence=convergence)
     data = {}
     err = {}
@@ -90,7 +91,8 @@ def score_over_layers_avg(models_resnet, random, imagenet=False,
     labels = {}
     idx = 0
     for models, label in zip([random, models_resnet],
-                             ['Resnet50 KN+DT', 'Resnet50 Transfer AG+CT', 'Alexnet KN+DT', 'Alexnet Transfer AG+CT']):
+                             ['Resnet50 KN+DT', 'Resnet50 Transfer AG+CT', 'Alexnet KN+DT',
+                              'Alexnet Transfer AG+CT']):
         data[label] = []
         layers[label] = []
         layers_number = layers_numbers[idx]
@@ -119,10 +121,13 @@ def score_over_layers_avg(models_resnet, random, imagenet=False,
             y = r"mean(V4, IT, Behavior) [% of standard training]"
         else:
             y = r"mean(V1,V2,V4,IT,Behavior) [% of standard training]"
-    plot_data_double(data, {}, '', x_name='Number of trained layers [% of all layers]', y_name=y, x_ticks=layers,
+    plot_data_double(data, {}, '', x_name='Number of trained layers [% of all layers]', y_name=y,
+                     x_ticks=layers,
                      x_ticks_2=[], percent=False, percent_x=True,
-                     pal=['#424949'] + [green_palette[1]] + ['#ABB2B9'] + [green_palette[0]], data_labels=labels, gs=gs,
+                     pal=['#424949'] + [green_palette[1]] + ['#ABB2B9'] + [green_palette[0]],
+                     data_labels=labels, gs=gs,
                      ax=ax)
+
 
 def plot_first_epochs(models, epochs=None, brain=True, convergence=True, model_name='resnet'):
     conn = get_connection()
@@ -148,7 +153,8 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True, model_n
             if brain:
                 full = np.mean(full_tr[2:5])
                 if epoch % 1 == 0:
-                    frac = (np.mean(model_dict[f'{model}_epoch_{int(epoch):02d}'][2:5]) / full) * 100
+                    frac = (np.mean(
+                        model_dict[f'{model}_epoch_{int(epoch):02d}'][2:5]) / full) * 100
                     scores.append(frac)
                 else:
                     frac = (np.mean(model_dict[f'{model}_epoch_{epoch:.1f}'][2:5]) / full) * 100
@@ -163,11 +169,13 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True, model_n
                     scores.append(frac)
         if convergence and model in convergence_epoch:
             if brain:
-                frac = (np.mean(model_dict[f'{model}_epoch_{convergence_epoch[model]:02d}'][2:5]) / full) * 100
+                frac = (np.mean(
+                    model_dict[f'{model}_epoch_{convergence_epoch[model]:02d}'][2:5]) / full) * 100
                 scores.append(frac)
                 y = 'mean(V4, IT, Behavior) [% of standard training]'
             else:
-                frac = (np.mean(model_dict[f'{model}_epoch_{convergence_epoch[model]:02d}'][5]) / full) * 100
+                frac = (np.mean(
+                    model_dict[f'{model}_epoch_{convergence_epoch[model]:02d}'][5]) / full) * 100
                 y = 'Imagenet [% of standard training]'
                 scores.append(frac)
             x_values[name] = epochs + [convergence_epoch[model]]
@@ -178,6 +186,7 @@ def plot_first_epochs(models, epochs=None, brain=True, convergence=True, model_n
     title = f'{model_name} Brain scores mean vs epochs' if brain else f'{model_name} Imagenet score vs epochs'
     plot_data_base(data, '', x_values, 'Epochs', y, x_ticks=epochs + [10, 20, 30],
                    percent=True, special_xaxis=True, only_blue=False)
+
 
 if __name__ == '__main__':
     plot_first_epochs({**models, **random}, [0, 6, 10, 20], False, convergence=True)

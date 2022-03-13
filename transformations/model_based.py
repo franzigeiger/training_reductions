@@ -8,8 +8,10 @@ from scipy.stats import norm
 from torch.nn import init
 
 from base_models.global_data import conv_to_norm, layers
-from transformations.transformation_utils import do_fit_gabor_init, do_correlation_init, do_gabors, do_fit_gabor_dist, \
-    do_correlation_init_no_reshape, do_kernel_convolution_init, do_distribution_gabor_init, do_scrumble_gabor_init, \
+from transformations.transformation_utils import do_fit_gabor_init, do_correlation_init, do_gabors, \
+    do_fit_gabor_dist, \
+    do_correlation_init_no_reshape, do_kernel_convolution_init, do_distribution_gabor_init, \
+    do_scrumble_gabor_init, \
     do_batch_from_image_init
 
 
@@ -48,12 +50,16 @@ def apply_incremental_init(ms, config):
             if len(kernel_values) != 0:
                 # m.weight.data = nn.init.xavier_normal(m.weight.data)
                 if name is 'V4.conv_input':
-                    means = np.add(kernel_values['V2.conv3']['means'], kernel_values['V2.skip']['means'])
-                    stds = np.add(kernel_values['V2.conv3']['stds'], kernel_values['V2.skip']['stds'])
+                    means = np.add(kernel_values['V2.conv3']['means'],
+                                   kernel_values['V2.skip']['means'])
+                    stds = np.add(kernel_values['V2.conv3']['stds'],
+                                  kernel_values['V2.skip']['stds'])
                     initialize_from_previous(m, means, stds)
                 elif name is 'IT.conv_input':
-                    means = np.add(kernel_values['V4.conv3']['means'], kernel_values['V2.skip']['means'])
-                    stds = np.add(kernel_values['V4.conv3']['stds'], kernel_values['V2.skip']['stds'])
+                    means = np.add(kernel_values['V4.conv3']['means'],
+                                   kernel_values['V2.skip']['means'])
+                    stds = np.add(kernel_values['V4.conv3']['stds'],
+                                  kernel_values['V2.skip']['stds'])
                     initialize_from_previous(m, means, stds)
                 else:
                     means = kernel_values[layers[len(layers) - 1]]['means']
@@ -275,7 +281,8 @@ def apply_gabors_dist(model, configuration):
         if type(m) == nn.Conv2d:
             weights = m.weight.data.cpu().numpy()
             if idx == 0:
-                m.weight.data = torch.Tensor(do_distribution_gabor_init(weights, configuration, idx))
+                m.weight.data = torch.Tensor(
+                    do_distribution_gabor_init(weights, configuration, idx))
             idx += 1
     return model
 
@@ -324,13 +331,15 @@ def apply_generic(model, configuration):
                     trained_weigts = getattr(trained_weigts, part)
                 trained_weigts = trained_weigts.weight.data.cpu().numpy()
                 previous_weights = configuration[layers[idx]](trained_weigts, config=configuration,
-                                                              previous=previous_weights, shape=trained_weigts.shape,
+                                                              previous=previous_weights,
+                                                              shape=trained_weigts.shape,
                                                               index=idx, model=model)
                 m.weight.data = torch.Tensor(previous_weights)
             idx += 1
         if type(m) == nn.BatchNorm2d and not (
-                any(value in name for value in configuration['layers']) or conv_to_norm[name] in configuration[
-            'layers']):
+                any(value in name for value in configuration['layers']) or conv_to_norm[name] in
+                configuration[
+                    'layers']):
             trained_weigts = trained
             for part in name.split('.'):
                 trained_weigts = getattr(trained_weigts, part)
@@ -338,16 +347,21 @@ def apply_generic(model, configuration):
                 bias = trained_weigts.bias.data.cpu().numpy()
                 bn_weight = trained_weigts.weight.data.cpu().numpy()
                 if configuration['bn_init'] == do_batch_from_image_init:
-                    bn_weight, bn_bias = configuration['bn_init'](m, config=configuration, previous=previous_weights,
-                                                                  index=idx, shape=bn_weight.shape, model=model,
+                    bn_weight, bn_bias = configuration['bn_init'](m, config=configuration,
+                                                                  previous=previous_weights,
+                                                                  index=idx, shape=bn_weight.shape,
+                                                                  model=model,
                                                                   previous_module=previous_module,
                                                                   previous_name=previous_name)
                     m.weight.data = bn_weight
                     m.bias.data = bn_bias
                 else:
-                    bn_weight = configuration['bn_init'](bn_weight, config=configuration, previous=previous_weights,
-                                                         index=idx, shape=bn_weight.shape, model=model)
-                    bias = configuration['bn_init'](bias, config=configuration, previous=previous_weights,
+                    bn_weight = configuration['bn_init'](bn_weight, config=configuration,
+                                                         previous=previous_weights,
+                                                         index=idx, shape=bn_weight.shape,
+                                                         model=model)
+                    bias = configuration['bn_init'](bias, config=configuration,
+                                                    previous=previous_weights,
                                                     index=idx, shape=bn_weight.shape, model=model)
                 m.weight.data = torch.Tensor(bn_weight)
                 m.bias.data = torch.Tensor(bias)
@@ -376,10 +390,12 @@ def apply_generic_other(model, configuration):
                 for part in configuration[name].split('.'):
                     trained_weigts = getattr(trained_weigts, part)
                 trained_weigts = trained_weigts.weight.data.cpu().numpy()
-                previous_weights = configuration[configuration[name]](trained_weigts, config=configuration,
+                previous_weights = configuration[configuration[name]](trained_weigts,
+                                                                      config=configuration,
                                                                       shape=m.weight.data.cpu().shape,
                                                                       previous=previous_weights,
-                                                                      index=layers.index(configuration[name]))
+                                                                      index=layers.index(
+                                                                          configuration[name]))
                 assert m.weight.data.shape == previous_weights.shape
                 m.weight.data = torch.Tensor(previous_weights)
                 if m.bias is not None and 'bn_init' in configuration:
@@ -389,7 +405,8 @@ def apply_generic_other(model, configuration):
                     for part in batchnorm.split('.'):
                         trained_weigts = getattr(trained_weigts, part)
                     bias = trained_weigts.bias.data.cpu().numpy()
-                    bias = configuration['bn_init'](bias, config=configuration, previous=previous_weights,
+                    bias = configuration['bn_init'](bias, config=configuration,
+                                                    previous=previous_weights,
                                                     index=idx, shape=m.bias.data.cpu().shape)
                     m.bias.data = torch.Tensor(bias)
                 elif m.bias is not None and 'no_bn' in configuration:
@@ -402,9 +419,11 @@ def apply_generic_other(model, configuration):
             if 'bn_init' in configuration:
                 bias = trained_weigts.bias.data.cpu().numpy()
                 bn_weight = trained_weigts.weight.data.cpu().numpy()
-                bn_weight = configuration['bn_init'](bn_weight, config=configuration, previous=previous_weights,
+                bn_weight = configuration['bn_init'](bn_weight, config=configuration,
+                                                     previous=previous_weights,
                                                      index=idx, shape=m.weight.data.cpu().shape)
-                bias = configuration['bn_init'](bias, config=configuration, previous=previous_weights,
+                bias = configuration['bn_init'](bias, config=configuration,
+                                                previous=previous_weights,
                                                 index=idx, shape=m.bias.data.cpu().shape)
                 m.weight.data = torch.Tensor(bn_weight)
                 m.bias.data = torch.Tensor(bias)

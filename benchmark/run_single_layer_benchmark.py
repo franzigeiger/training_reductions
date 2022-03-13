@@ -12,10 +12,12 @@ from benchmark.database import create_connection, store_score
 
 logger = logging.getLogger(__name__)
 
+
 def run_benchmark(benchmark_identifier, model_name):
     print(f'>>>>>Start running model {model_name} on benchmark {benchmark_identifier}')
     model = brain_translated_pool[model_name]
-    score = score_model(model_identifier=model_name, model=model, benchmark_identifier=benchmark_identifier)
+    score = score_model(model_identifier=model_name, model=model,
+                        benchmark_identifier=benchmark_identifier)
     return score
 
 
@@ -33,12 +35,12 @@ def score_models(model, benchmark, filename):
         repeat = False
         iterations = 4 if repeat else 1
         for i in range(iterations):
-                d = datetime.datetime.now()
-                raw_score = run_benchmark(benchmark, model)
-                result = raw_score.sel(aggregation='center')
-                result = result.values
-                store_score(db, (base_model,benchmark,d, result.item(0), model, False))
-                raw_scores.append(result.item(0))
+            d = datetime.datetime.now()
+            raw_score = run_benchmark(benchmark, model)
+            result = raw_score.sel(aggregation='center')
+            result = result.values
+            store_score(db, (base_model, benchmark, d, result.item(0), model, False))
+            raw_scores.append(result.item(0))
     except Exception as e:
         logging.error(f'Could not run model {model} because of following error')
         logging.error(e, exc_info=True)
@@ -53,7 +55,6 @@ def score_models(model, benchmark, filename):
         db.close()
         d = datetime.datetime.today()
         logger.info(f'\nJob finished at {d.isoformat()}\n')
-
 
 
 if __name__ == '__main__':

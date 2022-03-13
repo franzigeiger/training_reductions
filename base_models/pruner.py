@@ -18,7 +18,8 @@ ngpus = 2
 epochs = 100
 post_epochs = 0
 output_path = '/braintree/home/fgeiger/weight_initialization/base_models/model_weights/'  # os.path.join(os.path.dirname(__file__), 'model_weights/')
-data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
+data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else \
+os.environ['IMAGENET']
 batch_size = 256
 weight_decay = 1e-4
 momentum = .9
@@ -55,8 +56,10 @@ def train(identifier, model):
     model = model.to(device)
     loss = nn.CrossEntropyLoss()
     opt_class, opt_kwargs = load.optimizer('sgd')
-    optimizer = opt_class(generator.parameters(model), lr=lr, weight_decay=weight_decay, **opt_kwargs)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20, 30, 40], gamma=.1)
+    optimizer = opt_class(generator.parameters(model), lr=lr, weight_decay=weight_decay,
+                          **opt_kwargs)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20, 30, 40],
+                                                     gamma=.1)
 
     ## Save Original ##
     torch.save(model.state_dict(), "{}/model.pt".format(output_path))
@@ -94,19 +97,24 @@ def train(identifier, model):
         possible_flops = prune_result['flops'].sum()
         print("Prune results:\n", prune_result)
         print(
-            "Parameter Sparsity: {}/{} ({:.4f})".format(total_params, possible_params, total_params / possible_params))
-        print("FLOP Sparsity: {}/{} ({:.4f})".format(total_flops, possible_flops, total_flops / possible_flops))
+            "Parameter Sparsity: {}/{} ({:.4f})".format(total_params, possible_params,
+                                                        total_params / possible_params))
+        print("FLOP Sparsity: {}/{} ({:.4f})".format(total_flops, possible_flops,
+                                                     total_flops / possible_flops))
 
         # Reset Model's Weights
         original_dict = torch.load("{}/model.pt".format(output_path), map_location=device)
-        original_weights = dict(filter(lambda v: (v[1].requires_grad == True), original_dict.items()))
+        original_weights = dict(
+            filter(lambda v: (v[1].requires_grad == True), original_dict.items()))
         model_dict = model.state_dict()
         model_dict.update(original_weights)
         model.load_state_dict(model_dict)
 
         # Reset Optimizer and Scheduler
-        optimizer.load_state_dict(torch.load("{}/optimizer.pt".format(output_path), map_location=device))
-        scheduler.load_state_dict(torch.load("{}/scheduler.pt".format(output_path), map_location=device))
+        optimizer.load_state_dict(
+            torch.load("{}/optimizer.pt".format(output_path), map_location=device))
+        scheduler.load_state_dict(
+            torch.load("{}/scheduler.pt".format(output_path), map_location=device))
 
 
 def get_dataloader():

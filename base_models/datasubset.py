@@ -53,7 +53,8 @@ class DataSubSet(data.Dataset):
 
 normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
-data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else os.environ['IMAGENET']
+data_path = '/braintree/data2/active/common/imagenet_raw/' if 'IMAGENET' not in os.environ else \
+os.environ['IMAGENET']
 
 
 def get_dataloader(image_load=100, batch_size=256, workers=20):

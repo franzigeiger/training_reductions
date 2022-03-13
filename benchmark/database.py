@@ -1,8 +1,9 @@
 import logging
-import numpy as np
 import os
 import sqlite3
 import statistics
+
+import numpy as np
 
 from base_models.global_data import convergence_epoch, convergence_images
 
@@ -68,13 +69,19 @@ model_versions = {
     'CORnet-S_cluster2_v2_V4_trconv3_bi': ['CORnet-S_cluster2_v2_V4_trconv3_bi',
                                            # 'CORnet-S_cluster2_v2_V4_trconv3_bi_seed42',
                                            'CORnet-S_cluster2_v2_V4_trconv3_bi_seed94'],
-    'CORnet-S_train_gmk1_cl2_7_7tr_bi': ['CORnet-S_train_gmk1_cl2_7_7tr_bi', 'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42'],
+    'CORnet-S_train_gmk1_cl2_7_7tr_bi': ['CORnet-S_train_gmk1_cl2_7_7tr_bi',
+                                         'CORnet-S_train_gmk1_cl2_7_7tr_bi_seed42'],
     'CORnet-S_train_conv3_bi': ['CORnet-S_train_conv3_bi', 'CORnet-S_train_conv3_bi_seed42'],
-    'CORnet-S_train_conv3_V2_bi': ['CORnet-S_train_conv3_V2_bi', 'CORnet-S_train_conv3_V2_bi_seed42'],
-    'CORnet-S_train_conv3_V4_bi': ['CORnet-S_train_conv3_V4_bi', 'CORnet-S_train_conv3_V4_bi_seed42'],
-    'CORnet-S_cluster9_V4_trconv3_bi': ['CORnet-S_cluster9_V4_trconv3_bi', 'CORnet-S_cluster9_V4_trconv3_bi_seed42'],
-    'CORnet-S_cluster9_IT_trconv3_bi': ['CORnet-S_cluster9_IT_trconv3_bi', 'CORnet-S_cluster9_IT_trconv3_bi_seed42'],
-    'CORnet-S_train_wmk1_cl2_7_7tr_bi': ['CORnet-S_train_wmk1_cl2_7_7tr_bi', 'CORnet-S_train_wmk1_cl2_7_7tr_bi_seed42'],
+    'CORnet-S_train_conv3_V2_bi': ['CORnet-S_train_conv3_V2_bi',
+                                   'CORnet-S_train_conv3_V2_bi_seed42'],
+    'CORnet-S_train_conv3_V4_bi': ['CORnet-S_train_conv3_V4_bi',
+                                   'CORnet-S_train_conv3_V4_bi_seed42'],
+    'CORnet-S_cluster9_V4_trconv3_bi': ['CORnet-S_cluster9_V4_trconv3_bi',
+                                        'CORnet-S_cluster9_V4_trconv3_bi_seed42'],
+    'CORnet-S_cluster9_IT_trconv3_bi': ['CORnet-S_cluster9_IT_trconv3_bi',
+                                        'CORnet-S_cluster9_IT_trconv3_bi_seed42'],
+    'CORnet-S_train_wmk1_cl2_7_7tr_bi': ['CORnet-S_train_wmk1_cl2_7_7tr_bi',
+                                         'CORnet-S_train_wmk1_cl2_7_7tr_bi_seed42'],
     'CORnet-S_full': ['CORnet-S_full',
                       'CORnet-S_full_seed42',
                       # 'CORnet-S_full_seed94'
@@ -82,8 +89,10 @@ model_versions = {
     'CORnet-S_train_V4': ['CORnet-S_train_V4', 'CORnet-S_train_V4_seed42'],
     'CORnet-S_train_IT_seed_0': ['CORnet-S_train_IT_seed_0', 'CORnet-S_train_IT_seed_0_seed42'],
     'CORnet-S_train_random': ['CORnet-S_train_random', 'CORnet-S_train_random_seed42'],
-    'CORnet-S_cluster2_v2_IT_bi': ['CORnet-S_cluster2_v2_IT_bi_seed42', 'CORnet-S_cluster2_v2_IT_bi'],
-    'CORnet-S_cluster2_IT_full_train': ['CORnet-S_cluster2_IT_full_train', 'CORnet-S_cluster2_IT_full_train_seed32']
+    'CORnet-S_cluster2_v2_IT_bi': ['CORnet-S_cluster2_v2_IT_bi_seed42',
+                                   'CORnet-S_cluster2_v2_IT_bi'],
+    'CORnet-S_cluster2_IT_full_train': ['CORnet-S_cluster2_IT_full_train',
+                                        'CORnet-S_cluster2_IT_full_train_seed32']
 }
 
 
@@ -134,7 +143,8 @@ def load_error_bared(conn, models, benchmarks, convergence=True, epochs=[]):
                         val = model_dict[name].reshape(-1, 1)
                         if np.mean(val > 0):
                             res = np.concatenate([res, val], axis=1)
-                results[f'{model}{postfix}'] = np.concatenate([np.mean(res, axis=1), np.std(res, axis=1)], axis=0)
+                results[f'{model}{postfix}'] = np.concatenate(
+                    [np.mean(res, axis=1), np.std(res, axis=1)], axis=0)
             if convergence:
                 res = np.zeros([len(benchmarks), 0])
                 for runs in model_versions[model]:
@@ -152,13 +162,16 @@ def load_error_bared(conn, models, benchmarks, convergence=True, epochs=[]):
                     postfix = f'_epoch_{e:02d}'
                 else:
                     postfix = f'_epoch_{e:.1f}'
-                results[f'{model}{postfix}'] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
+                results[f'{model}{postfix}'] = np.concatenate(
+                    [model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
             if convergence and model in convergence_epoch:
                 postfix = f'_epoch_{convergence_epoch[model]:02d}'
-                results[model] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
+                results[model] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)],
+                                                axis=0)
             if convergence and model in convergence_images:
                 postfix = f'_epoch_{convergence_images[model]:02d}'
-                results[model] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)], axis=0)
+                results[model] = np.concatenate([model_dict[f'{model}{postfix}'], np.zeros(6)],
+                                                axis=0)
     return results
 
 
@@ -239,8 +252,8 @@ def load_from_statement(conn, sql, models, benchmarks):
                 array[i] = statistics.mean(score[i])
             except:
                 logger.error(f'No score for model {k} and benchmark {benchmarks[i]}')
-                array[i]=0.0
-        squeezed_scores[k] =  array
+                array[i] = 0.0
+        squeezed_scores[k] = array
 
     return squeezed_scores
 

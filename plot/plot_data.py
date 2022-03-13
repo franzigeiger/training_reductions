@@ -1,7 +1,8 @@
+from math import log10
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from math import log10
 from matplotlib import gridspec
 from matplotlib import rc
 from matplotlib.ticker import FuncFormatter
@@ -38,8 +39,10 @@ linestyle_tuple = [
     ('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
     ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))]
 
+
 def get_all_perturbations():
-    return ['', '_random', '_jumbler', '_kernel_jumbler', '_channel_jumbler', '_norm_dist', '_norm_dist_kernel']
+    return ['', '_random', '_jumbler', '_kernel_jumbler', '_channel_jumbler', '_norm_dist',
+            '_norm_dist_kernel']
 
 
 def get_all_models():
@@ -77,7 +80,8 @@ def formatter(x, pos, percent=False, million=False, million_base=False, trillion
     return x
 
 
-def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False, number=True, percent_x=False,
+def output_paper_quality(ax, title=None, xlabel=None, ylabel=None, percent=False, number=True,
+                         percent_x=False,
                          **formatter_kwargs):
     ax.set_title(title, weight='semibold', size=24)
     ax.set_xlabel(xlabel, size=26)  # weight='semibold',
@@ -129,10 +133,12 @@ def plot_data(benchmarks, data, labels, name, scale_fix=None):
     plt.show()
 
 
-def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=None, x_ticks=None, scale_fix=None,
+def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=None, x_ticks=None,
+                   scale_fix=None,
                    rotate=False, alpha=1.0, linestyle='-', number=True,
                    log=False, use_xticks=False, percent=False, special_xaxis=False, annotate=False,
-                   annotate_pos=0, ax=None, only_blue=False, legend=True, palette=None, **formatter_kwargs):
+                   annotate_pos=0, ax=None, only_blue=False, legend=True, palette=None,
+                   **formatter_kwargs):
     show = True
     if ax is None:
         plt.figure(figsize=(15, 10))
@@ -161,18 +167,22 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
                     color=palette[index])
             index += 1
             lab = x_values[-1]
-        elif use_xticks and key in ['base', 'base_untrained', 'base_trained', 'Brain Predictivity', 'Mean Brain Pred.']:
-            ax.plot(x_values, data[key], label=key, linestyle="dashed", marker=".", alpha=1, color=blue_palette[1])
+        elif use_xticks and key in ['base', 'base_untrained', 'base_trained', 'Brain Predictivity',
+                                    'Mean Brain Pred.']:
+            ax.plot(x_values, data[key], label=key, linestyle="dashed", marker=".", alpha=1,
+                    color=blue_palette[1])
             col = blue_palette[0]
             index += 1
             alpha = 1
             lab = x_values
         elif key is 'Full' or key == 'Standard train' or key == 'Standard training' and special_xaxis:
-            ax.plot(x_values[key], data[key], label=key, linestyle="dashed", marker=".", alpha=alpha,
+            ax.plot(x_values[key], data[key], label=key, linestyle="dashed", marker=".",
+                    alpha=alpha,
                     color='#424949')
             col = '#424949'
             lab = x_values[key]
-        elif key in ['base', 'base_untrained', 'base_trained', 'Brain Predictivity', 'Mean Brain Pred.']:
+        elif key in ['base', 'base_untrained', 'base_trained', 'Brain Predictivity',
+                     'Mean Brain Pred.']:
             ax.plot(x_values, data[key], label=key, linestyle="dashed", marker=".", alpha=1,
                     color=blue_palette[1])
             col = blue_palette[0]
@@ -180,13 +190,15 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
             lab = x_values
         elif special_xaxis:
             labels = x_values[key]
-            ax.plot(labels, data[key], label=key, linestyle=linestyle_tuple[index][1], marker=".", alpha=alpha,
+            ax.plot(labels, data[key], label=key, linestyle=linestyle_tuple[index][1], marker=".",
+                    alpha=alpha,
                     color=palette[index])
             col = palette[index]
             lab = labels
             index += 1
         else:
-            ax.plot(x_values, data[key], label=key, linestyle=linestyle_tuple[index][1], marker=".", alpha=alpha,
+            ax.plot(x_values, data[key], label=key, linestyle=linestyle_tuple[index][1], marker=".",
+                    alpha=alpha,
                     color=palette[index])
 
             col = palette[index]
@@ -196,7 +208,8 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
             ax.annotate(key,  # this is the text
                         (lab[annotate_pos], data[key][annotate_pos]),  # this is the point to label
                         textcoords="offset points",  # how to position the text
-                        xytext=(-10, 19), alpha=alpha, size=20,  # distance from text to points (x,y)
+                        xytext=(-10, 19), alpha=alpha, size=20,
+                        # distance from text to points (x,y)
                         ha='center', color=col)
 
     ax.set_xticks(x_ticks)
@@ -212,7 +225,8 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
     if percent:
         ax.set_yticks(range(0, 110, 20))
     if legend:
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=min(len(data), 3))
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False,
+                  ncol=min(len(data), 3))
     if scale_fix:
         ax.ylim(scale_fix[0], scale_fix[1])
     output_paper_quality(ax, name, x_name, y_name, percent, number=number, **formatter_kwargs)
@@ -226,11 +240,14 @@ def plot_data_base(data, name, x_name='', y_name='', x_values=None, x_labels=Non
         plt.show()
 
 
-def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_name='', y_name='', scale_fix=None,
+def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_name='', y_name='',
+                     scale_fix=None,
                      rotate=False, alpha=1.0, base_line=None,
-                     x_ticks=None, log=False, x_ticks_2=None, percent=False, annotate_pos=None, data_labels=None,
+                     x_ticks=None, log=False, x_ticks_2=None, percent=False, annotate_pos=None,
+                     data_labels=None,
                      scatter=False, legend=False,
-                     ax=None, percent_x=False, pal=my_palette + my_palette_light, gs=None, **formatter_kwargs):
+                     ax=None, percent_x=False, pal=my_palette + my_palette_light, gs=None,
+                     **formatter_kwargs):
     sns.set()
     sns.set_style("whitegrid", {'grid.color': '.95', })
     sns.set_context("talk")
@@ -254,14 +271,16 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
                         linestyle="--",
                         marker="o", alpha=alpha, color='#5d7575', )
         else:
-            ax.plot(x_ticks_2, data2['Score'], label='Kaiming Normal + Downstream Training (KN+DT)', scalex=True,
+            ax.plot(x_ticks_2, data2['Score'], label='Kaiming Normal + Downstream Training (KN+DT)',
+                    scalex=True,
                     linestyle="--",
                     marker="o", alpha=alpha, color='#5d7575', )
         full_y = data2['Score'][0]
         full_x = x_ticks_2[0]
         if data_labels:
             ax.annotate(s='Standard Training', xy=(full_x, full_y), color='black', size=26)
-            ax.annotate(s='Downstream Training', xy=(x_ticks_2[-1], data2['Score'][-1]), color='black', size=26)
+            ax.annotate(s='Downstream Training', xy=(x_ticks_2[-1], data2['Score'][-1]),
+                        color='black', size=26)
     idx = 0
     for key, value in data.items():
         if isinstance(pal[idx], list):
@@ -269,14 +288,16 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
         else:
             cols = pal[idx]
         if err:
-            ax.errorbar(x_ticks[key], data[key], yerr=err[key], label=key, linestyle=linestyle_tuple[idx][1],
+            ax.errorbar(x_ticks[key], data[key], yerr=err[key], label=key,
+                        linestyle=linestyle_tuple[idx][1],
                         marker="o", alpha=alpha,
                         color=cols)
         elif scatter:
             ax.plot(x_ticks[key], data[key], label=key, linestyle='', scalex=True,
                     marker="o", alpha=0.9, color=cols, )
         else:
-            ax.plot(x_ticks[key], data[key], label=key, scalex=True, linestyle=linestyle_tuple[idx][1], marker="o",
+            ax.plot(x_ticks[key], data[key], label=key, scalex=True,
+                    linestyle=linestyle_tuple[idx][1], marker="o",
                     alpha=alpha,
                     color=cols)
         y_val = data[key]
@@ -291,7 +312,8 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
             label = data_labels[idx] if isinstance(data_labels, list) else key
             if len(x_ticks[key]) > 0:
                 ax.annotate(label,  # this is the text
-                            (x_ticks[key][annotate_pos], data[key][annotate_pos]),  # this is the point to label
+                            (x_ticks[key][annotate_pos], data[key][annotate_pos]),
+                            # this is the point to label
                             textcoords="offset points", size=26,  # how to position the text
                             xytext=(-10, 19),  # distance from text to points (x,y)
                             ha='center', color=cols)  # cols[0] if isinstance(cols, list) else cols
@@ -306,12 +328,14 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
     if percent:
         ax.set_yticks(range(0, 110, 20))
     if legend:
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=3, prop={'size': 26})
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=3,
+                  prop={'size': 26})
     rows = 1
     rows = 2 if len(data) >= 4 else rows
     rows = 3 if len(data) >= 6 else rows
     if annotate_pos is None:  # or isinstance(data_labels, list):
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=int(rows), prop={'size': 26})
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), frameon=False, ncol=int(rows),
+                  prop={'size': 26})
     if scale_fix:
         ax.set_ylim(scale_fix[0], scale_fix[1])
     output_paper_quality(ax, name, x_name, y_name, percent, percent_x=percent_x, **formatter_kwargs)
@@ -322,7 +346,8 @@ def plot_data_double(data, data2, name, err=None, err2=None, x_labels=None, x_na
         plt.show()
 
 
-def plot_two_scales(data, name, x_labels=None, x_name='', y_name='', y_name2='', scale_fix=None, rotate=False,
+def plot_two_scales(data, name, x_labels=None, x_name='', y_name='', y_name2='', scale_fix=None,
+                    rotate=False,
                     alpha=1.0,
                     base_line=0):
     sns.set()
@@ -425,7 +450,8 @@ def plot_1_dim_data(data, name, x_labels=None, x_name='', y_name='', scale_fix=N
 def plot_histogram(data, name, bins=100, labels=[], x_axis='Weight distribution', range=None):
     sns.set()
     sns.set_context("paper")
-    plt.hist(data, alpha=0.5, bins=bins, range=range, fill=True, histtype='bar', density=True, label=labels)
+    plt.hist(data, alpha=0.5, bins=bins, range=range, fill=True, histtype='bar', density=True,
+             label=labels)
     plt.legend(prop={'size': 26})
     plt.gca().set(title=name, xlabel=x_axis)
     plt.tight_layout()
@@ -434,23 +460,34 @@ def plot_histogram(data, name, bins=100, labels=[], x_axis='Weight distribution'
     plt.show()
 
 
-def plot_subplots_histograms(data, name, bins=100, x_axis='Weight distribution', range=None, bounds=None):
+def plot_subplots_histograms(data, name, bins=100, x_axis='Weight distribution', range=None,
+                             bounds=None):
     sns.set()
     sns.set_context("paper")
     row = int(np.sqrt(len(data))) + 1
     plt.figure(figsize=(10, 10))
     idx = 0
-    dist_names = ['alpha', 'anglit', 'arcsine', 'beta', 'betaprime', 'bradford', 'burr', 'cauchy', 'chi', 'chi2',
-                  'cosine', 'dgamma', 'dweibull', 'erlang', 'expon', 'exponweib', 'exponpow', 'f', 'fatiguelife',
-                  'fisk', 'foldcauchy', 'foldnorm', 'frechet_r', 'frechet_l', 'genlogistic', 'genpareto', 'genexpon',
-                  'genextreme', 'gausshyper', 'gamma', 'gengamma', 'genhalflogistic', 'gilbrat', 'gompertz', 'gumbel_r',
-                  'gumbel_l', 'halfcauchy', 'halflogistic', 'halfnorm', 'hypsecant', 'invgamma', 'invgauss',
-                  'invweibull', 'johnsonsb', 'johnsonsu', 'ksone', 'kstwobign', 'laplace', 'logistic', 'loggamma',
-                  'loglaplace', 'lognorm', 'lomax', 'maxwell', 'mielke', 'nakagami', 'ncx2', 'ncf', 'nct', 'norm',
-                  'pareto', 'pearson3', 'powerlaw', 'powerlognorm', 'powernorm', 'rdist', 'reciprocal', 'rayleigh',
-                  'rice', 'recipinvgauss', 'semicircular', 't', 'triang', 'truncexpon', 'truncnorm', 'tukeylambda',
+    dist_names = ['alpha', 'anglit', 'arcsine', 'beta', 'betaprime', 'bradford', 'burr', 'cauchy',
+                  'chi', 'chi2',
+                  'cosine', 'dgamma', 'dweibull', 'erlang', 'expon', 'exponweib', 'exponpow', 'f',
+                  'fatiguelife',
+                  'fisk', 'foldcauchy', 'foldnorm', 'frechet_r', 'frechet_l', 'genlogistic',
+                  'genpareto', 'genexpon',
+                  'genextreme', 'gausshyper', 'gamma', 'gengamma', 'genhalflogistic', 'gilbrat',
+                  'gompertz', 'gumbel_r',
+                  'gumbel_l', 'halfcauchy', 'halflogistic', 'halfnorm', 'hypsecant', 'invgamma',
+                  'invgauss',
+                  'invweibull', 'johnsonsb', 'johnsonsu', 'ksone', 'kstwobign', 'laplace',
+                  'logistic', 'loggamma',
+                  'loglaplace', 'lognorm', 'lomax', 'maxwell', 'mielke', 'nakagami', 'ncx2', 'ncf',
+                  'nct', 'norm',
+                  'pareto', 'pearson3', 'powerlaw', 'powerlognorm', 'powernorm', 'rdist',
+                  'reciprocal', 'rayleigh',
+                  'rice', 'recipinvgauss', 'semicircular', 't', 'triang', 'truncexpon', 'truncnorm',
+                  'tukeylambda',
                   'uniform', 'vonmises', 'wald', 'weibull_min', 'weibull_max', 'wrapcauchy']
-    dist_names = ['expon', 'halflogistic', 'norm', 'powernorm', 'genexpon', 'laplace', 'logistic', 'loggamma',
+    dist_names = ['expon', 'halflogistic', 'norm', 'powernorm', 'genexpon', 'laplace', 'logistic',
+                  'loggamma',
                   'loglaplace']
     axes = []
     param_arrap = np.array(list(data.values()))
@@ -459,7 +496,8 @@ def plot_subplots_histograms(data, name, bins=100, x_axis='Weight distribution',
     for param, set in data.items():
         ax = plt.subplot(row, row, idx + 1)
         ax.set_title(f'Parameter {param}', pad=3)
-        entries, bin_edges, patches = ax.hist(set, alpha=0.5, bins=bins, normed=True, range=range, fill=True,
+        entries, bin_edges, patches = ax.hist(set, alpha=0.5, bins=bins, normed=True, range=range,
+                                              fill=True,
                                               histtype='bar')
         xt = plt.xticks()[0]
         xmin, xmax = min(xt), max(xt)
@@ -505,7 +543,8 @@ def plot_heatmap(data, col_labels, row_labels, title, ax=None, percent=False, **
         plt.show()
 
 
-def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots', yerr=None, line=None, label=False,
+def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots', yerr=None,
+                        line=None, label=False,
                         grey=True, percent=False, double=False, base_line=None,
                         gs=None, ax=None):
     sns.set()
@@ -542,20 +581,24 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
         else:
             pals = blue_palette * 2
     else:
-        pals = [blue_palette[1], blue_palette[0], blue_palette[0], blue_palette[0], blue_palette[0], blue_palette[0],
+        pals = [blue_palette[1], blue_palette[0], blue_palette[0], blue_palette[0], blue_palette[0],
+                blue_palette[0],
                 blue_palette[0]]
 
     for key, value in data.items():
         if label:
             colors = pals[idx]
             if double:
-                rects = ax.bar(x - left_edge + (0 * width), value, width + 0.5, yerr=yerr[key], label=key,
+                rects = ax.bar(x - left_edge + (0 * width), value, width + 0.5, yerr=yerr[key],
+                               label=key,
                                color=pals, alpha=1 if idx == 1 else 0.2)
             elif yerr is not None:
-                rects = ax.bar(x - left_edge + (idx * width), value, width - 0.05, yerr=yerr[key], label='',
+                rects = ax.bar(x - left_edge + (idx * width), value, width - 0.05, yerr=yerr[key],
+                               label='',
                                color=colors)
             else:
-                rects = ax.bar(x - left_edge + (idx * width), value, width - 0.05, label='', color=colors)
+                rects = ax.bar(x - left_edge + (idx * width), value, width - 0.05, label='',
+                               color=colors)
             axes.append(rects)
             for id in range(len(rects)):
                 rect = rects[id]
@@ -573,7 +616,8 @@ def plot_bar_benchmarks(data, labels, title='', y_label='', file_name='bar_plots
                                 textcoords="offset points", rotation='vertical',
                                 ha='center', va='top', size=font_size)
         else:
-            axes.append(ax.bar(x - left_edge + (idx * width), value, width, label=key, color=pals[idx]))
+            axes.append(
+                ax.bar(x - left_edge + (idx * width), value, width, label=key, color=pals[idx]))
         idx += 1
     if line:
         ax.axhline(y=line, linewidth=1, color='#424949', linestyle="dashed")
@@ -628,7 +672,8 @@ def plot_images(img, size, labels, theta):
     plt.show(bbox_inches='tight', pad_inches=0)
 
 
-def scatter_plot(x, y, y_2=None, x_label=None, y_label=None, labels=None, title=None, trendline=False, scale_fix=None,
+def scatter_plot(x, y, y_2=None, x_label=None, y_label=None, labels=None, title=None,
+                 trendline=False, scale_fix=None,
                  percent=False, ax=None):
     sns.set()
     sns.set_style("whitegrid", {'grid.color': '.95', })

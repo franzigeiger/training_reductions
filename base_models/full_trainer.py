@@ -58,7 +58,8 @@ def set_gpus(n=2):
         gpus = gpus[gpus['index'].isin(visible)]
     print(f'GPUs {gpus}')
     gpus = gpus.sort_values(by='memory.free [MiB]', ascending=False)
-    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
+    os.environ[
+        'CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # making sure GPUs are numbered the same way as in nvidia_smi
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(
         [str(i) for i in gpus['index'].iloc[:n]])
 

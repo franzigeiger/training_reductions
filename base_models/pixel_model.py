@@ -1,6 +1,7 @@
+from collections import OrderedDict
+
 import numpy as np
 from PIL import Image
-from collections import OrderedDict
 from model_tools.activations.core import ActivationsExtractorHelper
 from model_tools.brain_transformation import ModelCommitment
 
@@ -35,7 +36,8 @@ class PixelModel:
     def identifier(self, value):
         self._extractor.identifier = value
 
-    def __call__(self, *args, **kwargs):  # cannot assign __call__ as attribute due to Python convention
+    def __call__(self, *args,
+                 **kwargs):  # cannot assign __call__ as attribute due to Python convention
         return self._extractor(*args, **kwargs)
 
     def _pixels_from_paths(self, paths, layer_names):

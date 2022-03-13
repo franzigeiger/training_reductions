@@ -31,7 +31,8 @@ def plot_training_effort(name):
             train_top1.append(i['train']['top1'])
     plot_date_map_custom_x({'val_top1': val_top1, 'val_top5': val_top5, 'epoch': epochs},
                            f'validation {name}', label_field='epoch')
-    plot_data_map({'learning_rate': lr, 'epoch': epochs_train, 'Top1': train_top1}, f'learning rate {name}',
+    plot_data_map({'learning_rate': lr, 'epoch': epochs_train, 'Top1': train_top1},
+                  f'learning rate {name}',
                   label_field='epoch')
     print(f'Model {name} top1 at the end: {val_top1[-1]}')
 
@@ -65,10 +66,12 @@ def compare(name2, name1='CORnet-S_full', name3=None):
                 if i['meta']['epoch'] in epochs and len(val_top1_3) < len(val_top1_2):
                     val_top1_3.append(i['val']['top1'])
         # val_top1_3.append(val_top1_3[-1])
-        plot_date_map_custom_x({'Full train': val_top1_1, 'Imagenet optimized until V2.conv2': val_top1_2,
-                                'Brain benchmark optimized until V2.conv2': val_top1_3, 'epoch': epochs},
-                               f'Training behavior', label_field='epoch', y_name='Validation accuracy', x_name='Epoch')
+        plot_date_map_custom_x(
+            {'Full train': val_top1_1, 'Imagenet optimized until V2.conv2': val_top1_2,
+             'Brain benchmark optimized until V2.conv2': val_top1_3, 'epoch': epochs},
+            f'Training behavior', label_field='epoch', y_name='Validation accuracy', x_name='Epoch')
 
 
 if __name__ == '__main__':
-    compare('CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_full', name3='CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full')
+    compare('CORnet-S_train_gmk1_wmc2_kn3_kn4_ln5_wm6_full',
+            name3='CORnet-S_train_gmk1_gmk2_kn3_kn4_kn5_wm6_full')

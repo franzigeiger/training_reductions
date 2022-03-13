@@ -15,7 +15,8 @@ from sklearn.model_selection import ParameterGrid
 from torch import nn
 
 from base_models import get_model
-from plot.plot_data import plot_subplots_histograms, plot_3d, plot_heatmap, plot_2d, plot_histogram, plot_matrixImage
+from plot.plot_data import plot_subplots_histograms, plot_3d, plot_heatmap, plot_2d, plot_histogram, \
+    plot_matrixImage
 from utils.correlation import generate_correlation_map, pca, fit_data, multivariate_gaussian
 from utils.distributions import mixture_gaussian
 from utils.gabors import gabor_kernel_3, normalize, similarity
@@ -34,7 +35,8 @@ def score_kernel(X, theta, frequency, sigma, offset, stds):
 
 
 def objective_function_2(beta, X, size=3):
-    kernel = gabor_kernel_3(beta[0], theta=beta[1], sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5],
+    kernel = gabor_kernel_3(beta[0], theta=beta[1], sigma_x=beta[2], sigma_y=beta[3],
+                            offset=beta[4], x_c=beta[5],
                             y_c=beta[6], scale=beta[7], ks=size)
     kernel = normalize(kernel)
     error = mean_squared_error(kernel, X)
@@ -141,9 +143,11 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping', layers=['V1.conv1
 
                         if version is 'V1':
                             print('Use sklearn version')
-                            bnds = ((-0.5, 1.5), (-np.pi, 2 * np.pi), (-4, 4), (-4, 4), (-3, 3), (-5, 5))
+                            bnds = (
+                            (-0.5, 1.5), (-np.pi, 2 * np.pi), (-4, 4), (-4, 4), (-3, 3), (-5, 5))
                             params = [0.5, np.pi / 2, 2, 2, 0, 3]
-                            minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds, 'args': (kernel),
+                            minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds,
+                                                'args': (kernel),
                                                 'options': {'maxiter': 200000, 'gtol': 1e-25}}
                             result = basinhopping(objective_function, params, niter=15,
                                                   minimizer_kwargs=minimizer_kwargs,
@@ -151,11 +155,13 @@ def fit_gabors(version='V1', file='gabor_params_basinhopping', layers=['V1.conv1
                         else:
                             print('Use Tiagos version')
                             bnds = (
-                                (1 / 14, 0.5), (-2 * np.pi, 2 * np.pi), (2, 14), (2, 14), (-2 * np.pi, 2 * np.pi),
+                                (1 / 14, 0.5), (-2 * np.pi, 2 * np.pi), (2, 14), (2, 14),
+                                (-2 * np.pi, 2 * np.pi),
                                 (-2, 2),
                                 (-2, 2), (1e-5, 2))
                             params = [0.2, 0, 4, 4, 0, 0, 0, 1]
-                            minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds, 'args': (kernel),
+                            minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bnds,
+                                                'args': (kernel),
                                                 'options': {'maxiter': 200000, 'gtol': 1e-25}}
                             result = basinhopping(objective_function_2, params, niter=15,
                                                   minimizer_kwargs=minimizer_kwargs,
@@ -226,7 +232,8 @@ def compare_gabors(version='V1', file='gabor_params_basinhopping_bound_6_params'
                     kernel2 = normalize(kernel2)
                     if version is "V1":
                         kernel1 = np.real(gabor_kernel(beta[0], theta=beta[1],
-                                                       sigma_x=beta[2], sigma_y=beta[3], offset=beta[4],
+                                                       sigma_x=beta[2], sigma_y=beta[3],
+                                                       offset=beta[4],
                                                        n_stds=beta[5]))
                         kernel1 = np.nan_to_num(kernel1).astype(np.float32)
                         kernel1 = resize(kernel1, (kernel2.shape[0], kernel2.shape[0]),
@@ -234,7 +241,8 @@ def compare_gabors(version='V1', file='gabor_params_basinhopping_bound_6_params'
                         kernel1 = normalize(kernel1)
                     else:
                         kernel1 = gabor_kernel_3(beta[0], theta=beta[1],
-                                                 sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5],
+                                                 sigma_x=beta[2], sigma_y=beta[3], offset=beta[4],
+                                                 x_c=beta[5],
                                                  y_c=beta[6], scale=beta[7], ks=7)
                         kernel1 = normalize(kernel1)
                     ax = plt.subplot(gs[i * 2, j])
@@ -270,7 +278,9 @@ def plot_parameter_distribution(name):
         param = params[:, :, i]
         data[names[i]] = param.flatten()
         variables[i] = param.flatten()
-    bnds = ((1 / 14, 0.5), (-2 * np.pi, 2 * np.pi), (2, 14), (2, 14), (-2 * np.pi, 2 * np.pi), (-2, 2), (-2, 2))
+    bnds = (
+    (1 / 14, 0.5), (-2 * np.pi, 2 * np.pi), (2, 14), (2, 14), (-2 * np.pi, 2 * np.pi), (-2, 2),
+    (-2, 2))
     plot_subplots_histograms(data, 'Gabor parameter distributions', bins=10, bounds=bnds)
 
 
@@ -286,10 +296,12 @@ def mutual_information():
             kernels = weights.shape[0]
             for i in range(kernels):
                 for j in range(kernels):
-                    scores[i, j] = feature_selection.mutual_info_regression(weights[i].flatten().reshape(-1, 1),
-                                                                            weights[j].flatten())
+                    scores[i, j] = feature_selection.mutual_info_regression(
+                        weights[i].flatten().reshape(-1, 1),
+                        weights[j].flatten())
             print(f'Kernel mean mutual information {np.mean(scores)}')
-            plot_heatmap(scores, title=f'Kernel mutual information {name}', col_labels='Kernels', row_labels='Kernels')
+            plot_heatmap(scores, title=f'Kernel mutual information {name}', col_labels='Kernels',
+                         row_labels='Kernels')
             if len(weights.shape) > 2:
                 channels = weights.shape[1]
                 scores = np.zeros([kernels, channels, channels])
@@ -299,9 +311,9 @@ def mutual_information():
                             scores[i, j, k] = feature_selection.mutual_info_regression(
                                 weights[i, j].flatten().reshape(-1, 1), weights[i, k].flatten())
                 scores = np.mean(scores, axis=0)
-                plot_heatmap(scores, title=f'Channel mean mutual information {name}', col_labels='Channel',
+                plot_heatmap(scores, title=f'Channel mean mutual information {name}',
+                             col_labels='Channel',
                              row_labels='Channel')
-
 
 
 def kernel_similarity():
@@ -365,7 +377,8 @@ def mixture_base(param, tuples, shape, size=3):
         for s, e in tuples:
             p = param[i, int(s * 8 / 10):int(e * 8 / 10)]
             new_param[i, s:e] = (
-                p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]), p[5], p[6], p[7])
+                p[0], np.sin(2 * p[1]), np.cos(2 * p[1]), p[2], p[3], np.sin(p[4]), np.cos(p[4]),
+                p[5], p[6], p[7])
 
     # plot_bic(best_gmm, param)
     best_gmm = mixture_gaussian(new_param)
@@ -379,7 +392,8 @@ def mixture_base(param, tuples, shape, size=3):
         for s, e in tuples:
             beta = samples[i, s:e]
             kernel2 = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]),
-                                     sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
+                                     sigma_x=beta[3], sigma_y=beta[4],
+                                     offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                      y_c=beta[8],
                                      scale=beta[9], ks=size)
             ax = plt.subplot(gs[i, int(s / 10)])
@@ -397,7 +411,8 @@ def mixture_base(param, tuples, shape, size=3):
         for j in range(0, 64):
             beta = weights[i, j]
             channel = gabor_kernel_3(beta[0], theta=np.arctan2(beta[1], beta[2]),
-                                     sigma_x=beta[3], sigma_y=beta[4], offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
+                                     sigma_x=beta[3], sigma_y=beta[4],
+                                     offset=np.arctan2(beta[5], beta[6]), x_c=beta[7],
                                      y_c=beta[8],
                                      scale=beta[9], ks=size)
             row = np.concatenate((row, channel), axis=0)
@@ -474,9 +489,11 @@ def analyze_param_dist(name, plot=False):
         alpha = full_params[i]
         beta = full_params_hat[i]
         kernel2 = gabor_kernel_3(beta[0], theta=beta[1],
-                                 sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5], y_c=beta[6], ks=7)
+                                 sigma_x=beta[2], sigma_y=beta[3], offset=beta[4], x_c=beta[5],
+                                 y_c=beta[6], ks=7)
         kernel1 = gabor_kernel_3(alpha[0], theta=alpha[1],
-                                 sigma_x=alpha[2], sigma_y=alpha[3], offset=alpha[4], x_c=alpha[5], y_c=alpha[6], ks=7)
+                                 sigma_x=alpha[2], sigma_y=alpha[3], offset=alpha[4], x_c=alpha[5],
+                                 y_c=alpha[6], ks=7)
         ax = plt.subplot(gs[i, 0])
         ax.set_xticks([])
         ax.set_yticks([])

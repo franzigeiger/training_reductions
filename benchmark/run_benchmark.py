@@ -18,7 +18,8 @@ for disable_logger in ['s3transfer', 'botocore', 'boto3', 'urllib3', 'peewee', '
 def run_benchmark(benchmark_identifier, model_name):
     print(f'>>>>>Start running model {model_name} on benchmark {benchmark_identifier}')
     model = brain_translated_pool[model_name]
-    score = score_model(model_identifier=model_name, model=model, benchmark_identifier=benchmark_identifier)
+    score = score_model(model_identifier=model_name, model=model,
+                        benchmark_identifier=benchmark_identifier)
     return score
 
 
